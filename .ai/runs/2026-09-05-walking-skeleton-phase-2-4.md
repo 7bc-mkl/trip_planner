@@ -176,10 +176,10 @@ are removed. This is the rule that makes the date editor safe to use.
 
 ### Phase 2: Trip creation and the empty timeline
 
-- [ ] 2.1 Migration and models for trip, trip_stage, trip_day
-- [ ] 2.2 domain/days.py — generate_days, inclusive, bounded at 366
-- [ ] 2.3 domain/stages.py — stages_for_day and the truncated label
-- [ ] 2.4 POST /trips, GET /trips, GET /trips/{id}
+- [x] 2.1 Migration and models for trip, trip_stage, trip_day — 7646c9a
+- [x] 2.2 domain/days.py — generate_days, inclusive, bounded at 366 — e26cd4b
+- [x] 2.3 domain/stages.py — stages_for_day and the truncated label — f1a1858
+- [x] 2.4 POST /trips, GET /trips, GET /trips/{id} — dfde501
 - [ ] 2.5 The /trips list and the /trips/new multi-stop creator
 - [ ] 2.6 The /trips/:id timeline with its empty state
 
