@@ -256,7 +256,15 @@ Every path is nested under `/trips/{tripId}` so the ownership scope is impossibl
 
 Four routes. The design export is the visual reference for three of them; each is listed with what is adapted and what is dropped, because the export was drawn for a product with an assistant, prices and documents in it.
 
-Mockups of the proposed screens live beside this spec in `.ai/specs/assets/walking-skeleton/` and are attached to this spec's PR. There are **no current-state screenshots**: the repository contains no product code yet, so there is no running application to photograph.
+Mockups of the proposed screens live beside this spec and are attached to this spec's PR. They are illustrative statics — layout and flow, not pixel-perfect design — rendered from self-contained HTML with no application code behind them. There are **no current-state screenshots**: the repository contains no product code yet, so there is no running application to photograph.
+
+| Screen | Mockup |
+|---|---|
+| `/trips/new` — the multi-stop creator, Polish locale | [`assets/walking-skeleton/mockup-01-trip-creator.png`](assets/walking-skeleton/mockup-01-trip-creator.png) |
+| `/trips/:id` — the timeline, the counter and the filter bar, Polish locale | [`assets/walking-skeleton/mockup-02-timeline.png`](assets/walking-skeleton/mockup-02-timeline.png) |
+| `/trips/:id/days/:date` — the day detail and the item editor, **English locale** | [`assets/walking-skeleton/mockup-03-day-detail.png`](assets/walking-skeleton/mockup-03-day-detail.png) |
+
+Two of the three are rendered in Polish and one in English on purpose: R01 makes both locales first-class, and a spec that only ever pictures one of them is not showing the product it describes. `/login` has no mockup — it is a two-field form and the spec's own rule is that standard CRUD does not earn a picture.
 
 ### `/login`
 
