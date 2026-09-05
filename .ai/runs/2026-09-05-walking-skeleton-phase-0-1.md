@@ -88,14 +88,16 @@ Implementation Plan, no more:
 
 ## ⚠️ Risks
 
-- **The deployment sub-step is the run's one open item.** A05's test is "deployed", and
-  the spec is explicit that a plan ending at a passing test suite has not met it. This run
-  builds every deployment artifact but does not provision a host: standing up a public
-  service and a billed Postgres requires the owner to name an account. Recon found the
-  local `gcloud` authenticated against project `cosmic-bonfire-318907` (Cloud Run,
-  Artifact Registry, Cloud Build and Cloud SQL Admin all enabled, no existing Cloud Run
-  services), but that project hosts an unrelated product, so it is offered as a candidate
-  rather than assumed. **A local run is not a substitute** and none is recorded as one.
+- **A05's "deployed" test is not met by this milestone, by an explicit owner decision.**
+  The spec is emphatic that a plan ending at a passing test suite has not met A05, whose
+  own deadline is 2026-09-15. Every deployment artifact is built and was exercised against
+  the real image, but no host was provisioned: doing so meant creating a public service and
+  a billed database in an account the owner had not named, and on 2026-09-05 the owner chose
+  to **merge Phases 0-1 as an undeployed foundation and ship the deployment on a later PR**.
+  **A local run is not a substitute and none is recorded as one** — every piece of evidence
+  on the PR is labelled local. The consequence to carry forward: until that later PR lands,
+  the milestone has not answered the question A05 exists to answer, so the calendar risk
+  A05 identifies is still open rather than retired.
 - **`get_owned_trip` has no trip-scoped routes to guard yet**, because trips arrive in
   Phase 2. It ships here with its enumeration test written so that the assertion becomes
   load-bearing the moment the first `/trips/…` route appears, rather than being added
@@ -132,4 +134,4 @@ Implementation Plan, no more:
 - [x] 1.7 create-owner command reading the password from stdin — 1ea3d7b
 - [x] 1.8 /login screen, session context, route guard and the draft store — 83b9218
 - [x] 1.9 Deployment artifacts: Dockerfile, compose, fatal env check, release step — 5b0cdb6
-- [ ] 1.9d Deployment itself — a real TLS URL where /api/v1/trips answers 401 and /login answers 200 (BLOCKED: awaiting owner authorization of a host)
+- [~] 1.9d Deployment itself — **descoped by the owner on 2026-09-05**: Phases 0-1 merge as an undeployed foundation and the deployment ships on a later PR. A05's "deployed" test is therefore **not met by this milestone**; see Risks.
