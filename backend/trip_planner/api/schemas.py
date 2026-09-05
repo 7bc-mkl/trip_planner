@@ -39,6 +39,13 @@ __all__ = [
 #: Derived from the tuples that build the database CHECK constraints, so the
 #: request models, the wire contract and the constraint cannot disagree about
 #: which values exist.
+#:
+#: `Literal[some_tuple]` is equivalent to spelling the members out —
+#: `Literal[ITEM_KINDS]` is `Literal["accommodation", "transport", …]` — which is
+#: what lets the single tuple in `db/models.py` drive the CHECK clause, these
+#: request models and the SPA's own constant. Type checkers cannot follow the
+#: indirection through a name, hence the ignore; `tests/test_models_item.py`
+#: covers the round trip instead.
 ItemKind = Literal[ITEM_KINDS]  # type: ignore[valid-type]
 ItemStatus = Literal[ITEM_STATUSES]  # type: ignore[valid-type]
 

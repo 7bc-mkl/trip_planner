@@ -131,6 +131,7 @@
     "date_outside_trip": "Ta data jest poza zakresem podróży.",
     "days_have_items": "Te dni mają już zaplanowane elementy. Najpierw je przenieś lub usuń, potem skróć podróż.",
     "stages_outside_new_range": "Część celów wykracza poza nowe daty. Najpierw je popraw, potem skróć podróż.",
+    "items_outside_new_range": "Część elementów wykracza poza nową datę zakończenia. Najpierw je skróć lub usuń, potem skróć podróż.",
     "unknown": "Coś poszło nie tak. Spróbuj ponownie."
   }
 }

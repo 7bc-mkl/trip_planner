@@ -239,6 +239,98 @@ class TestDateRangeChanges:
         assert response.status_code == 422
         assert error_code(response) == "trip_too_long"
 
+    def test_shortening_past_a_surviving_items_span_is_refused(
+        self, signed_in_client: TestClient, trip: dict
+    ) -> None:
+        """Regression: the third rule, which the first draft of this endpoint missed.
+
+        A hotel booked on the 11th running to the trip's last day. Its own start
+        day survives a shortening, so `days_have_items` says nothing — and before
+        this check the trip was happily left ending on the 20th with an item
+        claiming to end on the 24th, a state `validate_span` refuses to create.
+        """
+        # An undated stage, so the stage rule cannot fire first and mask this one.
+        trip = create(signed_in_client, stages=[{"place": "Kuala Lumpur"}])
+        add_item(
+            signed_in_client,
+            trip,
+            day="2026-10-11",
+            kind="accommodation",
+            title="Nocleg: Mandarin Oriental KL",
+            end_date="2026-10-24",
+        )
+
+        response = patch(signed_in_client, trip, end_date="2026-10-20")
+
+        assert response.status_code == 409
+        assert error_code(response) == "items_outside_new_range"
+
+    def test_that_refusal_names_the_day_the_item_starts_on(
+        self, signed_in_client: TestClient, trip: dict
+    ) -> None:
+        """The start day is where the owner has to go to shorten the item."""
+        trip = create(signed_in_client, stages=[{"place": "Kuala Lumpur"}])
+        add_item(
+            signed_in_client, trip, day="2026-10-11", kind="accommodation",
+            title="Nocleg", end_date="2026-10-24",
+        )
+
+        response = patch(signed_in_client, trip, end_date="2026-10-20")
+
+        assert response.json()["error"]["field"] == "2026-10-11"
+
+    def test_that_refusal_changes_nothing(
+        self, signed_in_client: TestClient, trip: dict
+    ) -> None:
+        trip = create(signed_in_client, stages=[{"place": "Kuala Lumpur"}])
+        add_item(
+            signed_in_client, trip, day="2026-10-11", kind="accommodation",
+            title="Nocleg", end_date="2026-10-24",
+        )
+
+        patch(signed_in_client, trip, end_date="2026-10-20")
+
+        body = signed_in_client.get(f"{TRIPS}/{trip['id']}").json()
+        assert body["end_date"] == "2026-10-24"
+        assert len(body["days"]) == 15
+
+    def test_a_span_that_still_fits_the_new_range_is_allowed(
+        self, signed_in_client: TestClient, trip: dict
+    ) -> None:
+        """The check must not refuse a shortening the item survives intact."""
+        add_item(
+            signed_in_client, trip, day="2026-10-11", kind="accommodation",
+            title="Nocleg", end_date="2026-10-15",
+        )
+
+        assert patch(signed_in_client, trip, end_date="2026-10-23").status_code == 200
+
+    def test_an_item_with_no_span_never_blocks_a_shortening(
+        self, signed_in_client: TestClient, trip: dict
+    ) -> None:
+        """`end_date` is null for most items; they are none of this rule's business."""
+        add_item(signed_in_client, trip, day="2026-10-11", title="Batu Caves")
+
+        assert patch(signed_in_client, trip, end_date="2026-10-23").status_code == 200
+
+    def test_shortening_the_start_past_a_span_is_refused_too(
+        self, signed_in_client: TestClient, trip: dict
+    ) -> None:
+        """The rule is about the range, not only its end.
+
+        Trimming the front of the trip removes days an item's span may still
+        point into, even though the trip's end never moved.
+        """
+        trip = create(signed_in_client, stages=[{"place": "Kuala Lumpur"}])
+        add_item(
+            signed_in_client, trip, day="2026-10-11", kind="accommodation",
+            title="Nocleg", end_date="2026-10-13",
+        )
+
+        response = patch(signed_in_client, trip, start_date="2026-10-14")
+
+        assert response.status_code == 409
+
     def test_editing_only_the_title_leaves_the_days_alone(
         self, signed_in_client: TestClient, trip: dict
     ) -> None:

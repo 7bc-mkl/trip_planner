@@ -237,7 +237,10 @@ export function TripCreatePage() {
                 {t('tripCreate.removeStage')}
               </button>
 
-              {stageErrors[index] !== null && <p role="alert">{stageErrors[index]}</p>}
+              {/* Truthiness rather than `!== null`: the two arrays are the same
+                  length today, but an out-of-range read would otherwise render an
+                  empty alert rather than nothing. */}
+              {stageErrors[index] ? <p role="alert">{stageErrors[index]}</p> : null}
             </div>
           ))}
 

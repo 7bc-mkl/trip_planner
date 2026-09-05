@@ -1,9 +1,8 @@
 import { useTranslation } from 'react-i18next'
 
 import type { Item } from '../../api/items'
-import { toTimeInput } from '../../api/items'
 import { StatusChip } from './StatusChip'
-import { formatShortDate } from './format'
+import { formatShortDate, formatTime } from './format'
 
 /**
  * One item, as it renders on the day detail and on a timeline day card.
@@ -30,8 +29,10 @@ export function ItemRow({
 }) {
   const { t, i18n } = useTranslation()
 
-  const start = toTimeInput(item.start_time)
-  const end = toTimeInput(item.end_time)
+  // Both formatted through the active locale; only the en dash joining them is
+  // punctuation rather than locale data.
+  const start = formatTime(item.start_time, i18n.language)
+  const end = formatTime(item.end_time, i18n.language)
   const time = start === '' ? t('item.allDay') : end === '' ? start : `${start}–${end}`
   const spansOn = item.end_date !== null && item.end_date !== dayDate ? item.end_date : null
 

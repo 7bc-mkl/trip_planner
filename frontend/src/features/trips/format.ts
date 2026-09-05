@@ -130,3 +130,25 @@ export function stageLabel(stages: readonly Stage[]): string {
   }
   return `${places.slice(0, MAX_LABELLED_STAGES).join(' → ')} +${places.length - MAX_LABELLED_STAGES}`
 }
+
+/**
+ * A wall-clock time (`HH:MM` or `HH:MM:SS`) rendered in the active locale.
+ *
+ * Through `Intl` rather than by slicing the string, for the same reason every
+ * date on these screens goes through it: the repository's review rules put
+ * dates, times and numbers behind the locale, never behind hand-built strings.
+ * A locale that writes 11:50 PM should get 11:50 PM.
+ *
+ * The date the time is attached to is irrelevant here — only the clock face is
+ * rendered — so an arbitrary local date carries it into the formatter.
+ */
+export function formatTime(value: string | null, locale: string): string {
+  if (value === null) {
+    return ''
+  }
+
+  const [hours = NaN, minutes = NaN] = value.split(':').map(Number)
+  return new Intl.DateTimeFormat(locale, { hour: '2-digit', minute: '2-digit' }).format(
+    new Date(2000, 0, 1, hours, minutes),
+  )
+}

@@ -336,6 +336,34 @@ class TestUpdateItem:
         assert pushed.status_code == 422
         assert error_code(pushed) == "invalid_time_span"
 
+    def test_over_length_notes_are_refused(
+        self, signed_in_client: TestClient, trip: dict
+    ) -> None:
+        """Regression: PATCH used to be unbounded where POST was not.
+
+        A boundary the POST guards and the PATCH does not is a hole, not an
+        asymmetry — the same field, reachable two ways, with one way unchecked.
+        """
+        item = add_item(signed_in_client, trip)
+
+        response = signed_in_client.patch(
+            f"{TRIPS}/{trip['id']}/items/{item['id']}", json={"notes": "x" * 5001}
+        )
+
+        assert response.status_code == 422
+        assert error_code(response) == "validation_error"
+
+    def test_notes_at_the_limit_are_accepted(
+        self, signed_in_client: TestClient, trip: dict
+    ) -> None:
+        item = add_item(signed_in_client, trip)
+
+        response = signed_in_client.patch(
+            f"{TRIPS}/{trip['id']}/items/{item['id']}", json={"notes": "x" * 5000}
+        )
+
+        assert response.status_code == 200
+
     def test_an_unknown_item_answers_404(
         self, signed_in_client: TestClient, trip: dict
     ) -> None:

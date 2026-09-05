@@ -66,7 +66,9 @@ class ItemUpdate(BaseModel):
     end_time: time | None = None
     end_date: date_type | None = None
     title: str | None = Field(default=None, min_length=1, max_length=TITLE_MAX)
-    notes: str | None = None
+    #: Bounded exactly as on create: a boundary the POST guards and the PATCH does
+    #: not is a hole, not an asymmetry.
+    notes: str | None = Field(default=None, max_length=NOTES_MAX)
     #: The day to move the item to, within the same trip.
     date: date_type | None = None
 

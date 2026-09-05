@@ -327,6 +327,36 @@ describe('the item editor', () => {
     expect(screen.getByRole('button', { name: 'Zapisz' })).toBeEnabled()
   })
 
+  it('discards the draft when the edit is cancelled', async () => {
+    const user = userEvent.setup()
+    mockApi(backend())
+    renderApp(DAY_PATH)
+
+    await user.click(await screen.findByRole('button', { name: /Batu Caves/u }))
+    await user.clear(screen.getByLabelText('Nazwa'))
+    await user.type(screen.getByLabelText('Nazwa'), 'coś zupełnie innego')
+    await user.click(screen.getByRole('button', { name: 'Anuluj' }))
+
+    // Checked here, while the dialog is closed: reopening legitimately re-seeds
+    // the store from the saved item, so afterwards it is non-empty again.
+    expect(readDraft<ItemDraft>(draftKey('item-1'))).toBeUndefined()
+
+    // And the visible consequence: reopening shows the saved item, not the edit
+    // the owner threw away.
+    await user.click(screen.getByRole('button', { name: /Batu Caves/u }))
+
+    expect(screen.getByLabelText('Nazwa')).toHaveValue('Batu Caves')
+  })
+
+  it('discards the draft on Escape too', async () => {
+    const user = await openNewItem()
+
+    await user.type(screen.getByLabelText('Nazwa'), 'porzucone')
+    await user.keyboard('{Escape}')
+
+    expect(readDraft<ItemDraft>(draftKey(null))).toBeUndefined()
+  })
+
   it('keeps the draft when the session expires mid-edit', async () => {
     const user = userEvent.setup()
     mockApi((url, init) => {

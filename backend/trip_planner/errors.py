@@ -52,6 +52,7 @@ class ErrorCode(StrEnum):
     # Editing and deleting a trip (Phase 4).
     DAYS_HAVE_ITEMS = "days_have_items"
     STAGES_OUTSIDE_NEW_RANGE = "stages_outside_new_range"
+    ITEMS_OUTSIDE_NEW_RANGE = "items_outside_new_range"
 
 
 #: The status each code is served with. Kept beside the enum so a code cannot be
@@ -73,6 +74,7 @@ STATUS_FOR_CODE: dict[ErrorCode, int] = {
     # the trip, which the caller can resolve by moving or deleting the items.
     ErrorCode.DAYS_HAVE_ITEMS: status.HTTP_409_CONFLICT,
     ErrorCode.STAGES_OUTSIDE_NEW_RANGE: status.HTTP_409_CONFLICT,
+    ErrorCode.ITEMS_OUTSIDE_NEW_RANGE: status.HTTP_409_CONFLICT,
 }
 
 

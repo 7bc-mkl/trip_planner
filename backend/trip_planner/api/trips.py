@@ -244,6 +244,7 @@ def update_trip(trip: OwnedTrip, payload: TripUpdate, db: DbSession) -> TripDeta
     if start != trip.start_date or end != trip.end_date:
         _refuse_if_days_would_be_lost(trip, wanted_dates)
         _refuse_if_stages_would_escape(trip, start, end)
+        _refuse_if_item_spans_would_escape(trip, wanted_dates, end)
 
     # Read the round-trip state *before* departure_place is changed — afterwards
     # the comparison it is derived from no longer describes the trip as it was.
@@ -301,6 +302,43 @@ def _refuse_if_stages_would_escape(trip: Trip, start: date, end: date) -> None:
 
     if escaping:
         raise ApiError(ErrorCode.STAGES_OUTSIDE_NEW_RANGE, field=", ".join(escaping))
+
+
+def _refuse_if_item_spans_would_escape(trip: Trip, wanted: set[date], end: date) -> None:
+    """409 when an item that *survives* the edit would still reach past the new range.
+
+    The third member of the family, and the one the first draft of this endpoint
+    missed. The two rules above protect the day an item starts on and the stages;
+    neither notices an item sitting safely on a kept day whose `end_date` points
+    into the days being removed.
+
+    Concretely: a hotel booked on the 11th running to the trip's last day, and the
+    trip is then trimmed by four days. The item's own start day survives, so
+    `days_have_items` says nothing, and the row is left claiming to end after its
+    trip does — a state `validate_span` would refuse to create, and one the
+    timeline renders as a "→ dd.MM" marker pointing at a day that no longer
+    exists. `BACKWARD_COMPATIBILITY.md` §3 calls that class of silent change the
+    worst kind, so it is refused rather than truncated: shortening the item is a
+    decision only the owner can make.
+
+    The offending items' **start days** are named, because that is where the owner
+    has to go to fix them.
+    """
+    offending = sorted(
+        {
+            day.date
+            for day in trip.days
+            if day.date in wanted
+            for item in day.items
+            if item.end_date is not None and (item.end_date > end or item.end_date not in wanted)
+        }
+    )
+
+    if offending:
+        raise ApiError(
+            ErrorCode.ITEMS_OUTSIDE_NEW_RANGE,
+            field=", ".join(day.isoformat() for day in offending),
+        )
 
 
 def _resize_days(db: DbSession, trip: Trip, wanted: set[date]) -> None:

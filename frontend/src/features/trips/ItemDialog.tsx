@@ -76,10 +76,24 @@ export function ItemDialog({
     }
   }, [])
 
+  /**
+   * Close the dialog, discarding what was typed.
+   *
+   * Cancel and Escape are the owner explicitly throwing the edit away, so the
+   * draft goes with it — otherwise reopening the item shows the discarded text
+   * as if it had been saved. The session-expiry path deliberately does *not*
+   * come through here: it returns early without closing, so its draft survives,
+   * which is the whole point of the store.
+   */
+  function dismiss() {
+    clearDraft(key)
+    onClose()
+  }
+
   function handleKeyDown(event: React.KeyboardEvent) {
     if (event.key === 'Escape') {
       event.stopPropagation()
-      onClose()
+      dismiss()
       return
     }
 
@@ -240,7 +254,7 @@ export function ItemDialog({
                 {t('item.delete')}
               </button>
             )}
-            <button type="button" className="button-quiet" onClick={onClose}>
+            <button type="button" className="button-quiet" onClick={dismiss}>
               {t('item.cancel')}
             </button>
             <button

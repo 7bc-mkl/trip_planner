@@ -131,6 +131,7 @@
     "date_outside_trip": "That date is outside this trip.",
     "days_have_items": "Those days already have items on them. Move or delete the items first, then shorten the trip.",
     "stages_outside_new_range": "Some destinations fall outside the new dates. Adjust them first, then shorten the trip.",
+    "items_outside_new_range": "Some items run past the new end date. Shorten or delete them first, then shorten the trip.",
     "unknown": "Something went wrong. Please try again."
   }
 }
