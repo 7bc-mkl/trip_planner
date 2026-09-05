@@ -39,6 +39,12 @@ class ErrorCode(StrEnum):
     NOT_FOUND = "not_found"
     SERVICE_UNAVAILABLE = "service_unavailable"
 
+    # Trips and their stages (Phase 2).
+    INVALID_DATE_RANGE = "invalid_date_range"
+    TRIP_TOO_LONG = "trip_too_long"
+    STAGES_REQUIRED = "stages_required"
+    STAGE_OUTSIDE_TRIP = "stage_outside_trip"
+
 
 #: The status each code is served with. Kept beside the enum so a code cannot be
 #: introduced without deciding its status, and so the pairing is assertable.
@@ -49,6 +55,10 @@ STATUS_FOR_CODE: dict[ErrorCode, int] = {
     ErrorCode.VALIDATION_ERROR: status.HTTP_422_UNPROCESSABLE_CONTENT,
     ErrorCode.NOT_FOUND: status.HTTP_404_NOT_FOUND,
     ErrorCode.SERVICE_UNAVAILABLE: status.HTTP_503_SERVICE_UNAVAILABLE,
+    ErrorCode.INVALID_DATE_RANGE: status.HTTP_422_UNPROCESSABLE_CONTENT,
+    ErrorCode.TRIP_TOO_LONG: status.HTTP_422_UNPROCESSABLE_CONTENT,
+    ErrorCode.STAGES_REQUIRED: status.HTTP_422_UNPROCESSABLE_CONTENT,
+    ErrorCode.STAGE_OUTSIDE_TRIP: status.HTTP_422_UNPROCESSABLE_CONTENT,
 }
 
 

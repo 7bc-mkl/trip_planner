@@ -32,6 +32,10 @@
     "validation_error": "Some of the details are not valid. Check the highlighted fields.",
     "not_found": "We could not find that.",
     "service_unavailable": "The service is temporarily unavailable. Please try again in a moment.",
+    "invalid_date_range": "The end date cannot be before the start date.",
+    "trip_too_long": "A trip can be at most 366 days long. Check the dates.",
+    "stages_required": "Add at least one destination to the trip.",
+    "stage_outside_trip": "A destination's dates fall outside the trip's dates.",
     "unknown": "Something went wrong. Please try again."
   }
 }

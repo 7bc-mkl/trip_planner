@@ -32,6 +32,10 @@
     "validation_error": "Część danych jest nieprawidłowa. Sprawdź zaznaczone pola.",
     "not_found": "Nie znaleziono.",
     "service_unavailable": "Usługa jest chwilowo niedostępna. Spróbuj ponownie za moment.",
+    "invalid_date_range": "Data zakończenia nie może być wcześniejsza niż data rozpoczęcia.",
+    "trip_too_long": "Podróż może trwać maksymalnie 366 dni. Sprawdź daty.",
+    "stages_required": "Dodaj do podróży co najmniej jeden cel.",
+    "stage_outside_trip": "Daty jednego z celów wykraczają poza daty podróży.",
     "unknown": "Coś poszło nie tak. Spróbuj ponownie."
   }
 }

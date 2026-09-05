@@ -8,6 +8,10 @@ export type ErrorCode =
   | 'validation_error'
   | 'not_found'
   | 'service_unavailable'
+  | 'invalid_date_range'
+  | 'trip_too_long'
+  | 'stages_required'
+  | 'stage_outside_trip'
 
 export const ERROR_CODES: readonly ErrorCode[] = [
   'invalid_credentials',
@@ -16,4 +20,8 @@ export const ERROR_CODES: readonly ErrorCode[] = [
   'validation_error',
   'not_found',
   'service_unavailable',
+  'invalid_date_range',
+  'trip_too_long',
+  'stages_required',
+  'stage_outside_trip',
 ] as const
