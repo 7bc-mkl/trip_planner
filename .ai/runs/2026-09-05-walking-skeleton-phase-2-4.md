@@ -172,6 +172,8 @@ are removed. This is the rule that makes the date editor safe to use.
 
 ## Progress
 
+PR: #6
+
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
 ### Phase 2: Trip creation and the empty timeline
