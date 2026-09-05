@@ -185,11 +185,11 @@ are removed. This is the rule that makes the date editor safe to use.
 
 ### Phase 3: Items, statuses and the readiness counter
 
-- [ ] 3.1 Migration and model for item
-- [ ] 3.2 domain/items.py span validation and domain/readiness.py
-- [ ] 3.3 GET /trips/{id}/days/{date} with prev/next
-- [ ] 3.4 Item POST, PATCH and DELETE
-- [ ] 3.5 readiness on the trip list and timeline payloads
+- [x] 3.1 Migration and model for item — d64353c
+- [x] 3.2 domain/items.py span validation and domain/readiness.py — bf31897
+- [x] 3.3 GET /trips/{id}/days/{date} with prev/next — 2186fb2
+- [x] 3.4 Item POST, PATCH and DELETE — 2186fb2
+- [x] 3.5 readiness on the trip list and timeline payloads — 2186fb2
 - [ ] 3.6 The /trips/:id/days/:date screen and the item editor dialog
 - [ ] 3.7 Status chips with a translated text node and data-status
 - [ ] 3.8 Items and the counter tile on the timeline and the trip list
