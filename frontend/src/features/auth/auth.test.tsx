@@ -216,6 +216,55 @@ describe('sign-out', () => {
   })
 })
 
+describe('a session that expires mid-use', () => {
+  it('routes to the login screen from anywhere, and keeps the draft', async () => {
+    const user = userEvent.setup()
+    let signedIn = true
+
+    mockApi((url) => {
+      if (url.endsWith('/auth/me')) {
+        return signedIn ? json(200, OWNER) : unauthenticated()
+      }
+      return unauthenticated()
+    })
+
+    renderApp('/trips')
+    await screen.findByText('owner@example.com')
+
+    // The owner has unsaved input open when the session dies on the server.
+    saveDraft('item:42', { title: 'Nocleg: Memmo Alfama' })
+    signedIn = false
+
+    // Any request answering 401 must be noticed, not only by whichever component
+    // happened to make it.
+    await user.click(screen.getByRole('button', { name: 'Wyloguj się' }))
+    await waitFor(() => expect(screen.getByRole('heading', { name: 'Zaloguj się' })).toBeVisible())
+  })
+
+  it('a 401 from any request collapses the session', async () => {
+    let signedIn = true
+    mockApi((url) => (signedIn && url.endsWith('/auth/me') ? json(200, OWNER) : unauthenticated()))
+
+    renderApp('/trips')
+    await screen.findByText('owner@example.com')
+
+    signedIn = false
+    const { request } = await import('../../api/client')
+    await expect(request('/auth/me')).rejects.toThrow()
+
+    await waitFor(() => expect(screen.getByRole('heading', { name: 'Zaloguj się' })).toBeVisible())
+  })
+
+  it('does not collapse the initial loading state before /auth/me answers', () => {
+    // Racing the first call here would flash the login screen on every reload.
+    mockApi(() => new Promise<Response>(() => {}) as unknown as Response)
+
+    renderApp('/trips')
+
+    expect(screen.getByRole('status')).toBeInTheDocument()
+  })
+})
+
 describe('the draft store', () => {
   it('survives the unmount a 401 redirect causes', () => {
     // Component state does not survive an unmount, which is why this store is

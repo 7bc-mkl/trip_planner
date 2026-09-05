@@ -19,6 +19,7 @@ from trip_planner.api.deps import AppSettings, CurrentOwner, CurrentSession, DbS
 from trip_planner.db.models import Owner, normalise_email
 from trip_planner.errors import ApiError, ErrorCode
 from trip_planner.security.cookies import clear_session_cookies, set_session_cookies
+from trip_planner.security.csrf import verify_csrf
 from trip_planner.security.passwords import DUMMY_HASH, verify_password
 from trip_planner.security.rate_limit import (
     RateLimiter,
@@ -111,8 +112,19 @@ def logout(
     db: DbSession,
     settings: AppSettings,
 ) -> Response:
-    """Sign out. Idempotent, and it genuinely revokes: the row is deleted."""
-    revoke_session(db, request.cookies.get(SESSION_COOKIE_NAME, ""), secret=settings.session_secret)
+    """Sign out. Idempotent, and it genuinely revokes: the row is deleted.
+
+    CSRF is verified only when a session cookie is actually present. Logout is a
+    state-changing request, so a cross-site page must not be able to drop the
+    owner's session; but a logout with no session to end is a no-op, and demanding
+    a token there would turn "sign me out" into an error for someone already
+    signed out.
+    """
+    token = request.cookies.get(SESSION_COOKIE_NAME, "")
+    if token:
+        verify_csrf(request)
+
+    revoke_session(db, token, secret=settings.session_secret)
 
     response.status_code = status.HTTP_204_NO_CONTENT
     clear_session_cookies(response, settings=settings)

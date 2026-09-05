@@ -300,7 +300,20 @@ class TestLogout:
         assert client.get(ME).status_code == 401
 
     def test_logout_is_idempotent_without_a_session(self, client: TestClient) -> None:
+        """No session to end is a no-op, not an error for someone already signed out."""
         assert client.post(LOGOUT).status_code == 204
+
+    def test_logout_without_a_csrf_token_is_refused_while_signed_in(
+        self, client: TestClient, db_session: OrmSession, owner: Owner, owner_password: str
+    ) -> None:
+        """Logout changes state, so a cross-site page must not be able to force it."""
+        sign_in(client, owner.email, owner_password)
+
+        response = client.post(LOGOUT)
+
+        assert response.status_code == 403
+        assert response.json() == {"error": {"code": "csrf_token_invalid", "field": None}}
+        assert db_session.execute(sa.select(sa.func.count()).select_from(Session)).scalar() == 1
 
     def test_logout_clears_the_cookies(
         self, client: TestClient, owner: Owner, owner_password: str

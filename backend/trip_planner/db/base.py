@@ -1,32 +1,9 @@
-"""Declarative base and shared column conventions."""
+"""Declarative base."""
 
 from __future__ import annotations
 
-import uuid
-from datetime import datetime
-
-from sqlalchemy import DateTime, func
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from sqlalchemy.orm import DeclarativeBase
 
 
 class Base(DeclarativeBase):
     """Declarative base for every model in the service."""
-
-
-def uuid_pk() -> Mapped[uuid.UUID]:
-    from sqlalchemy.dialects.postgresql import UUID as PgUUID
-
-    return mapped_column(PgUUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-
-
-def created_at_column() -> Mapped[datetime]:
-    return mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
-
-
-def updated_at_column() -> Mapped[datetime]:
-    return mapped_column(
-        DateTime(timezone=True),
-        nullable=False,
-        server_default=func.now(),
-        onupdate=func.now(),
-    )

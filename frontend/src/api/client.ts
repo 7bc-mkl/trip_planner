@@ -50,6 +50,20 @@ export function readCookie(name: string): string | null {
   return match ? decodeURIComponent(match.slice(name.length + 1)) : null
 }
 
+/**
+ * Notified whenever any request answers 401.
+ *
+ * Without this, an expired session is only noticed by whichever component
+ * happened to make the call, and the rest of the app keeps rendering as if it
+ * were still signed in. The session context registers here so expiry routes to
+ * /login from anywhere — which is what makes the draft store's promise real.
+ */
+let onUnauthenticated: (() => void) | null = null
+
+export function setUnauthenticatedHandler(handler: (() => void) | null): void {
+  onUnauthenticated = handler
+}
+
 type RequestOptions = {
   method?: string
   body?: unknown
@@ -82,7 +96,11 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
   })
 
   if (!response.ok) {
-    throw await toApiError(response)
+    const error = await toApiError(response)
+    if (error.isUnauthenticated) {
+      onUnauthenticated?.()
+    }
+    throw error
   }
 
   if (response.status === 204) {

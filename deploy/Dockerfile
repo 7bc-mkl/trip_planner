@@ -28,7 +28,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     UV_PROJECT_ENVIRONMENT=/opt/venv \
     PATH="/opt/venv/bin:$PATH"
 
-COPY --from=ghcr.io/astral-sh/uv:0.5 /uv /usr/local/bin/uv
+# Pinned to a release, not a floating major, so a rebuild is reproducible.
+COPY --from=ghcr.io/astral-sh/uv:0.5.11 /uv /usr/local/bin/uv
 
 WORKDIR /srv/app
 
@@ -36,6 +37,8 @@ WORKDIR /srv/app
 COPY backend/pyproject.toml backend/uv.lock ./
 RUN uv sync --frozen --no-dev --no-install-project
 
+# .dockerignore keeps the host's .venv and caches out of this copy — otherwise
+# they land in the image and ship a laptop's build artifacts to production.
 COPY backend/ ./
 RUN uv sync --frozen --no-dev
 

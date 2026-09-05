@@ -3,7 +3,7 @@ import type { ReactNode } from 'react'
 
 import { fetchMe, login as loginRequest, logout as logoutRequest } from '../../api/auth'
 import type { Owner } from '../../api/auth'
-import { ApiError } from '../../api/client'
+import { ApiError, setUnauthenticatedHandler } from '../../api/client'
 import { applyLocale, isLocale } from '../../i18n'
 import { clearAllDrafts } from './draftStore'
 
@@ -67,6 +67,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const signOut = useCallback(async () => {
     try {
       await logoutRequest()
+    } catch {
+      // Swallowed deliberately, not ignored: the request can fail precisely
+      // because the session already expired, and the local outcome is the same
+      // either way. Rethrowing would surface an unhandled rejection from every
+      // sign-out button for a request whose failure changes nothing.
     } finally {
       // Local state is cleared even if the request failed: the owner asked to be
       // signed out, and leaving the UI signed in would be a lie.
@@ -76,8 +81,17 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const handleUnauthenticated = useCallback(() => {
-    setState({ status: 'anonymous' })
+    setState((current) =>
+      // Only a session we believed in can expire. Collapsing 'loading' here would
+      // race the initial /auth/me call and flash the login screen.
+      current.status === 'authenticated' ? { status: 'anonymous' } : current,
+    )
   }, [])
+
+  useEffect(() => {
+    setUnauthenticatedHandler(handleUnauthenticated)
+    return () => setUnauthenticatedHandler(null)
+  }, [handleUnauthenticated])
 
   const value = useMemo<SessionValue>(
     () => ({ ...state, signIn, signOut, handleUnauthenticated }),
