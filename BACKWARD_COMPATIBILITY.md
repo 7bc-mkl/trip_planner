@@ -33,7 +33,9 @@ The frontend is a real consumer even though it lives in the same repository. Lan
 | Tightening validation on an existing endpoint | **Yes** | Input that used to be accepted now 4xx's. Log-and-allow first, measure, then enforce. |
 | Changing pagination, sorting, or default limits | **Yes** | Treat as a field change; defaults are contract. |
 
-**Versioning:** TODO — decide the strategy (URL prefix such as `/api/v1`, or additive-only evolution) in the first API spec, and record the decision here.
+**Versioning:** a **URL version prefix, `/api/v1`**, with additive-only evolution inside a version. Decided in `.ai/specs/2026-09-05-walking-skeleton.md` (assumption A13), which is the first API spec.
+
+A version segment costs one path component today and is the only mechanism that lets a status code or an error code change without the expand/contract dance the table above otherwise demands — cheap insurance for a surface reachable from the public internet. Inside `v1`, every row of that table still applies: a breaking change earns `/api/v2`, it does not get made in place.
 
 ### 2. Persisted data — database schema and migrations
 

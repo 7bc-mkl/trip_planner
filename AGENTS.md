@@ -6,7 +6,7 @@ Instructions for coding agents working in this repository. Every `om-*` skill re
 
 **trip_planner** is an intelligent trip planner: a web application that helps a traveller go from a rough intention ("a week somewhere warm in May, two people, moderate budget") to a concrete, bookable day-by-day itinerary. It is a Python backend serving a React single-page frontend, and it is **multilingual from day one — Polish and English are both first-class**, not an afterthought bolted on later.
 
-> **Status: greenfield.** At the time this file was generated the repository contained no source code. The layout, commands, and conventions below are the agreed target shape, not observations of existing code. Rows marked **TODO** must be filled in by the first agent or human that establishes the convention — do not invent a rule to fill a gap; record what you actually built.
+> **Status: skeleton.** `backend/` and `frontend/` are scaffolded and the validation gate is green; owner authentication is in place. Trips, days, items, the readiness counter and the filter are **not built yet** — they are Phases 2 to 4 of `.ai/specs/2026-09-05-walking-skeleton.md`. Rows still marked **TODO** must be filled in by the first agent or human that establishes the convention — do not invent a rule to fill a gap; record what you actually built.
 
 ## Stack
 
@@ -17,7 +17,7 @@ Instructions for coding agents working in this repository. Every `om-*` skill re
 | Lint/format (Python) | `ruff` | Both linting and formatting; no separate black/isort. |
 | Tests (Python) | `pytest` | Under `backend/tests/`. |
 | Tests (frontend) | Vitest | Colocated `*.test.ts(x)` or under `frontend/src/**/__tests__/`. |
-| i18n | TODO — library not yet chosen | Locale files must live where `scripts/check_locales.py` looks (see **Multilingual** below). |
+| i18n | `react-i18next` + `i18next` + `i18next-icu` | ICU message formatting, so a counted noun is one key whose value carries every plural category. i18next's default suffix pluralisation would put four keys in `pl.json` against English's two and fail `scripts/check_locales.py`. Locale files live where that gate looks (see **Multilingual** below). |
 | Specs & docs | English | Product-facing UI strings are translated; specs, code, comments, commit messages, and PR bodies are English. |
 
 ## Repository layout
@@ -44,7 +44,7 @@ BACKWARD_COMPATIBILITY.md  Protected contract surfaces
 
 | When the task involves… | Read first | Key rules |
 |---|---|---|
-| Backend API endpoints, business logic | `backend/pyproject.toml`, `backend/` source tree | Dependencies go through `uv add`, never a hand-edited `pyproject.toml` or `pip install`. Every request body and query parameter is validated at the boundary — TODO: name the validation library once chosen. Every new endpoint is a contract surface: check `BACKWARD_COMPATIBILITY.md`. |
+| Backend API endpoints, business logic | `backend/pyproject.toml`, `backend/` source tree | Dependencies go through `uv add`, never a hand-edited `pyproject.toml` or `pip install`. Every request body and query parameter is validated at the boundary by **Pydantic v2** models, which reject unknown fields. Every new endpoint is a contract surface: check `BACKWARD_COMPATIBILITY.md`. |
 | Backend tests | `backend/tests/` | Every bug fix ships a regression test that fails before the fix. Run with `(cd backend && uv run pytest)`. |
 | React components, screens, routing | `frontend/src/`, `frontend/package.json` | No user-visible string is hardcoded — every one goes through the i18n layer with a key present in **both** `en` and `pl`. TypeScript strict mode; `npm run typecheck` must pass. |
 | Frontend tests | `frontend/src/**` colocated tests | Run with `(cd frontend && npm run test -- --run)`. |
@@ -52,7 +52,7 @@ BACKWARD_COMPATIBILITY.md  Protected contract surfaces
 | Dependencies | `backend/pyproject.toml` + `uv.lock`, `frontend/package.json` + `package-lock.json` | Both lockfiles are committed and must be updated in the same commit as the manifest. Label the PR `dependencies`. |
 | Trip-planning domain logic (itineraries, routing, scheduling, recommendations) | `.ai/specs/` | This is the product's core. Behavior changes need a spec before code — see `SDLC.md`, Definition of Ready. TODO: point at the domain module once it exists. |
 | External APIs (maps, places, weather, booking, LLM providers) | TODO — integration module not yet created | Never commit API keys. Credentials come from environment variables; document each new one in the README and in `.ai/qa/test-env.env` (gitignored) for QA. Every external call needs a timeout and a defined failure mode — a dead third party must not take down a page. |
-| CI | `.github/workflows/` | TODO — no workflows yet. When added, they must run the same commands as the validation gate below, in the same order. |
+| CI | `.github/workflows/validation-gate.yml` | Runs the same six commands as the validation gate below, in the same order. When the gate changes, change the workflow in the same PR. |
 | The agent pipeline itself (labels, review flow, QA gate) | `SDLC.md`, `.ai/agentic.config.json` | Change the config and `SDLC.md` together. Per-skill repo overrides go in `.ai/skills/<skill-name>/SKILL.md`. |
 
 ## Multilingual (PL + EN)
@@ -77,7 +77,7 @@ Run these in order before opening or updating a PR. Any non-zero exit blocks the
 
 The authoritative list is `validation.commands` in `.ai/agentic.config.json`. When it changes, update it there, in `SDLC.md`, and here — together.
 
-Until the backend and frontend are scaffolded, most of these commands will fail because the directories do not exist. That is expected: the first scaffolding PR's job is to make the whole gate green.
+All six commands are expected to pass. `(cd backend && uv run pytest)` needs a reachable PostgreSQL server — start one with `docker compose -f deploy/compose.dev.yml up -d db`, or point `TEST_DATABASE_URL` at your own. Without a server those tests **skip** rather than fail, so read the summary: a run reporting skips has not verified the database layer.
 
 ## Pointers
 

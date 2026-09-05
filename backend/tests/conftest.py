@@ -56,10 +56,16 @@ def database_url() -> Iterator[str]:
             connection.execute(sa.text(f'CREATE DATABASE "{name}"'))
     except sa.exc.OperationalError as error:  # pragma: no cover - environment problem
         maintenance.dispose()
-        pytest.skip(
+        message = (
             f"No PostgreSQL server at {admin.set(password=None).render_as_string()}: {error}. "
             "Start one with: docker compose -f deploy/compose.dev.yml up -d db"
         )
+        # Locally an unreachable database is a setup problem and skipping keeps the
+        # rest of the suite useful. In CI it is a false green — the database layer
+        # would go unverified while the gate reports success — so it fails instead.
+        if os.environ.get("CI", "").lower() in {"1", "true"}:
+            pytest.fail(message, pytrace=False)
+        pytest.skip(message)
 
     url = admin.set(database=name).render_as_string(hide_password=False)
 
