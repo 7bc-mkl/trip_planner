@@ -20,8 +20,15 @@ from collections.abc import Iterable, Sequence
 from datetime import date
 
 from trip_planner.db.models import TripStage
+from trip_planner.errors import ApiError, ErrorCode
 
-__all__ = ["LABEL_JOINER", "MAX_LABELLED_STAGES", "stage_label", "stages_for_day"]
+__all__ = [
+    "LABEL_JOINER",
+    "MAX_LABELLED_STAGES",
+    "stage_label",
+    "stages_for_day",
+    "validate_stage_range",
+]
 
 #: Places are joined with an arrow because the label describes movement, not a set.
 LABEL_JOINER = " → "
@@ -33,6 +40,33 @@ LABEL_JOINER = " → "
 #: by more than two stages is rare enough that "+n" is a better use of the space
 #: than a name nobody can read.
 MAX_LABELLED_STAGES = 2
+
+
+def validate_stage_range(
+    start: date | None,
+    end: date | None,
+    *,
+    trip_start: date,
+    trip_end: date,
+    place: str,
+) -> None:
+    """Refuse a stage whose own range is invalid or escapes the trip.
+
+    Two distinct failures, kept distinct because they need different fixes:
+    a backwards range is `invalid_date_range`, a range outside the trip is
+    `stage_outside_trip`. Both name the offending place in `field`, since a trip
+    being created may have several stages and "one of them is wrong" is not
+    actionable.
+
+    A stage with no dates, or only one of them, passes: it is a base whose days are
+    undecided, which the spec allows explicitly.
+    """
+    if start is not None and end is not None and end < start:
+        raise ApiError(ErrorCode.INVALID_DATE_RANGE, field=place)
+
+    for boundary in (start, end):
+        if boundary is not None and not (trip_start <= boundary <= trip_end):
+            raise ApiError(ErrorCode.STAGE_OUTSIDE_TRIP, field=place)
 
 
 def covers(stage: TripStage, day: date) -> bool:

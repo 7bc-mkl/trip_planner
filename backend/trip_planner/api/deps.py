@@ -8,14 +8,17 @@ plan is reachable without a session.
 
 from __future__ import annotations
 
+import uuid
 from collections.abc import Iterator
 from typing import Annotated
 
+import sqlalchemy as sa
 from fastapi import Depends, Request
 from sqlalchemy.orm import Session as OrmSession
+from sqlalchemy.orm import selectinload
 
 from trip_planner.config import Settings, get_settings
-from trip_planner.db.models import Owner, Session
+from trip_planner.db.models import Owner, Session, Trip
 from trip_planner.db.session import get_sessionmaker
 from trip_planner.errors import ApiError, ErrorCode
 from trip_planner.security.csrf import verify_csrf
@@ -66,3 +69,34 @@ def get_current_owner(session: CurrentSession, db: DbSession) -> Owner:
 
 
 CurrentOwner = Annotated[Owner, Depends(get_current_owner)]
+
+
+def get_owned_trip(trip_id: uuid.UUID, db: DbSession, owner: CurrentOwner) -> Trip:
+    """Resolve `{trip_id}` to a trip this owner actually owns, or answer 404.
+
+    Every trip-scoped route takes this rather than joining to the trip by hand.
+    A handler that writes its own query can forget the `owner_id` clause, and the
+    resulting endpoint serves another owner's plan while looking correct in review;
+    `tests/test_route_protection.py` enumerates the routes and fails if one skips
+    this dependency, so the guarantee survives routes nobody has written yet.
+
+    **A trip belonging to someone else answers 404, not 403.** A 403 would confirm
+    the id exists, which is a membership oracle over the whole table.
+
+    Stages and days are eager-loaded because every consumer needs them: the
+    timeline payload derives each day's stages from them, and lazy loading would
+    turn one timeline into a query per day.
+    """
+    trip = db.execute(
+        sa.select(Trip)
+        .where(Trip.id == trip_id, Trip.owner_id == owner.id)
+        .options(selectinload(Trip.stages), selectinload(Trip.days))
+    ).scalar_one_or_none()
+
+    if trip is None:
+        raise ApiError(ErrorCode.NOT_FOUND, field="trip_id")
+
+    return trip
+
+
+OwnedTrip = Annotated[Trip, Depends(get_owned_trip)]
