@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+
+<html lang="pl"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/><link href="https://fonts.googleapis.com" rel="preconnect"/><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/><link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config={darkMode:"class",theme:{extend:{colors:{"error":"#ba1a1a","secondary-container":"#fd651e","primary-fixed-dim":"#a2c9ff","on-error-container":"#93000a","inverse-primary":"#a2c9ff","surface-container-lowest":"#ffffff","primary":"#00294d","on-primary-container":"#84abe0","outline":"#737780","secondary-fixed-dim":"#ffb599","on-secondary-fixed-variant":"#7f2b00","on-surface-variant":"#42474f","surface-container":"#eaedff","tertiary":"#002e1d","tertiary-fixed-dim":"#4edea3","on-primary-fixed":"#001c38","error-container":"#ffdad6","on-surface":"#131b2e","surface-container-high":"#e2e7ff","tertiary-container":"#00472f","surface-bright":"#faf8ff","secondary-fixed":"#ffdbce","inverse-on-surface":"#eef0ff","primary-container":"#0f3f6d","outline-variant":"#c3c6d0","primary-fixed":"#d3e4ff","surface-variant":"#dae2fd","on-tertiary":"#ffffff","surface-container-low":"#f2f3ff","on-tertiary-fixed":"#002113","surface-tint":"#386090","secondary":"#a73a00","on-secondary-fixed":"#370e00","surface-container-highest":"#dae2fd","surface":"#faf8ff","background":"#faf8ff","on-tertiary-fixed-variant":"#005236","on-primary":"#ffffff","surface-dim":"#d2d9f4","on-secondary":"#ffffff","on-background":"#131b2e","on-tertiary-container":"#20bf86","inverse-surface":"#283044","on-secondary-container":"#571a00","on-primary-fixed-variant":"#1c4877","tertiary-fixed":"#6ffbbe","on-error":"#ffffff"},borderRadius:{"DEFAULT":"0.25rem","lg":"0.5rem","xl":"0.75rem","full":"9999px"},spacing:{"space-lg":"1.5rem","space-2xl":"3rem","gutter-desktop":"1.5rem","gutter-mobile":"1rem","space-md":"1rem","timeline-track-offset":"2.5rem","space-xs":"0.5rem","space-2xs":"0.25rem","space-3xl":"4rem","space-xl":"2rem","space-sm":"0.75rem","sidebar-width":"22rem"},fontFamily:{"headline-lg":["Plus Jakarta Sans"],"display-lg-mobile":["Plus Jakarta Sans"],"label-sm":["Plus Jakarta Sans"],"label-md":["Plus Jakarta Sans"],"body-md":["Plus Jakarta Sans"],"headline-xl":["Plus Jakarta Sans"],"headline-md":["Plus Jakarta Sans"],"display-lg":["Plus Jakarta Sans"],"headline-xl-mobile":["Plus Jakarta Sans"],"body-lg":["Plus Jakarta Sans"],"body-sm":["Plus Jakarta Sans"],"label-lg":["Plus Jakarta Sans"],"headline-sm":["Plus Jakarta Sans"]},fontSize:{"headline-lg":["24px",{"lineHeight":"32px","letterSpacing":"-0.015em","fontWeight":"600"}],"display-lg-mobile":["34px",{"lineHeight":"42px","letterSpacing":"-0.02em","fontWeight":"700"}],"label-sm":["11px",{"lineHeight":"14px","letterSpacing":"0.025em","fontWeight":"600"}],"label-md":["12px",{"lineHeight":"16px","letterSpacing":"0.015em","fontWeight":"500"}],"body-md":["15px",{"lineHeight":"22px","fontWeight":"400"}],"headline-xl":["36px",{"lineHeight":"44px","letterSpacing":"-0.02em","fontWeight":"600"}],"headline-md":["20px",{"lineHeight":"28px","letterSpacing":"-0.01em","fontWeight":"600"}],"display-lg":["48px",{"lineHeight":"56px","letterSpacing":"-0.03em","fontWeight":"700"}],"headline-xl-mobile":["28px",{"lineHeight":"36px","letterSpacing":"-0.01em","fontWeight":"600"}],"body-lg":["18px",{"lineHeight":"28px","letterSpacing":"-0.005em","fontWeight":"400"}],"body-sm":["13px",{"lineHeight":"18px","fontWeight":"400"}],"label-lg":["14px",{"lineHeight":"20px","letterSpacing":"0.01em","fontWeight":"600"}],"headline-sm":["16px",{"lineHeight":"24px","letterSpacing":"-0.005em","fontWeight":"600"}]}}}}</script></head><body class="bg-surface font-body-md text-on-surface antialiased min-h-screen"><header class="fixed top-0 left-0 right-0 z-50 bg-surface/85 backdrop-blur-xl border-b border-outline-variant/30 shadow-[0_1px_8px_rgba(0,0,0,0.03)]"><div class="h-16 w-full px-gutter-desktop flex items-center justify-between gap-space-md"><div class="flex items-center gap-space-lg shrink-0"><div class="flex items-center gap-space-xs"><img alt="VoyageAI Brand Logo" class="h-8 w-auto object-contain" src="https://lh3.googleusercontent.com/aida/AEtjO1UwqvODcQZBJXVPksey1jihS-mD--3lWjHsLIK-NS1K9JVIz8D5qknHEQ_88BSASgOV6LUnwCJlyGqzQG4f2FGk9074jjbwUcCPH6FnJ-EhvpoIRZS3CfY4vPxQBSJoOZBmuC9np9jiS_mVKB576JVoePuOV0BDuWC4PMWNciJg-tMfcUc-s_Z1tLGcReCf0Jw7xDYMP_TBlnm1lznCbPYvy3KgDls--UTTBj1wMZCbNW2IRnp1HWsCzw"/><span class="font-headline-sm text-headline-sm text-primary tracking-tight font-bold">VoyageAI</span></div><div class="h-5 w-px bg-outline-variant/50 hidden xl:block"></div><button class="hidden xl:flex items-center gap-space-xs px-space-sm py-1.5 rounded-lg bg-surface-container-low hover:bg-surface-container hover:text-on-surface transition-all text-left group" type="button"><div class="flex flex-col"><span class="font-label-sm text-label-sm text-on-surface-variant group-hover:text-primary transition-colors flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-secondary"></span>Aktywna podróż</span><span class="font-label-md text-label-md text-on-surface font-semibold max-w-[220px] truncate">Majówka w Portugalii: Lizbona &amp; Algarve</span></div><span class="material-symbols-outlined text-outline text-[18px] ml-1 group-hover:text-on-surface transition-colors">expand_more</span></button></div><nav class="hidden lg:flex items-center gap-space-2xs bg-surface-container-lowest/80 p-1 rounded-xl border border-outline-variant/30" data-active-classes="bg-primary-container text-on-primary font-semibold rounded-lg shadow-sm"><a class="px-space-md py-1.5 rounded-lg font-label-lg text-label-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors" data-path="nowa-podroz" href="#">Nowa podróż</a><a class="px-space-md py-1.5 rounded-lg font-label-lg text-label-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors" data-path="os-czasu" href="#">Oś czasu</a><a class="px-space-md py-1.5 rounded-lg font-label-lg text-label-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors" data-path="szczegoly-dnia" href="#">Szczegóły dnia</a><a class="px-space-md py-1.5 rounded-lg font-label-lg text-label-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors" data-path="rezerwacje-i-dokumenty" href="#">Rezerwacje i Dokumenty</a></nav><div class="flex items-center gap-space-sm shrink-0"><button class="flex items-center gap-2 px-space-md py-2 rounded-lg bg-secondary text-on-secondary font-label-md text-label-md hover:bg-on-secondary-container transition-all shadow-sm active:scale-[0.98]" type="button"><span class="relative flex h-2 w-2"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-secondary-fixed opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-on-secondary"></span></span><span class="material-symbols-outlined text-[18px]">arrow_back_ios_new</span><span class="hidden sm:inline font-semibold">Asystent AI</span></button><div class="flex items-center bg-surface-container-low rounded-lg p-0.5 border border-outline-variant/30"><button class="px-2 py-1 rounded font-label-sm text-label-sm font-semibold bg-surface-container-lowest text-primary shadow-2xs" type="button">PLN</button><button class="px-2 py-1 rounded font-label-sm text-label-sm font-semibold text-on-surface-variant hover:text-on-surface transition-colors" type="button">EUR</button></div><button aria-label="Powiadomienia" class="p-2 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors relative" type="button"><span class="material-symbols-outlined text-[22px]">notifications</span><span class="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-secondary-container ring-2 ring-surface"></span></button><div class="h-6 w-px bg-outline-variant/50 hidden sm:block"></div><button class="flex items-center gap-space-xs p-1 rounded-full hover:bg-surface-container-high transition-colors group" type="button"><img alt="Profile" class="w-8 h-8 rounded-full object-cover ring-1 ring-outline-variant/40" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAi_GpiafipyuUrX0Y7Bx2qiF2pvE5rBgu7vCTTZrhkAp736wXXSdJJ6E1qzcFyup4P7oyfgo4RpOZZXp-tmSddlfa1482Bt7pfla81IZ_b4bgMh6yqRor1tDcHsWmuSJY5s5zfZ0wwpDgyhNyHnaWEd5sGg8oFeucf1c1sja3gUzr3NfsIJwDMZ-Y4YJFhw4FzAq5iel9r7ied9aPppdqKrnCIvG5NY9l2vUgDI4GAkzjCeTxXVKQs"/><span class="material-symbols-outlined text-outline text-[18px] group-hover:text-on-surface transition-colors hidden sm:inline">keyboard_arrow_down</span></button></div></div></header><main class="w-full pt-16 bg-surface min-h-screen"><div class="flex flex-col w-full">
+<div class="w-full px-gutter-desktop py-space-lg max-w-[1580px] mx-auto space-y-space-lg">
+<!-- Top Breadcrumb & Day Control Header -->
+<div class="flex flex-col xl:flex-row items-start xl:items-center justify-between gap-space-md bg-surface-container-lowest p-space-lg rounded-xl shadow-sm">
+<div class="space-y-space-2xs">
+<div class="flex items-center gap-space-2xs text-on-surface-variant font-label-md text-label-md">
+<span class="hover:text-primary cursor-pointer transition-colors">Podróże</span>
+<span class="material-symbols-outlined text-[14px]">chevron_right</span>
+<span class="hover:text-primary cursor-pointer transition-colors">Majówka w Portugalii</span>
+<span class="material-symbols-outlined text-[14px]">chevron_right</span>
+<span class="text-primary font-semibold">Dzień 2: 2 Maja 2025</span>
+</div>
+<div class="flex flex-wrap items-center gap-space-sm pt-1">
+<h1 class="font-headline-lg text-headline-lg text-primary font-bold tracking-tight">
+            Dzień 2: Baśniowa Sintra, Pałac Pena i zachód słońca na Cabo da Roca
+          </h1>
+<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-surface-container-high text-primary font-label-sm text-label-sm font-semibold">
+<span class="w-2 h-2 rounded-full bg-secondary"></span> 5 aktywności • 1h 45m trasy
+          </span>
+</div>
+</div>
+<!-- Actions & Pagers -->
+<div class="flex flex-wrap items-center gap-space-xs w-full xl:w-auto justify-between xl:justify-end">
+<!-- Day Switchers -->
+<div class="flex items-center bg-surface-container-low rounded-lg p-1">
+<button class="flex items-center gap-1 px-space-sm py-1.5 rounded-lg text-on-surface hover:bg-surface-container-lowest font-label-md text-label-md transition-all shadow-2xs" type="button">
+<span class="material-symbols-outlined text-[18px]">arrow_back</span>
+            Dzień 1
+          </button>
+<div class="h-4 w-px bg-outline-variant/40 mx-1"></div>
+<button class="flex items-center gap-1 px-space-sm py-1.5 rounded-lg text-on-surface hover:bg-surface-container-lowest font-label-md text-label-md transition-all shadow-2xs" type="button">
+            Dzień 3
+            <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+</button>
+</div>
+<!-- Major Buttons -->
+<div class="flex items-center gap-space-xs">
+<button class="flex items-center gap-1.5 px-space-md py-2 rounded-lg bg-surface-container-high text-primary font-label-md text-label-md hover:bg-surface-variant transition-all font-semibold shadow-2xs" type="button">
+<span class="material-symbols-outlined text-[18px]">calendar_today</span>
+<span class="hidden md:inline">Eksportuj do Google Calendar</span>
+<span class="md:hidden">Kalendarz</span>
+</button>
+<button class="flex items-center gap-1.5 px-space-md py-2 rounded-lg bg-secondary text-on-secondary font-label-md text-label-md hover:bg-on-secondary-container transition-all font-semibold shadow-sm active:scale-[0.98]" id="ai-opt-btn" type="button">
+<span class="material-symbols-outlined text-[18px]">auto_fix_high</span>
+<span>Optymalizuj trasę z AI</span>
+</button>
+<button class="flex items-center gap-1.5 px-space-md py-2 rounded-lg bg-primary text-on-primary font-label-md text-label-md hover:bg-primary-container transition-all font-semibold shadow-sm" type="button">
+<span class="material-symbols-outlined text-[18px]">add_circle</span>
+<span class="hidden sm:inline">Dodaj aktywność</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Main Dynamic Grid -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-space-lg items-start">
+<!-- Left Column: Hourly Breakdown & Activity Cards (7 Cols) -->
+<div class="lg:col-span-7 space-y-space-md">
+<!-- Notification Bar: AI Route Analysis -->
+<div class="flex items-start gap-space-sm p-space-md bg-surface-container-low rounded-xl">
+<div class="p-2 rounded-lg bg-secondary text-on-secondary shrink-0 mt-0.5 shadow-xs">
+<span class="material-symbols-outlined text-[20px]">smart_toy</span>
+</div>
+<div class="space-y-0.5 text-on-surface">
+<p class="font-headline-sm text-headline-sm font-semibold">Sugerowana optymalizacja czasowa</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
+              Dojazd do Sintry z Lizbony w piątkowy poranek generuje wzmożony ruch w okolicy Pałacu Pena. Rozważ start o 08:30 lub zarezerwowanie slotu transferowego Tuk-Tuk spod stacji.
+            </p>
+</div>
+</div>
+<!-- Connected Timeline Track Container -->
+<div class="relative space-y-space-md pl-4 before:absolute before:top-6 before:bottom-6 before:left-8 before:w-0.5 before:bg-outline-variant/30">
+<!-- Activity Item 1: 09:00 -->
+<div class="relative flex items-start gap-space-md group">
+<div class="z-10 flex items-center justify-center w-8 h-8 rounded-full bg-primary text-on-primary font-label-md text-label-md font-bold shadow-sm shrink-0 ring-4 ring-surface">
+              1
+            </div>
+<div class="w-full bg-surface-container-lowest p-space-lg rounded-xl shadow-sm transition-all hover:shadow-md space-y-space-sm">
+<div class="flex flex-wrap items-start justify-between gap-2">
+<div class="space-y-1">
+<div class="flex items-center gap-2">
+<span class="font-label-lg text-label-lg font-bold text-primary">09:00</span>
+<span class="px-2 py-0.5 rounded-full bg-surface-container-high text-primary font-label-sm text-label-sm font-semibold flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">directions_car</span> Logistyka &amp; Transport
+                    </span>
+</div>
+<h3 class="font-headline-md text-headline-md text-on-surface font-semibold">Odbiór auta z wypożyczalni (Lizbona Centrum)</h3>
+</div>
+<div class="flex items-center gap-1">
+<span class="px-2.5 py-1 rounded-full bg-surface-container text-on-surface font-label-sm text-label-sm font-medium">Rezerwacja opłacona</span>
+</div>
+</div>
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-space-xs pt-1">
+<!-- Option Sixt -->
+<div class="p-space-sm rounded-lg bg-surface-container-low flex flex-col justify-between">
+<div class="flex items-center justify-between">
+<span class="font-label-md text-label-md font-bold text-primary">Sixt Rent-A-Car</span>
+<span class="text-secondary font-label-sm text-label-sm font-bold">185 PLN / dzień</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-1">VW T-Cross lub podobny (Automatyczna)</p>
+<span class="inline-flex items-center gap-1 mt-2 text-primary font-label-sm text-label-sm font-semibold">
+<span class="material-symbols-outlined text-[15px] text-tertiary-fixed-dim fill-current">check_circle</span>
+                    Wybrana opcja
+                  </span>
+</div>
+<!-- Option Europcar -->
+<div class="p-space-sm rounded-lg bg-surface-container-lowest shadow-2xs opacity-80 flex flex-col justify-between">
+<div class="flex items-center justify-between">
+<span class="font-label-md text-label-md font-bold text-on-surface">Europcar</span>
+<span class="text-on-surface-variant font-label-sm text-label-sm">210 PLN / dzień</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-1">Renault Clio (Manualna skrzynia)</p>
+<span class="text-outline font-label-sm text-label-sm mt-2">Alternatywa</span>
+</div>
+</div>
+<div class="flex items-center gap-2 p-2.5 rounded-lg bg-surface-container-low text-on-surface-variant font-body-sm text-body-sm">
+<span class="material-symbols-outlined text-secondary text-[18px] shrink-0">info</span>
+<span>Wymagane fizyczne prawo jazdy kat. B oraz karta kredytowa kierowcy (kaucja: 300 EUR).</span>
+</div>
+</div>
+</div>
+<!-- Activity Item 2: 10:30 -->
+<div class="relative flex items-start gap-space-md group">
+<div class="z-10 flex items-center justify-center w-8 h-8 rounded-full bg-primary text-on-primary font-label-md text-label-md font-bold shadow-sm shrink-0 ring-4 ring-surface">
+              2
+            </div>
+<div class="w-full bg-surface-container-lowest p-space-lg rounded-xl shadow-sm transition-all hover:shadow-md space-y-space-sm">
+<div class="flex flex-wrap items-start justify-between gap-2">
+<div class="space-y-1">
+<div class="flex items-center gap-2">
+<span class="font-label-lg text-label-lg font-bold text-secondary">10:30 – 13:00</span>
+<span class="px-2 py-0.5 rounded-full bg-surface-container-high text-primary font-label-sm text-label-sm font-semibold flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">castle</span> Zabytek UNESCO
+                    </span>
+</div>
+<h3 class="font-headline-md text-headline-md text-on-surface font-semibold">Zwiedzanie Palácio Nacional da Pena</h3>
+</div>
+<div class="flex items-center gap-1.5">
+<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-tertiary-fixed/20 text-on-surface font-label-sm text-label-sm font-semibold">
+<span class="w-2 h-2 rounded-full bg-tertiary-fixed-dim"></span> Zarezerwowane
+                  </span>
+</div>
+</div>
+<!-- Visual photo preview strip -->
+<div class="grid grid-cols-3 gap-space-xs rounded-xl overflow-hidden h-28">
+<div class="relative h-full">
+<img class="w-full h-full object-cover" data-alt="Vibrant yellow and red turrets of the Pena Palace against clear blue sky in Sintra Portugal with lush green forest below, editorial architectural travel photo, soft daylight." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBWIlhLgtRMD_bfWKPmUqo-1GKTCOlFSYBXdIzPF2lahPxjn2CHt6kD_psoQWxLCDtJhQWOjHavvsstBbVZUiputWIpuIaf5uWFOD0hYUg5m92qYs6hbUn8cwFBNtIpjAjRJ8daOzeiGrpjhbtorAH4_aXDdIkg5z1AqF9bofqQgaWIsv7J3XRzG6Bjmxjb35zewlLHJajXXN3S85b1gkDVqBcP_sGwx7Bqm3ufBi0_jnpjQPvGuXyw"/>
+</div>
+<div class="relative h-full">
+<img class="w-full h-full object-cover" data-alt="Intricate Manueline style stone carving arches and gothic balconies inside the Palacio da Pena courtyard, Portugal, warm sunlight casting sharp shadows." src="https://lh3.googleusercontent.com/aida-public/AB6AXuABlb7Fgdp20E00sISkAvI2WRvlliM26G23VWIovTIx75AqY6cFtAzf3AUE_f5f_6sLkIWkcx1rjZoRW1iHwPywU6ye54IXdbFSkpunp_LVQs0HMOPvtuO7ZWA2lOyBE5dwtOt4jDv36eNRWNoMBNyzshyS4S0Y5Bxb_VrN4AUm_Qh86XiqhKcfcdVpaoV2xmRvHuXWRKTu2J4NLA9Lg4nIsxZ8ZDjeBEHW5_Ajfl-YV1-QtMs1Vm6v"/>
+</div>
+<div class="relative h-full bg-surface-container flex flex-col justify-center items-center text-primary p-2 text-center">
+<span class="material-symbols-outlined text-[24px]">collections</span>
+<span class="font-label-sm text-label-sm font-bold mt-1">+12 zdjęć z przewodnika</span>
+</div>
+</div>
+<div class="grid grid-cols-1 sm:grid-cols-3 gap-space-xs pt-1 font-body-sm text-body-sm">
+<div class="p-2 rounded bg-surface-container-low">
+<span class="text-outline text-label-sm block">Slot wstępu</span>
+<span class="font-semibold text-primary">11:00 (Rygorystyczny)</span>
+</div>
+<div class="p-2 rounded bg-surface-container-low">
+<span class="text-outline text-label-sm block">Szacowany czas</span>
+<span class="font-semibold text-primary">2.5 godziny</span>
+</div>
+<div class="p-2 rounded bg-surface-container-low">
+<span class="text-outline text-label-sm block">Koszt biletów</span>
+<span class="font-semibold text-primary">14.00 EUR / os.</span>
+</div>
+</div>
+<!-- Ticket quick view trigger -->
+<div class="flex items-center justify-between pt-1 text-on-surface-variant font-label-md text-label-md">
+<span class="flex items-center gap-1 text-primary font-semibold">
+<span class="material-symbols-outlined text-[18px]">confirmation_number</span>
+                  Bilet #PENA-88421-2025
+                </span>
+<button class="text-secondary hover:text-on-secondary-container font-semibold transition-colors flex items-center gap-1" type="button">
+                  Pokaż PDF z kodem QR <span class="material-symbols-outlined text-[16px]">arrow_outward</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Activity Item 3: 14:00 -->
+<div class="relative flex items-start gap-space-md group">
+<div class="z-10 flex items-center justify-center w-8 h-8 rounded-full bg-primary text-on-primary font-label-md text-label-md font-bold shadow-sm shrink-0 ring-4 ring-surface">
+              3
+            </div>
+<div class="w-full bg-surface-container-lowest p-space-lg rounded-xl shadow-sm transition-all hover:shadow-md space-y-space-sm">
+<div class="flex flex-wrap items-start justify-between gap-2">
+<div class="space-y-1">
+<div class="flex items-center gap-2">
+<span class="font-label-lg text-label-lg font-bold text-primary">14:00 – 15:30</span>
+<span class="px-2 py-0.5 rounded-full bg-surface-container-high text-primary font-label-sm text-label-sm font-semibold flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">restaurant</span> Gastronomia
+                    </span>
+</div>
+<h3 class="font-headline-md text-headline-md text-on-surface font-semibold">Obiad: 'Tascantiga Sintra' – lokalne tapas</h3>
+</div>
+<div>
+<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-secondary-fixed text-on-secondary-fixed font-label-sm text-label-sm font-semibold">
+                    Wstępny wybór
+                  </span>
+</div>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant">
+                Tradycyjna portugalska tawerna położona w sercu starego miasta Sintra. Specjalność lokalu: chrupiące Polvo à Lagareiro (ośmiornica) oraz deska serów Queijo de Azeitão.
+              </p>
+<div class="flex flex-wrap items-center gap-space-sm pt-2">
+<span class="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-surface-container-low text-on-surface font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-[16px] text-secondary">star</span> 4.7 (1 420 opinii)
+                </span>
+<span class="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-surface-container-low text-on-surface font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-[16px]">euro</span> Średni rachunek: ~25 EUR / os.
+                </span>
+<button class="ml-auto text-primary hover:text-secondary transition-colors font-label-sm text-label-sm font-bold flex items-center gap-1" type="button">
+                  Zadzwoń do restauracji <span class="material-symbols-outlined text-[16px]">call</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Activity Item 4: 16:30 -->
+<div class="relative flex items-start gap-space-md group">
+<div class="z-10 flex items-center justify-center w-8 h-8 rounded-full bg-primary text-on-primary font-label-md text-label-md font-bold shadow-sm shrink-0 ring-4 ring-surface">
+              4
+            </div>
+<div class="w-full bg-surface-container-lowest p-space-lg rounded-xl shadow-sm transition-all hover:shadow-md space-y-space-sm">
+<div class="flex flex-wrap items-start justify-between gap-2">
+<div class="space-y-1">
+<div class="flex items-center gap-2">
+<span class="font-label-lg text-label-lg font-bold text-primary">16:30 – 18:00</span>
+<span class="px-2 py-0.5 rounded-full bg-surface-container-high text-primary font-label-sm text-label-sm font-semibold flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">nature</span> Tajemnicze ogrody
+                    </span>
+</div>
+<h3 class="font-headline-md text-headline-md text-on-surface font-semibold">Quinta da Regaleira &amp; Studnia Inicjacji</h3>
+</div>
+<div>
+<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-surface-container text-on-surface font-label-sm text-label-sm font-semibold">
+                    Planowane
+                  </span>
+</div>
+</div>
+<div class="flex flex-col sm:flex-row gap-space-md items-start">
+<div class="w-full sm:w-44 h-28 rounded-xl overflow-hidden shrink-0">
+<img class="w-full h-full object-cover" data-alt="Looking down the moss covered spiral subterranean Initiation Well at Quinta da Regaleira Sintra Portugal, mysterious daylight filtering from above into stone depth." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA5K6ULIn_embCYNexZ1FE4J9HB0YMyLnR-N-YLQmQz414_vdsgYJ2suhLczD6HmSlZ6opT_l3tPHSsbV7aNt45cwrxIAyRL033U-lfznSXKQjxv99L_F8-YIWIi2SYdkhfX22F_KFJGGECnladL-zLGZrwE6rgXieTmn1Zb-CNX96oNG4etmw5yXeXo8BC83FSZQgVq5bMY9D0QDBP-4sMOLvRcfPN9kP3dsgzaqy94jqmTCQbLQqi"/>
+</div>
+<div class="space-y-2">
+<p class="font-body-sm text-body-sm text-on-surface-variant">
+                    Labirynt podziemnych korytarzy, fontanny i 27-metrowa spiralna studnia templariuszy. Zalecane wygodne obuwie z antypoślizgową podeszwą ze względu na wilgotne stopnie.
+                  </p>
+<div class="flex items-center gap-3 text-label-sm font-semibold text-primary">
+<span class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">pin_drop</span> 1.2 km od centrum Sintry
+                    </span>
+<span class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">payments</span> 12 EUR na miejscu
+                    </span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Activity Item 5: 18:30 -->
+<div class="relative flex items-start gap-space-md group">
+<div class="z-10 flex items-center justify-center w-8 h-8 rounded-full bg-secondary text-on-secondary font-label-md text-label-md font-bold shadow-sm shrink-0 ring-4 ring-surface">
+              5
+            </div>
+<div class="w-full bg-surface-container-lowest p-space-lg rounded-xl shadow-sm transition-all hover:shadow-md space-y-space-sm">
+<div class="flex flex-wrap items-start justify-between gap-2">
+<div class="space-y-1">
+<div class="flex items-center gap-2">
+<span class="font-label-lg text-label-lg font-bold text-secondary">18:30 – 20:00</span>
+<span class="px-2 py-0.5 rounded-full bg-secondary-fixed text-on-secondary-fixed font-label-sm text-label-sm font-semibold flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">wb_twilight</span> Highlight Dnia
+                    </span>
+</div>
+<h3 class="font-headline-md text-headline-md text-on-surface font-semibold">Zachód słońca na Cabo da Roca</h3>
+</div>
+<div>
+<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-tertiary-fixed/20 text-on-surface font-label-sm text-label-sm font-semibold">
+                    Punkt widokowy
+                  </span>
+</div>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant">
+                Najdalej wysunięty na zachód punkt stałego lądu Europy. Dramatyczne 140-metrowe klify opadające wprost do wzburzonego Oceanu Atlantyckiego i zabytkowa latarnia morska z 1772 roku.
+              </p>
+<!-- Weather & sunset intelligence box -->
+<div class="p-space-sm rounded-xl bg-surface-container-low flex flex-wrap items-center justify-between gap-space-xs">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-secondary text-[24px]">wb_sunny</span>
+<div>
+<span class="font-label-sm text-label-sm text-outline block">Prognoza na zachód</span>
+<span class="font-label-md text-label-md font-bold text-primary">19:48 CET • Bezchmurnie • 17°C</span>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<span class="font-label-sm text-label-sm text-secondary font-semibold flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">air</span> Wiatr: 32 km/h (Wymaga kurtki)
+                  </span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Add Activity Placeholder Box -->
+<button class="w-full py-4 rounded-xl bg-surface-container-lowest border-2 border-dashed border-outline-variant/50 hover:border-primary text-on-surface-variant hover:text-primary transition-all flex items-center justify-center gap-2 font-label-lg text-label-lg font-semibold shadow-2xs" type="button">
+<span class="material-symbols-outlined text-[20px]">add_circle</span>
+          Dodaj kolejny punkt trasy lub przerwę
+        </button>
+</div>
+<!-- Right Column: Route Map, Documents, Checklists & AI Prompter (5 Cols) -->
+<div class="lg:col-span-5 space-y-space-md">
+<!-- Interactive Route Visualizer -->
+<div class="bg-surface-container-lowest p-space-lg rounded-xl shadow-sm space-y-space-sm">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[22px]">alt_route</span>
+<h2 class="font-headline-sm text-headline-sm font-bold text-primary">Podgląd trasy (Pętla Sintra)</h2>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface-variant font-semibold">1h 45m • 68 km</span>
+</div>
+<!-- Static map integration -->
+<div class="relative w-full h-56 rounded-xl overflow-hidden shadow-2xs group cursor-pointer">
+<div class="w-full h-full bg-cover bg-center transition-transform duration-500 group-hover:scale-105" data-location="Sintra Cabo da Roca Portugal" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDFGTUOZXpeWOfLLIWWsU4UuPt3k5fbWD5P6y-i2q6WSnnAYbqtIXLJQv-kqPeWvwHf22En-bD_pRrxauazDzFuGJB5II_5PrkidJXkX4VBPZ8Nzy5XbDofuOz1beG42ggv6bpuLcIJKxsDoUAM9dUc4_TA4b5xM0tr7vNDd1Lu_vr9UcUv9JIus9TWzJ7bsLPHb8p85LG6_Ng71EyFKggjT5eCkxCuL4XquuTECBokzITqYeBDhjDf');"></div>
+<div class="absolute inset-0 bg-gradient-to-t from-primary/80 via-transparent to-transparent flex flex-col justify-end p-space-sm text-on-primary">
+<div class="flex items-center justify-between">
+<span class="font-label-sm text-label-sm font-semibold">Lizbona → Pena → Regaleira → Cabo da Roca</span>
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-surface-container-lowest/90 text-primary font-label-sm text-label-sm font-bold">
+<span class="material-symbols-outlined text-[14px]">navigation</span> Otwórz GPS
+                </span>
+</div>
+</div>
+</div>
+<!-- Waypoints Micro-Bar -->
+<div class="flex items-center justify-between text-on-surface-variant font-label-sm text-label-sm pt-1">
+<span class="flex items-center gap-1 font-semibold text-primary"><span class="w-2 h-2 rounded-full bg-primary"></span> 1. Wypożyczalnia</span>
+<span class="material-symbols-outlined text-[14px]">arrow_right_alt</span>
+<span class="flex items-center gap-1 font-semibold text-primary"><span class="w-2 h-2 rounded-full bg-primary"></span> 2. Pena</span>
+<span class="material-symbols-outlined text-[14px]">arrow_right_alt</span>
+<span class="flex items-center gap-1 font-semibold text-primary"><span class="w-2 h-2 rounded-full bg-primary"></span> 3. Regaleira</span>
+<span class="material-symbols-outlined text-[14px]">arrow_right_alt</span>
+<span class="flex items-center gap-1 font-semibold text-secondary"><span class="w-2 h-2 rounded-full bg-secondary"></span> 4. Klify</span>
+</div>
+</div>
+<!-- Documents & Travel Vault for Day 2 -->
+<div class="bg-surface-container-lowest p-space-lg rounded-xl shadow-sm space-y-space-sm">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[22px]">folder_open</span>
+<h2 class="font-headline-sm text-headline-sm font-bold text-primary">Załączniki i dokumenty dnia</h2>
+</div>
+<span class="font-label-sm text-label-sm text-secondary font-bold">2 pliki</span>
+</div>
+<!-- Document 1: PDF Tickets -->
+<div class="flex items-center justify-between p-space-sm rounded-xl bg-surface-container-low hover:bg-surface-container transition-colors">
+<div class="flex items-center gap-space-sm min-w-0">
+<div class="w-10 h-10 rounded-lg bg-surface-container-high flex items-center justify-center text-secondary shrink-0">
+<span class="material-symbols-outlined text-[24px]">picture_as_pdf</span>
+</div>
+<div class="min-w-0">
+<h4 class="font-label-md text-label-md font-bold text-on-surface truncate">Palacio_Pena_Official_Voucher.pdf</h4>
+<p class="font-body-sm text-body-sm text-on-surface-variant">2 bilety dorosłe • 412 KB • Bilet cyfrowy</p>
+</div>
+</div>
+<button class="p-2 rounded-lg text-primary hover:bg-surface-container-highest transition-colors" title="Pobierz" type="button">
+<span class="material-symbols-outlined text-[20px]">download</span>
+</button>
+</div>
+<!-- Document 2: Car rental voucher -->
+<div class="flex items-center justify-between p-space-sm rounded-xl bg-surface-container-low hover:bg-surface-container transition-colors">
+<div class="flex items-center gap-space-sm min-w-0">
+<div class="w-10 h-10 rounded-lg bg-surface-container-high flex items-center justify-center text-primary shrink-0">
+<span class="material-symbols-outlined text-[24px]">receipt_long</span>
+</div>
+<div class="min-w-0">
+<h4 class="font-label-md text-label-md font-bold text-on-surface truncate">Sixt_Lisbon_Car_Pickup_Voucher.pdf</h4>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Umowa najmu • Kod: SX-9912L</p>
+</div>
+</div>
+<button class="p-2 rounded-lg text-primary hover:bg-surface-container-highest transition-colors" title="Pobierz" type="button">
+<span class="material-symbols-outlined text-[20px]">download</span>
+</button>
+</div>
+<!-- Upload Dropzone Action -->
+<button class="w-full py-2.5 rounded-lg bg-surface-container text-primary font-label-md text-label-md font-semibold hover:bg-surface-container-high transition-colors flex items-center justify-center gap-1.5" type="button">
+<span class="material-symbols-outlined text-[18px]">upload_file</span>
+            Dodaj plik / zdjęcie / bilet
+          </button>
+</div>
+<!-- Checklist & Essentials -->
+<div class="bg-surface-container-lowest p-space-lg rounded-xl shadow-sm space-y-space-sm">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[22px]">checklist</span>
+<h2 class="font-headline-sm text-headline-sm font-bold text-primary">Zadania &amp; Przygotowanie</h2>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface-variant font-bold" id="task-counter">1/3 ukończone</span>
+</div>
+<div class="space-y-2 font-body-sm text-body-sm">
+<!-- Task 1 (Checked) -->
+<label class="flex items-center gap-space-xs p-2 rounded-lg hover:bg-surface-container-low cursor-pointer transition-colors">
+<input checked="" class="w-4 h-4 rounded text-primary focus:ring-primary accent-primary" onchange="updateTasks()" type="checkbox"/>
+<span class="line-through text-outline">Pobrać mapy Google offline dla regionu Sintra</span>
+</label>
+<!-- Task 2 (Unchecked) -->
+<label class="flex items-center gap-space-xs p-2 rounded-lg hover:bg-surface-container-low cursor-pointer transition-colors">
+<input class="w-4 h-4 rounded text-primary focus:ring-primary accent-primary" onchange="updateTasks()" type="checkbox"/>
+<span class="text-on-surface font-medium">Zabrać cieplejszą wiatrówkę na klify Cabo da Roca</span>
+</label>
+<!-- Task 3 (Unchecked) -->
+<label class="flex items-center gap-space-xs p-2 rounded-lg hover:bg-surface-container-low cursor-pointer transition-colors">
+<input class="w-4 h-4 rounded text-primary focus:ring-primary accent-primary" onchange="updateTasks()" type="checkbox"/>
+<span class="text-on-surface font-medium">Potwierdzić telefonicznie rezerwację stolika w Tascantiga</span>
+</label>
+</div>
+</div>
+<!-- AI Assistant Mini Bar for Day Context -->
+<div class="bg-gradient-to-br from-primary to-primary-container p-space-lg rounded-xl shadow-sm text-on-primary space-y-space-sm">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-secondary-fixed-dim text-[22px]">arrow_back_ios_new</span>
+<h3 class="font-headline-sm text-headline-sm font-bold text-on-primary">Inteligentny Asystent Dnia</h3>
+</div>
+<p class="font-body-sm text-body-sm text-on-primary/80">
+            Zadaj dowolne pytanie dotyczące parkingów przy Pałacu Pena, optymalizacji trasy lub polecanych punktów na zachód słońca.
+          </p>
+<form class="relative mt-2" id="ai-quick-form" onsubmit="handleAiPrompt(event)">
+<input class="w-full py-2.5 pl-3 pr-10 rounded-lg bg-surface-container-lowest text-on-surface placeholder:text-outline font-body-sm text-body-sm outline-none shadow-xs" id="ai-input" placeholder="np. Gdzie najlepiej zaparkować pod Zamkiem Pena?" type="text"/>
+<button class="absolute right-1.5 top-1/2 -translate-y-1/2 p-1.5 rounded-lg bg-secondary text-on-secondary hover:bg-on-secondary-container transition-all" type="submit">
+<span class="material-symbols-outlined text-[18px]">send</span>
+</button>
+</form>
+<div class="flex flex-wrap gap-1.5 pt-1">
+<button class="px-2 py-1 rounded bg-surface-container-lowest/15 hover:bg-surface-container-lowest/25 text-on-primary font-label-sm text-label-sm transition-colors" onclick="setPrompt(this.innerText)" type="button">
+              Gdzie zjeść deser Travesseiro?
+            </button>
+<button class="px-2 py-1 rounded bg-surface-container-lowest/15 hover:bg-surface-container-lowest/25 text-on-primary font-label-sm text-label-sm transition-colors" onclick="setPrompt(this.innerText)" type="button">
+              Alternatywa w razie deszczu
+            </button>
+</div>
+</div>
+</div>
+</div>
+</div>
+<script>
+    function updateTasks() {
+      const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+      let checked = 0;
+      checkboxes.forEach(cb => {
+        if (cb.checked) checked++;
+      });
+      const counter = document.getElementById('task-counter');
+      if (counter) {
+        counter.innerText = checked + '/' + checkboxes.length + ' ukończone';
+      }
+    }
+
+    function setPrompt(text) {
+      const input = document.getElementById('ai-input');
+      if (input) {
+        input.value = text;
+        input.focus();
+      }
+    }
+
+    function handleAiPrompt(e) {
+      e.preventDefault();
+      const input = document.getElementById('ai-input');
+      if (!input || !input.value.trim()) return;
+      const query = input.value;
+      input.value = '';
+      alert('Asystent analizuje: "' + query + '" dla Dnia 2...');
+    }
+
+    document.getElementById('ai-opt-btn')?.addEventListener('click', function() {
+      const btn = this;
+      btn.innerHTML = '<span class="material-symbols-outlined animate-spin text-[18px]">sync</span><span>Optymalizowanie...</span>';
+      setTimeout(() => {
+        btn.innerHTML = '<span class="material-symbols-outlined text-[18px]">check</span><span>Trasa zoptymalizowana!</span>';
+        btn.classList.remove('bg-secondary');
+        btn.classList.add('bg-tertiary-container');
+        setTimeout(() => {
+          btn.innerHTML = '<span class="material-symbols-outlined text-[18px]">auto_fix_high</span><span>Optymalizuj trasę z AI</span>';
+          btn.classList.add('bg-secondary');
+          btn.classList.remove('bg-tertiary-container');
+        }, 3000);
+      }, 1200);
+    });
+  </script>
+</div></main><footer class="w-full bg-surface-container-lowest border-t border-outline-variant/30 py-space-xl mt-auto"><div class="w-full px-gutter-desktop max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-space-md"><div class="flex items-center gap-space-xs"><span class="font-headline-sm text-headline-sm text-primary font-bold tracking-tight">VoyageAI</span><span class="text-on-surface-variant font-body-sm text-body-sm">© 2025 Wszelkie prawa zastrzeżone. Inteligentne planowanie podróży.</span></div><div class="flex items-center gap-space-lg font-label-md text-label-md text-on-surface-variant"><a class="hover:text-on-surface transition-colors" href="#">Prywatność</a><a class="hover:text-on-surface transition-colors" href="#">Regulamin</a><a class="hover:text-on-surface transition-colors" href="#">Centrum pomocy</a><a class="hover:text-on-surface transition-colors" href="#">Status API</a></div></div></footer></body></html>

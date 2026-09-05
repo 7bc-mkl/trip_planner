@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+
+<html lang="pl"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/><link href="https://fonts.googleapis.com" rel="preconnect"/><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/><link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config={darkMode:"class",theme:{extend:{colors:{"error":"#ba1a1a","secondary-container":"#fd651e","primary-fixed-dim":"#a2c9ff","on-error-container":"#93000a","inverse-primary":"#a2c9ff","surface-container-lowest":"#ffffff","primary":"#00294d","on-primary-container":"#84abe0","outline":"#737780","secondary-fixed-dim":"#ffb599","on-secondary-fixed-variant":"#7f2b00","on-surface-variant":"#42474f","surface-container":"#eaedff","tertiary":"#002e1d","tertiary-fixed-dim":"#4edea3","on-primary-fixed":"#001c38","error-container":"#ffdad6","on-surface":"#131b2e","surface-container-high":"#e2e7ff","tertiary-container":"#00472f","surface-bright":"#faf8ff","secondary-fixed":"#ffdbce","inverse-on-surface":"#eef0ff","primary-container":"#0f3f6d","outline-variant":"#c3c6d0","primary-fixed":"#d3e4ff","surface-variant":"#dae2fd","on-tertiary":"#ffffff","surface-container-low":"#f2f3ff","on-tertiary-fixed":"#002113","surface-tint":"#386090","secondary":"#a73a00","on-secondary-fixed":"#370e00","surface-container-highest":"#dae2fd","surface":"#faf8ff","background":"#faf8ff","on-tertiary-fixed-variant":"#005236","on-primary":"#ffffff","surface-dim":"#d2d9f4","on-secondary":"#ffffff","on-background":"#131b2e","on-tertiary-container":"#20bf86","inverse-surface":"#283044","on-secondary-container":"#571a00","on-primary-fixed-variant":"#1c4877","tertiary-fixed":"#6ffbbe","on-error":"#ffffff"},borderRadius:{"DEFAULT":"0.25rem","lg":"0.5rem","xl":"0.75rem","full":"9999px"},spacing:{"space-lg":"1.5rem","space-2xl":"3rem","gutter-desktop":"1.5rem","gutter-mobile":"1rem","space-md":"1rem","timeline-track-offset":"2.5rem","space-xs":"0.5rem","space-2xs":"0.25rem","space-3xl":"4rem","space-xl":"2rem","space-sm":"0.75rem","sidebar-width":"22rem"},fontFamily:{"headline-lg":["Plus Jakarta Sans"],"display-lg-mobile":["Plus Jakarta Sans"],"label-sm":["Plus Jakarta Sans"],"label-md":["Plus Jakarta Sans"],"body-md":["Plus Jakarta Sans"],"headline-xl":["Plus Jakarta Sans"],"headline-md":["Plus Jakarta Sans"],"display-lg":["Plus Jakarta Sans"],"headline-xl-mobile":["Plus Jakarta Sans"],"body-lg":["Plus Jakarta Sans"],"body-sm":["Plus Jakarta Sans"],"label-lg":["Plus Jakarta Sans"],"headline-sm":["Plus Jakarta Sans"]},fontSize:{"headline-lg":["24px",{"lineHeight":"32px","letterSpacing":"-0.015em","fontWeight":"600"}],"display-lg-mobile":["34px",{"lineHeight":"42px","letterSpacing":"-0.02em","fontWeight":"700"}],"label-sm":["11px",{"lineHeight":"14px","letterSpacing":"0.025em","fontWeight":"600"}],"label-md":["12px",{"lineHeight":"16px","letterSpacing":"0.015em","fontWeight":"500"}],"body-md":["15px",{"lineHeight":"22px","fontWeight":"400"}],"headline-xl":["36px",{"lineHeight":"44px","letterSpacing":"-0.02em","fontWeight":"600"}],"headline-md":["20px",{"lineHeight":"28px","letterSpacing":"-0.01em","fontWeight":"600"}],"display-lg":["48px",{"lineHeight":"56px","letterSpacing":"-0.03em","fontWeight":"700"}],"headline-xl-mobile":["28px",{"lineHeight":"36px","letterSpacing":"-0.01em","fontWeight":"600"}],"body-lg":["18px",{"lineHeight":"28px","letterSpacing":"-0.005em","fontWeight":"400"}],"body-sm":["13px",{"lineHeight":"18px","fontWeight":"400"}],"label-lg":["14px",{"lineHeight":"20px","letterSpacing":"0.01em","fontWeight":"600"}],"headline-sm":["16px",{"lineHeight":"24px","letterSpacing":"-0.005em","fontWeight":"600"}]}}}}</script></head><body class="bg-surface font-body-md text-on-surface antialiased min-h-screen"><header class="fixed top-0 left-0 right-0 z-50 bg-surface/85 backdrop-blur-xl border-b border-outline-variant/30 shadow-[0_1px_8px_rgba(0,0,0,0.03)]"><div class="h-16 w-full px-gutter-desktop flex items-center justify-between gap-space-md"><div class="flex items-center gap-space-lg shrink-0"><div class="flex items-center gap-space-xs"><img alt="VoyageAI Brand Logo" class="h-8 w-auto object-contain" src="https://lh3.googleusercontent.com/aida/AEtjO1UwqvODcQZBJXVPksey1jihS-mD--3lWjHsLIK-NS1K9JVIz8D5qknHEQ_88BSASgOV6LUnwCJlyGqzQG4f2FGk9074jjbwUcCPH6FnJ-EhvpoIRZS3CfY4vPxQBSJoOZBmuC9np9jiS_mVKB576JVoePuOV0BDuWC4PMWNciJg-tMfcUc-s_Z1tLGcReCf0Jw7xDYMP_TBlnm1lznCbPYvy3KgDls--UTTBj1wMZCbNW2IRnp1HWsCzw"/><span class="font-headline-sm text-headline-sm text-primary tracking-tight font-bold">VoyageAI</span></div><div class="h-5 w-px bg-outline-variant/50 hidden xl:block"></div><button class="hidden xl:flex items-center gap-space-xs px-space-sm py-1.5 rounded-lg bg-surface-container-low hover:bg-surface-container hover:text-on-surface transition-all text-left group" type="button"><div class="flex flex-col"><span class="font-label-sm text-label-sm text-on-surface-variant group-hover:text-primary transition-colors flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-secondary"></span>Aktywna podróż</span><span class="font-label-md text-label-md text-on-surface font-semibold max-w-[220px] truncate">Majówka w Portugalii: Lizbona &amp; Algarve</span></div><span class="material-symbols-outlined text-outline text-[18px] ml-1 group-hover:text-on-surface transition-colors">expand_more</span></button></div><nav class="hidden lg:flex items-center gap-space-2xs bg-surface-container-lowest/80 p-1 rounded-xl border border-outline-variant/30" data-active-classes="bg-primary-container text-on-primary font-semibold rounded-lg shadow-sm"><a class="px-space-md py-1.5 rounded-lg font-label-lg text-label-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors" data-path="nowa-podroz" href="#">Nowa podróż</a><a class="px-space-md py-1.5 rounded-lg font-label-lg text-label-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors" data-path="os-czasu" href="#">Oś czasu</a><a class="px-space-md py-1.5 rounded-lg font-label-lg text-label-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors" data-path="szczegoly-dnia" href="#">Szczegóły dnia</a><a aria-current="page" class="px-space-md py-1.5 transition-colors bg-primary-container text-on-primary font-semibold rounded-lg shadow-sm" data-path="rezerwacje-i-dokumenty" href="#">Rezerwacje i Dokumenty</a></nav><div class="flex items-center gap-space-sm shrink-0"><button class="flex items-center gap-2 px-space-md py-2 rounded-lg bg-secondary text-on-secondary font-label-md text-label-md hover:bg-on-secondary-container transition-all shadow-sm active:scale-[0.98]" type="button"><span class="relative flex h-2 w-2"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-secondary-fixed opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-on-secondary"></span></span><span class="material-symbols-outlined text-[18px]">arrow_back_ios_new</span><span class="hidden sm:inline font-semibold">Asystent AI</span></button><div class="flex items-center bg-surface-container-low rounded-lg p-0.5 border border-outline-variant/30"><button class="px-2 py-1 rounded font-label-sm text-label-sm font-semibold bg-surface-container-lowest text-primary shadow-2xs" type="button">PLN</button><button class="px-2 py-1 rounded font-label-sm text-label-sm font-semibold text-on-surface-variant hover:text-on-surface transition-colors" type="button">EUR</button></div><button aria-label="Powiadomienia" class="p-2 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors relative" type="button"><span class="material-symbols-outlined text-[22px]">notifications</span><span class="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-secondary-container ring-2 ring-surface"></span></button><div class="h-6 w-px bg-outline-variant/50 hidden sm:block"></div><button class="flex items-center gap-space-xs p-1 rounded-full hover:bg-surface-container-high transition-colors group" type="button"><img alt="Profile" class="w-8 h-8 rounded-full object-cover ring-1 ring-outline-variant/40" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAi_GpiafipyuUrX0Y7Bx2qiF2pvE5rBgu7vCTTZrhkAp736wXXSdJJ6E1qzcFyup4P7oyfgo4RpOZZXp-tmSddlfa1482Bt7pfla81IZ_b4bgMh6yqRor1tDcHsWmuSJY5s5zfZ0wwpDgyhNyHnaWEd5sGg8oFeucf1c1sja3gUzr3NfsIJwDMZ-Y4YJFhw4FzAq5iel9r7ied9aPppdqKrnCIvG5NY9l2vUgDI4GAkzjCeTxXVKQs"/><span class="material-symbols-outlined text-outline text-[18px] group-hover:text-on-surface transition-colors hidden sm:inline">keyboard_arrow_down</span></button></div></div></header><main class="w-full pt-16 bg-surface min-h-screen"><div class="flex flex-col w-full">
+<div class="w-full px-gutter-desktop py-space-xl max-w-7xl mx-auto flex flex-col gap-space-xl">
+<!-- Header Section with Title, AI Sync Pill & Action -->
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-space-md">
+<div class="flex flex-col gap-space-2xs">
+<div class="flex items-center gap-space-xs">
+<span class="px-space-xs py-0.5 rounded-full bg-surface-container-high text-primary font-label-sm text-label-sm uppercase tracking-wider font-bold">Hub Logistyczny</span>
+<span class="w-1.5 h-1.5 rounded-full bg-outline-variant"></span>
+<span class="font-label-sm text-label-sm text-secondary flex items-center gap-1 font-semibold">
+<span class="material-symbols-outlined text-[14px]">auto_awesome</span> Zsynchronizowano z AI
+          </span>
+</div>
+<h1 class="font-headline-xl text-headline-xl text-primary font-bold tracking-tight">Dokumenty, bilety i rezerwacje</h1>
+<p class="font-body-md text-body-md text-on-surface-variant flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px] text-primary">calendar_today</span>
+          Majówka w Portugalii (1 - 8 maja 2025)
+          <span class="text-outline-variant">•</span>
+<span>Lizbona &amp; Algarve</span>
+</p>
+</div>
+<div class="flex items-center gap-space-sm shrink-0">
+<button class="flex items-center gap-2 px-space-md py-2.5 rounded-lg bg-primary text-on-primary font-label-lg text-label-lg shadow-sm hover:bg-primary-container active:scale-[0.98] transition-all" onclick="document.getElementById('file-upload-input').click()" type="button">
+<span class="material-symbols-outlined text-[20px]">upload_file</span>
+<span>Wgraj nowy dokument / bilet</span>
+</button>
+<input class="hidden" id="file-upload-input" multiple="" type="file"/>
+</div>
+</div>
+<!-- Stats Summary Cards Bento Grid -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-space-md">
+<!-- Card 1: Wydatki potwierdzone -->
+<div class="bg-surface-container-lowest p-space-md rounded-xl shadow-sm flex flex-col justify-between group hover:shadow-md transition-all">
+<div class="flex items-center justify-between">
+<span class="font-label-md text-label-md text-on-surface-variant font-medium">Wydatki potwierdzone</span>
+<div class="w-8 h-8 rounded-lg bg-tertiary-fixed-dim/25 flex items-center justify-center text-tertiary">
+<span class="material-symbols-outlined text-[18px]">check_circle</span>
+</div>
+</div>
+<div class="mt-space-sm">
+<div class="flex items-baseline gap-1.5">
+<span class="font-headline-xl text-headline-xl text-on-surface font-bold">4 250</span>
+<span class="font-label-lg text-label-lg text-on-surface-variant font-semibold">PLN</span>
+</div>
+<span class="font-body-sm text-body-sm text-on-surface-variant">78% łącznego budżetu</span>
+</div>
+</div>
+<!-- Card 2: Do opłacenia / rezerwacji -->
+<div class="bg-surface-container-lowest p-space-md rounded-xl shadow-sm flex flex-col justify-between group hover:shadow-md transition-all">
+<div class="flex items-center justify-between">
+<span class="font-label-md text-label-md text-on-surface-variant font-medium">Do opłacenia / rezerwacji</span>
+<div class="w-8 h-8 rounded-lg bg-secondary-fixed/40 flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined text-[18px]">pending_actions</span>
+</div>
+</div>
+<div class="mt-space-sm">
+<div class="flex items-baseline gap-1.5">
+<span class="font-headline-xl text-headline-xl text-secondary font-bold">1 180</span>
+<span class="font-label-lg text-label-lg text-on-surface-variant font-semibold">PLN</span>
+</div>
+<span class="font-body-sm text-body-sm text-secondary font-medium flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span> 2 pozycje oczekujące
+          </span>
+</div>
+</div>
+<!-- Card 3: Załączone dokumenty -->
+<div class="bg-surface-container-lowest p-space-md rounded-xl shadow-sm flex flex-col justify-between group hover:shadow-md transition-all">
+<div class="flex items-center justify-between">
+<span class="font-label-md text-label-md text-on-surface-variant font-medium">Załączone dokumenty</span>
+<div class="w-8 h-8 rounded-lg bg-surface-container flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-[18px]">folder_open</span>
+</div>
+</div>
+<div class="mt-space-sm">
+<div class="flex items-baseline gap-1.5">
+<span class="font-headline-xl text-headline-xl text-on-surface font-bold">7</span>
+<span class="font-label-lg text-label-lg text-on-surface-variant font-semibold">plików</span>
+</div>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Bilety, vouchery, polisa</span>
+</div>
+</div>
+<!-- Card 4: Status gotowości z SVG Ring -->
+<div class="bg-surface-container-lowest p-space-md rounded-xl shadow-sm flex items-center justify-between group hover:shadow-md transition-all">
+<div class="flex flex-col justify-between h-full">
+<span class="font-label-md text-label-md text-on-surface-variant font-medium">Status gotowości</span>
+<div class="mt-space-sm">
+<span class="font-headline-xl text-headline-xl text-on-surface font-bold">80%</span>
+<span class="block font-body-sm text-body-sm text-tertiary-fixed-dim/90 text-tertiary font-semibold">Gotowe na wyjazd</span>
+</div>
+</div>
+<div class="relative w-16 h-16 shrink-0 flex items-center justify-center">
+<svg class="w-full h-full transform -rotate-90" viewbox="0 0 36 36">
+<path class="text-surface-container" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-width="3.5"></path>
+<path class="text-secondary" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-dasharray="80, 100" stroke-linecap="round" stroke-width="3.5"></path>
+</svg>
+<span class="material-symbols-outlined absolute text-secondary text-[20px]">flight_takeoff</span>
+</div>
+</div>
+</div>
+<!-- Main Content Layout (Split View: Inventory List & Right Dropzone/AI Desk) -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-space-xl items-start">
+<!-- Left 8 Columns: Filters, Search and Document Cards -->
+<div class="lg:col-span-8 flex flex-col gap-space-lg">
+<!-- Category Filter Tabs -->
+<div class="flex items-center justify-between flex-wrap gap-space-sm">
+<div class="flex items-center gap-1.5 p-1 bg-surface-container-low rounded-xl overflow-x-auto max-w-full">
+<button class="tab-btn px-space-md py-1.5 rounded-lg font-label-md text-label-md bg-surface-container-lowest text-primary shadow-2xs font-semibold transition-all" data-category="all" type="button">
+              Wszystkie (7)
+            </button>
+<button class="tab-btn px-space-md py-1.5 rounded-lg font-label-md text-label-md text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-all" data-category="transport" type="button">
+              Transport i Loty (3)
+            </button>
+<button class="tab-btn px-space-md py-1.5 rounded-lg font-label-md text-label-md text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-all" data-category="stay" type="button">
+              Noclegi i Hotele (2)
+            </button>
+<button class="tab-btn px-space-md py-1.5 rounded-lg font-label-md text-label-md text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-all" data-category="attractions" type="button">
+              Atrakcje i Bilety (2)
+            </button>
+<button class="tab-btn px-space-md py-1.5 rounded-lg font-label-md text-label-md text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-all" data-category="insurance" type="button">
+              Ubezpieczenie i Paszporty (1)
+            </button>
+</div>
+<!-- Search or Quick Filter Icon -->
+<div class="relative flex items-center">
+<span class="material-symbols-outlined absolute left-2.5 text-[18px] text-outline">search</span>
+<input class="pl-8 pr-3 py-1.5 text-label-md rounded-lg bg-surface-container-lowest text-on-surface focus:outline-none focus:ring-2 focus:ring-primary shadow-2xs w-44 sm:w-56" placeholder="Szukaj dokumentu..." type="text"/>
+</div>
+</div>
+<!-- Inventory List -->
+<div class="flex flex-col gap-space-md">
+<!-- Card 1: Flight TAP Portugal -->
+<div class="bg-surface-container-lowest p-space-lg rounded-xl shadow-sm hover:shadow-md transition-all flex flex-col md:flex-row md:items-center justify-between gap-space-md" data-item-type="transport">
+<div class="flex items-start gap-space-md min-w-0">
+<div class="w-12 h-12 rounded-xl bg-primary-fixed flex items-center justify-center text-on-primary-fixed shrink-0 shadow-2xs">
+<span class="material-symbols-outlined text-[24px]">flight</span>
+</div>
+<div class="flex flex-col min-w-0">
+<div class="flex items-center gap-space-xs flex-wrap">
+<h2 class="font-headline-sm text-headline-sm text-on-surface font-semibold truncate">Lot Warszawa (WAW) → Lizbona (LIS)</h2>
+<span class="px-2 py-0.5 rounded-full bg-surface-container text-on-surface-variant font-label-sm text-label-sm font-semibold">TAP TP1205</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-0.5">
+                  1 maja 2025 • Wylot 13:45, Lądowanie 16:50 • Dzień 1
+                </p>
+<div class="flex items-center gap-space-sm mt-space-sm">
+<div class="inline-flex items-center gap-1.5 px-space-xs py-1 rounded-lg bg-surface-container-low text-primary font-label-sm text-label-sm group cursor-pointer hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined text-[16px] text-secondary">picture_as_pdf</span>
+<span class="font-medium truncate max-w-[180px]">BoardingPass_WAW_LIS.pdf</span>
+</div>
+<span class="font-body-sm text-body-sm text-outline">1.2 MB</span>
+</div>
+</div>
+</div>
+<div class="flex md:flex-col items-end justify-between md:justify-center gap-space-sm shrink-0">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-tertiary-fixed-dim/20 text-tertiary font-label-sm text-label-sm font-semibold">
+<span class="w-2 h-2 rounded-full bg-tertiary-container"></span>
+                Opłacone / Potwierdzone
+              </span>
+<div class="flex items-center gap-1">
+<button class="p-1.5 rounded-lg text-on-surface-variant hover:text-primary hover:bg-surface-container transition-colors" title="Podgląd" type="button">
+<span class="material-symbols-outlined text-[20px]">visibility</span>
+</button>
+<button class="p-1.5 rounded-lg text-on-surface-variant hover:text-primary hover:bg-surface-container transition-colors" title="Pobierz" type="button">
+<span class="material-symbols-outlined text-[20px]">download</span>
+</button>
+<button class="p-1.5 rounded-lg text-on-surface-variant hover:text-primary hover:bg-surface-container transition-colors" title="Więcej" type="button">
+<span class="material-symbols-outlined text-[20px]">more_vert</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Card 2: Hotel Lisbon -->
+<div class="bg-surface-container-lowest p-space-lg rounded-xl shadow-sm hover:shadow-md transition-all flex flex-col md:flex-row md:items-center justify-between gap-space-md" data-item-type="stay">
+<div class="flex items-start gap-space-md min-w-0">
+<div class="w-12 h-12 rounded-xl bg-surface-container-high flex items-center justify-center text-primary shrink-0 shadow-2xs">
+<span class="material-symbols-outlined text-[24px]">hotel</span>
+</div>
+<div class="flex flex-col min-w-0">
+<div class="flex items-center gap-space-xs flex-wrap">
+<h2 class="font-headline-sm text-headline-sm text-on-surface font-semibold truncate">Memmo Alfama Hotel</h2>
+<span class="px-2 py-0.5 rounded-full bg-surface-container text-on-surface-variant font-label-sm text-label-sm font-semibold">3 noce • Pokój Superior</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-0.5">
+                  1 - 4 maja 2025 • Lizbona, Travessa das Merceeiras 27
+                </p>
+<div class="flex items-center gap-space-sm mt-space-sm">
+<div class="inline-flex items-center gap-1.5 px-space-xs py-1 rounded-lg bg-surface-container-low text-primary font-label-sm text-label-sm group cursor-pointer hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined text-[16px] text-secondary">picture_as_pdf</span>
+<span class="font-medium truncate max-w-[180px]">Voucher_Memmo_Alfama.pdf</span>
+</div>
+<span class="font-body-sm text-body-sm text-outline">840 KB</span>
+</div>
+</div>
+</div>
+<div class="flex md:flex-col items-end justify-between md:justify-center gap-space-sm shrink-0">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-tertiary-fixed-dim/20 text-tertiary font-label-sm text-label-sm font-semibold">
+<span class="w-2 h-2 rounded-full bg-tertiary-container"></span>
+                Rezerwacja potwierdzona (Booking #9842103)
+              </span>
+<div class="flex items-center gap-1">
+<button class="p-1.5 rounded-lg text-on-surface-variant hover:text-primary hover:bg-surface-container transition-colors" title="Podgląd" type="button">
+<span class="material-symbols-outlined text-[20px]">visibility</span>
+</button>
+<button class="p-1.5 rounded-lg text-on-surface-variant hover:text-primary hover:bg-surface-container transition-colors" title="Pobierz" type="button">
+<span class="material-symbols-outlined text-[20px]">download</span>
+</button>
+<button class="p-1.5 rounded-lg text-on-surface-variant hover:text-primary hover:bg-surface-container transition-colors" title="Więcej" type="button">
+<span class="material-symbols-outlined text-[20px]">more_vert</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Card 3: Car Rental Lagos -->
+<div class="bg-surface-container-lowest p-space-lg rounded-xl shadow-sm hover:shadow-md transition-all flex flex-col md:flex-row md:items-center justify-between gap-space-md" data-item-type="transport">
+<div class="flex items-start gap-space-md min-w-0">
+<div class="w-12 h-12 rounded-xl bg-secondary-fixed/40 flex items-center justify-center text-secondary shrink-0 shadow-2xs">
+<span class="material-symbols-outlined text-[24px]">directions_car</span>
+</div>
+<div class="flex flex-col min-w-0">
+<div class="flex items-center gap-space-xs flex-wrap">
+<h2 class="font-headline-sm text-headline-sm text-on-surface font-semibold truncate">Wynajem auta: Volkswagen T-Roc lub podobny</h2>
+<span class="px-2 py-0.5 rounded-full bg-surface-container text-on-surface-variant font-label-sm text-label-sm font-semibold">Sixt Faro / Lagos</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-0.5">
+                  4 - 8 maja 2025 (4 doby) • Odbiór: Lizbona Oriente, Zwrot: Faro Airport
+                </p>
+<div class="flex items-center gap-space-sm mt-space-sm">
+<div class="inline-flex items-center gap-1.5 px-space-xs py-1 rounded-lg bg-surface-container-low text-primary font-label-sm text-label-sm group cursor-pointer hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined text-[16px] text-secondary">receipt_long</span>
+<span class="font-medium truncate max-w-[180px]">Rezerwacja_Sixt_SX8199.pdf</span>
+</div>
+<span class="font-body-sm text-body-sm text-outline">510 KB</span>
+</div>
+</div>
+</div>
+<div class="flex md:flex-col items-end justify-between md:justify-center gap-space-sm shrink-0">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-secondary-fixed text-on-secondary-fixed font-label-sm text-label-sm font-semibold">
+<span class="w-2 h-2 rounded-full bg-secondary"></span>
+                Do opłacenia na miejscu (820 PLN)
+              </span>
+<div class="flex items-center gap-1">
+<button class="p-1.5 rounded-lg text-on-surface-variant hover:text-primary hover:bg-surface-container transition-colors" title="Podgląd" type="button">
+<span class="material-symbols-outlined text-[20px]">visibility</span>
+</button>
+<button class="p-1.5 rounded-lg text-on-surface-variant hover:text-primary hover:bg-surface-container transition-colors" title="Pobierz" type="button">
+<span class="material-symbols-outlined text-[20px]">download</span>
+</button>
+<button class="p-1.5 rounded-lg text-on-surface-variant hover:text-primary hover:bg-surface-container transition-colors" title="Więcej" type="button">
+<span class="material-symbols-outlined text-[20px]">more_vert</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Card 4: Palacio da Pena Tickets (Missing / Action Needed) -->
+<div class="bg-surface-container-lowest p-space-lg rounded-xl shadow-sm hover:shadow-md transition-all flex flex-col md:flex-row md:items-center justify-between gap-space-md" data-item-type="attractions">
+<div class="flex items-start gap-space-md min-w-0">
+<div class="w-12 h-12 rounded-xl bg-error-container flex items-center justify-center text-error shrink-0 shadow-2xs">
+<span class="material-symbols-outlined text-[24px]">confirmation_number</span>
+</div>
+<div class="flex flex-col min-w-0">
+<div class="flex items-center gap-space-xs flex-wrap">
+<h2 class="font-headline-sm text-headline-sm text-on-surface font-semibold truncate">Bilety wstępu: Pałac Pena &amp; Park (Sintra)</h2>
+<span class="px-2 py-0.5 rounded-full bg-error-container text-on-error-container font-label-sm text-label-sm font-semibold">2 osoby dorosłe</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-0.5">
+                  Planowane: 3 maja 2025, godz. 10:30 • Rekomendowany slot czasowy
+                </p>
+<div class="flex items-center gap-space-xs mt-space-sm text-error">
+<span class="material-symbols-outlined text-[16px]">warning</span>
+<span class="font-body-sm text-body-sm font-semibold">Wymagana rezerwacja z wyprzedzeniem (szybko znikające terminy)</span>
+</div>
+</div>
+</div>
+<div class="flex md:flex-col items-end justify-between md:justify-center gap-space-sm shrink-0">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-error-container text-on-error-container font-label-sm text-label-sm font-semibold">
+                Brak rezerwacji • Wymagany zakup (ok. 160 PLN)
+              </span>
+<button class="flex items-center gap-1.5 px-space-md py-1.5 rounded-lg bg-secondary text-on-secondary font-label-md text-label-md font-semibold hover:bg-on-secondary-container transition-colors shadow-2xs" type="button">
+<span class="material-symbols-outlined text-[16px]">arrow_back_ios_new</span>
+<span>Kup teraz przez AI</span>
+</button>
+</div>
+</div>
+<!-- Card 5: Allianz Insurance -->
+<div class="bg-surface-container-lowest p-space-lg rounded-xl shadow-sm hover:shadow-md transition-all flex flex-col md:flex-row md:items-center justify-between gap-space-md" data-item-type="insurance">
+<div class="flex items-start gap-space-md min-w-0">
+<div class="w-12 h-12 rounded-xl bg-tertiary-fixed flex items-center justify-center text-on-tertiary-fixed shrink-0 shadow-2xs">
+<span class="material-symbols-outlined text-[24px]">verified_user</span>
+</div>
+<div class="flex flex-col min-w-0">
+<div class="flex items-center gap-space-xs flex-wrap">
+<h2 class="font-headline-sm text-headline-sm text-on-surface font-semibold truncate">Polisa ubezpieczeniowa Allianz Travel Plus</h2>
+<span class="px-2 py-0.5 rounded-full bg-surface-container text-on-surface-variant font-label-sm text-label-sm font-semibold">Nr PL-8829104</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-0.5">
+                  Ważność: 1 - 8 maja 2025 • Pokrycie: Koszty leczenia (do 200 000 EUR), OC, Bagaż
+                </p>
+<div class="flex items-center gap-space-sm mt-space-sm">
+<div class="inline-flex items-center gap-1.5 px-space-xs py-1 rounded-lg bg-surface-container-low text-primary font-label-sm text-label-sm group cursor-pointer hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined text-[16px] text-secondary">picture_as_pdf</span>
+<span class="font-medium truncate max-w-[180px]">Polisa_Allianz_Travel_2025.pdf</span>
+</div>
+<span class="font-body-sm text-body-sm text-outline">1.8 MB</span>
+</div>
+</div>
+</div>
+<div class="flex md:flex-col items-end justify-between md:justify-center gap-space-sm shrink-0">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-tertiary-fixed-dim/20 text-tertiary font-label-sm text-label-sm font-semibold">
+<span class="w-2 h-2 rounded-full bg-tertiary-container"></span>
+                Aktywna (2 osoby objęte)
+              </span>
+<div class="flex items-center gap-1">
+<button class="p-1.5 rounded-lg text-on-surface-variant hover:text-primary hover:bg-surface-container transition-colors" title="Podgląd" type="button">
+<span class="material-symbols-outlined text-[20px]">visibility</span>
+</button>
+<button class="p-1.5 rounded-lg text-on-surface-variant hover:text-primary hover:bg-surface-container transition-colors" title="Pobierz" type="button">
+<span class="material-symbols-outlined text-[20px]">download</span>
+</button>
+<button class="p-1.5 rounded-lg text-on-surface-variant hover:text-primary hover:bg-surface-container transition-colors" title="Więcej" type="button">
+<span class="material-symbols-outlined text-[20px]">more_vert</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Helpful Destination Visual Preview Strip -->
+<div class="bg-surface-container-low p-space-md rounded-xl flex items-center justify-between gap-space-md">
+<div class="flex items-center gap-space-md">
+<img class="w-20 h-20 rounded-lg object-cover shrink-0 shadow-sm" data-alt="Panoramic viewpoint of Lisbon Portugal Alfama terracotta rooftops and the blue Tagus river in golden sunset lighting with modern editorial travel elegance" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBPvPgXSDDVVv6cIAEjxRc5PTxcDPCei2WG6aduvpfq3uOsaEuIZ4bhgA8rFJNuGgcPF6WmN4kA5AF95xkfWuP9Yz2c_n_DxofN0iBJJmXOQrwer8tLPnrg5DOUxxFIrMHTY0dv56GDlBPYyifJnYCOo9lLA7OvTdHDILUJ6sBjbi06ticoHkeOhv7bmsdXYOY5xwlocRtu3h6mxHzb4JFhETBnILjBLk9adsdY1Wab-ImVz5VmMWIM"/>
+<div class="flex flex-col">
+<span class="font-label-md text-label-md text-secondary font-bold uppercase tracking-wide">Wskazówka VoyageAI</span>
+<h3 class="font-headline-sm text-headline-sm text-primary font-semibold">Zsynchronizuj z Apple Wallet &amp; Google Pass</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Wszystkie Twoje 7 biletów jest dostępnych offline w formacie PKPass.</p>
+</div>
+</div>
+<button class="hidden sm:flex items-center gap-1.5 px-space-md py-2 rounded-lg bg-surface-container-lowest text-primary font-label-md text-label-md font-semibold hover:bg-surface-container transition-colors shadow-2xs shrink-0" type="button">
+<span class="material-symbols-outlined text-[18px]">wallet</span>
+<span>Eksportuj portfel</span>
+</button>
+</div>
+</div>
+<!-- Right 4 Columns: Drag & Drop Zone and AI Parser Dock -->
+<div class="lg:col-span-4 flex flex-col gap-space-md sticky top-20">
+<!-- Drag & Drop Upload Zone -->
+<div class="bg-surface-container-lowest p-space-lg rounded-xl shadow-sm flex flex-col items-center justify-center text-center group cursor-pointer transition-all hover:bg-surface-container-low" id="drop-area">
+<div class="w-16 h-16 rounded-full bg-surface-container-high flex items-center justify-center text-primary group-hover:scale-110 group-hover:bg-primary group-hover:text-on-primary transition-all shadow-sm">
+<span class="material-symbols-outlined text-[32px]">cloud_upload</span>
+</div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface font-semibold mt-space-md">
+            Upuść potwierdzenia tutaj
+          </h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-1 max-w-xs">
+            Przeciągnij faktury, maile z rezerwacją, bilety lotnicze lub zdjęcia voucherów.
+          </p>
+<span class="font-label-sm text-label-sm text-outline mt-space-sm uppercase font-semibold">
+            Obsługuje PDF, PKPASS, PNG, JPG (do 25 MB)
+          </span>
+<button class="mt-space-md px-space-md py-2 rounded-lg bg-surface-container text-primary font-label-md text-label-md font-semibold hover:bg-surface-container-high transition-colors" onclick="document.getElementById('file-upload-input').click()" type="button">
+            Wybierz plik z dysku
+          </button>
+</div>
+<!-- AI Intelligent Scanner & Extraction Info -->
+<div class="bg-surface-container-lowest p-space-lg rounded-xl shadow-sm flex flex-col gap-space-md">
+<div class="flex items-center gap-space-xs">
+<span class="w-8 h-8 rounded-lg bg-secondary-fixed/40 flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined text-[20px]">document_scanner</span>
+</span>
+<div class="flex flex-col">
+<h4 class="font-headline-sm text-headline-sm text-on-surface font-semibold">Inteligentny Skaner AI</h4>
+<span class="font-label-sm text-label-sm text-secondary font-medium">Automatyczne parsowanie</span>
+</div>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant">
+            VoyageAI automatycznie odczytuje daty, kody PNR, numery rezerwacji, godziny odlotów i kwoty. Dane są natychmiast łączone z Twoją Osią Czasu oraz kalkulatorem budżetu podróży.
+          </p>
+<!-- Live Extraction Demonstration Widget -->
+<div class="p-space-sm rounded-lg bg-surface-container-low flex flex-col gap-space-2xs">
+<div class="flex items-center justify-between">
+<span class="font-label-sm text-label-sm text-on-surface font-semibold">Ostatnio przetworzony:</span>
+<span class="font-label-sm text-label-sm text-tertiary font-bold flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-tertiary"></span> 100% spójności
+              </span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface truncate">Voucher_Memmo_Alfama.pdf</p>
+<div class="flex items-center gap-1 text-[11px] text-outline mt-1 font-mono">
+<span>PNR: #9842103</span>
+<span>•</span>
+<span>Check-in: 01.05.2025</span>
+</div>
+</div>
+<div class="pt-space-xs flex items-center justify-between text-on-surface-variant font-label-sm text-label-sm">
+<span>Szyfrowanie end-to-end AES-256</span>
+<span class="material-symbols-outlined text-[16px] text-tertiary">lock</span>
+</div>
+</div>
+<!-- Quick AI Assistance Card -->
+<div class="bg-primary text-on-primary p-space-lg rounded-xl shadow-md flex flex-col gap-space-sm relative overflow-hidden">
+<div class="absolute -right-6 -bottom-6 w-32 h-32 rounded-full bg-on-primary/5 pointer-events-none"></div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-secondary-container text-[20px]">smart_toy</span>
+<span class="font-label-lg text-label-lg font-bold">Brakuje Ci dokumentu?</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-primary/80">
+            Wyślij potwierdzenie e-mail bezpośrednio na Twój prywatny adres podróży:
+          </p>
+<div class="flex items-center justify-between p-2 rounded-lg bg-on-primary/10 text-on-primary font-mono text-body-sm">
+<span class="truncate">trip-pt2025@my.voyageai.com</span>
+<button class="hover:text-secondary-fixed transition-colors" onclick="navigator.clipboard.writeText('trip-pt2025@my.voyageai.com'); alert('Skopiowano adres e-mail!');" title="Kopiuj" type="button">
+<span class="material-symbols-outlined text-[18px]">content_copy</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<script>
+  // Simple interactive filter behavior for tabs
+  document.querySelectorAll('.tab-btn').forEach(button => {
+    button.addEventListener('click', () => {
+      // Update Tab Styles
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('bg-surface-container-lowest', 'text-primary', 'shadow-2xs', 'font-semibold');
+        btn.classList.add('text-on-surface-variant');
+      });
+      button.classList.add('bg-surface-container-lowest', 'text-primary', 'shadow-2xs', 'font-semibold');
+      button.classList.remove('text-on-surface-variant');
+
+      // Filter rows
+      const targetCat = button.getAttribute('data-category');
+      const cards = document.querySelectorAll('[data-item-type]');
+      
+      cards.forEach(card => {
+        if (targetCat === 'all' || card.getAttribute('data-item-type') === targetCat) {
+          card.classList.remove('hidden');
+        } else {
+          card.classList.add('hidden');
+        }
+      });
+    });
+  });
+
+  // Drag & drop highlight
+  const dropArea = document.getElementById('drop-area');
+  if (dropArea) {
+    ['dragenter', 'dragover'].forEach(eventName => {
+      dropArea.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        dropArea.classList.add('bg-surface-container-high', 'scale-[1.01]');
+      }, false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+      dropArea.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        dropArea.classList.remove('bg-surface-container-high', 'scale-[1.01]');
+      }, false);
+    });
+
+    dropArea.addEventListener('drop', (e) => {
+      alert('Pliki zostały pomyślnie przesłane i przekazane do analizy AI!');
+    });
+  }
+</script></main><footer class="w-full bg-surface-container-lowest border-t border-outline-variant/30 py-space-xl mt-auto"><div class="w-full px-gutter-desktop max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-space-md"><div class="flex items-center gap-space-xs"><span class="font-headline-sm text-headline-sm text-primary font-bold tracking-tight">VoyageAI</span><span class="text-on-surface-variant font-body-sm text-body-sm">© 2025 Wszelkie prawa zastrzeżone. Inteligentne planowanie podróży.</span></div><div class="flex items-center gap-space-lg font-label-md text-label-md text-on-surface-variant"><a class="hover:text-on-surface transition-colors" href="#">Prywatność</a><a class="hover:text-on-surface transition-colors" href="#">Regulamin</a><a class="hover:text-on-surface transition-colors" href="#">Centrum pomocy</a><a class="hover:text-on-surface transition-colors" href="#">Status API</a></div></div></footer></body></html>

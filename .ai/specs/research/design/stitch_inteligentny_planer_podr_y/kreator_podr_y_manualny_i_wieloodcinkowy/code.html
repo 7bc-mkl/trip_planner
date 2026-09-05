@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+
+<html lang="pl"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/><link href="https://fonts.googleapis.com" rel="preconnect"/><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/><link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script><script id="tailwind-config">tailwind.config={darkMode:"class",theme:{extend:{colors:{"error":"#ba1a1a","secondary-container":"#fd651e","primary-fixed-dim":"#a2c9ff","on-error-container":"#93000a","inverse-primary":"#a2c9ff","surface-container-lowest":"#ffffff","primary":"#00294d","on-primary-container":"#84abe0","outline":"#737780","secondary-fixed-dim":"#ffb599","on-secondary-fixed-variant":"#7f2b00","on-surface-variant":"#42474f","surface-container":"#eaedff","tertiary":"#002e1d","tertiary-fixed-dim":"#4edea3","on-primary-fixed":"#001c38","error-container":"#ffdad6","on-surface":"#131b2e","surface-container-high":"#e2e7ff","tertiary-container":"#00472f","surface-bright":"#faf8ff","secondary-fixed":"#ffdbce","inverse-on-surface":"#eef0ff","primary-container":"#0f3f6d","outline-variant":"#c3c6d0","primary-fixed":"#d3e4ff","surface-variant":"#dae2fd","on-tertiary":"#ffffff","surface-container-low":"#f2f3ff","on-tertiary-fixed":"#002113","surface-tint":"#386090","secondary":"#a73a00","on-secondary-fixed":"#370e00","surface-container-highest":"#dae2fd","surface":"#faf8ff","background":"#faf8ff","on-tertiary-fixed-variant":"#005236","on-primary":"#ffffff","surface-dim":"#d2d9f4","on-secondary":"#ffffff","on-background":"#131b2e","on-tertiary-container":"#20bf86","inverse-surface":"#283044","on-secondary-container":"#571a00","on-primary-fixed-variant":"#1c4877","tertiary-fixed":"#6ffbbe","on-error":"#ffffff"},borderRadius:{"DEFAULT":"0.25rem","lg":"0.5rem","xl":"0.75rem","full":"9999px"},spacing:{"space-lg":"1.5rem","space-2xl":"3rem","gutter-desktop":"1.5rem","gutter-mobile":"1rem","space-md":"1rem","timeline-track-offset":"2.5rem","space-xs":"0.5rem","space-2xs":"0.25rem","space-3xl":"4rem","space-xl":"2rem","space-sm":"0.75rem","sidebar-width":"22rem"},fontFamily:{"headline-lg":["Plus Jakarta Sans"],"display-lg-mobile":["Plus Jakarta Sans"],"label-sm":["Plus Jakarta Sans"],"label-md":["Plus Jakarta Sans"],"body-md":["Plus Jakarta Sans"],"headline-xl":["Plus Jakarta Sans"],"headline-md":["Plus Jakarta Sans"],"display-lg":["Plus Jakarta Sans"],"headline-xl-mobile":["Plus Jakarta Sans"],"body-lg":["Plus Jakarta Sans"],"body-sm":["Plus Jakarta Sans"],"label-lg":["Plus Jakarta Sans"],"headline-sm":["Plus Jakarta Sans"]},fontSize:{"headline-lg":["24px",{"lineHeight":"32px","letterSpacing":"-0.015em","fontWeight":"600"}],"display-lg-mobile":["34px",{"lineHeight":"42px","letterSpacing":"-0.02em","fontWeight":"700"}],"label-sm":["11px",{"lineHeight":"14px","letterSpacing":"0.025em","fontWeight":"600"}],"label-md":["12px",{"lineHeight":"16px","letterSpacing":"0.015em","fontWeight":"500"}],"body-md":["15px",{"lineHeight":"22px","fontWeight":"400"}],"headline-xl":["36px",{"lineHeight":"44px","letterSpacing":"-0.02em","fontWeight":"600"}],"headline-md":["20px",{"lineHeight":"28px","letterSpacing":"-0.01em","fontWeight":"600"}],"display-lg":["48px",{"lineHeight":"56px","letterSpacing":"-0.03em","fontWeight":"700"}],"headline-xl-mobile":["28px",{"lineHeight":"36px","letterSpacing":"-0.01em","fontWeight":"600"}],"body-lg":["18px",{"lineHeight":"28px","letterSpacing":"-0.005em","fontWeight":"400"}],"body-sm":["13px",{"lineHeight":"18px","fontWeight":"400"}],"label-lg":["14px",{"lineHeight":"20px","letterSpacing":"0.01em","fontWeight":"600"}],"headline-sm":["16px",{"lineHeight":"24px","letterSpacing":"-0.005em","fontWeight":"600"}]}}}}</script></head><body class="bg-surface font-body-md text-on-surface antialiased min-h-screen"><header class="fixed top-0 left-0 right-0 z-50 bg-surface/85 backdrop-blur-xl border-b border-outline-variant/30 shadow-[0_1px_8px_rgba(0,0,0,0.03)]"><div class="h-16 w-full px-gutter-desktop flex items-center justify-between gap-space-md"><div class="flex items-center gap-space-lg shrink-0"><div class="flex items-center gap-space-xs"><img alt="VoyageAI Brand Logo" class="h-8 w-auto object-contain" src="https://lh3.googleusercontent.com/aida/AEtjO1UwqvODcQZBJXVPksey1jihS-mD--3lWjHsLIK-NS1K9JVIz8D5qknHEQ_88BSASgOV6LUnwCJlyGqzQG4f2FGk9074jjbwUcCPH6FnJ-EhvpoIRZS3CfY4vPxQBSJoOZBmuC9np9jiS_mVKB576JVoePuOV0BDuWC4PMWNciJg-tMfcUc-s_Z1tLGcReCf0Jw7xDYMP_TBlnm1lznCbPYvy3KgDls--UTTBj1wMZCbNW2IRnp1HWsCzw"/><span class="font-headline-sm text-headline-sm text-primary tracking-tight font-bold">VoyageAI</span></div><div class="h-5 w-px bg-outline-variant/50 hidden xl:block"></div><button class="hidden xl:flex items-center gap-space-xs px-space-sm py-1.5 rounded-lg bg-surface-container-low hover:bg-surface-container hover:text-on-surface transition-all text-left group" type="button"><div class="flex flex-col"><span class="font-label-sm text-label-sm text-on-surface-variant group-hover:text-primary transition-colors flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-secondary"></span>Nowy szkic podróży</span><span class="font-label-md text-label-md text-on-surface font-semibold max-w-[220px] truncate">Indie Północne: Delhi &amp; Mumbaj</span></div><span class="material-symbols-outlined text-outline text-[18px] ml-1 group-hover:text-on-surface transition-colors">expand_more</span></button></div><nav class="hidden lg:flex items-center gap-space-2xs bg-surface-container-lowest/80 p-1 rounded-xl border border-outline-variant/30" data-active-classes="bg-primary-container text-on-primary font-semibold rounded-lg shadow-sm"><a class="px-space-md py-1.5 rounded-lg font-label-lg text-label-lg bg-primary text-on-primary font-semibold shadow-sm" data-path="nowa-podroz" href="#">Nowa podróż</a><a class="px-space-md py-1.5 rounded-lg font-label-lg text-label-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors" data-path="os-czasu" href="#">Oś czasu</a><a class="px-space-md py-1.5 rounded-lg font-label-lg text-label-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors" data-path="szczegoly-dnia" href="#">Szczegóły dnia</a><a class="px-space-md py-1.5 rounded-lg font-label-lg text-label-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors" data-path="rezerwacje-i-dokumenty" href="#">Rezerwacje i Dokumenty</a></nav><div class="flex items-center gap-space-sm shrink-0"><button class="flex items-center gap-2 px-space-md py-2 rounded-lg bg-surface-container-low border border-outline-variant/50 text-on-surface font-label-md text-label-md hover:bg-surface-container-high hover:border-secondary transition-all shadow-xs active:scale-[0.98]" title="Opcjonalny czat z asystentem AI w bocznym panelu" type="button"><span class="material-symbols-outlined text-[18px] text-secondary">smart_toy</span><span class="hidden sm:inline font-semibold">Pomoc Asystenta</span><span class="px-1.5 py-0.5 rounded text-[10px] bg-secondary-fixed text-on-secondary-fixed font-bold">Opcjonalnie</span></button><div class="flex items-center bg-surface-container-low rounded-lg p-0.5 border border-outline-variant/30"><button class="px-2 py-1 rounded font-label-sm text-label-sm font-semibold bg-surface-container-lowest text-primary shadow-2xs" type="button">PLN</button><button class="px-2 py-1 rounded font-label-sm text-label-sm font-semibold text-on-surface-variant hover:text-on-surface transition-colors" type="button">EUR</button></div><button aria-label="Powiadomienia" class="p-2 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors relative" type="button"><span class="material-symbols-outlined text-[22px]">notifications</span><span class="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-secondary-container ring-2 ring-surface"></span></button><div class="h-6 w-px bg-outline-variant/50 hidden sm:block"></div><button class="flex items-center gap-space-xs p-1 rounded-full hover:bg-surface-container-high transition-colors group" type="button"><img alt="Profile" class="w-8 h-8 rounded-full object-cover ring-1 ring-outline-variant/40" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAi_GpiafipyuUrX0Y7Bx2qiF2pvE5rBgu7vCTTZrhkAp736wXXSdJJ6E1qzcFyup4P7oyfgo4RpOZZXp-tmSddlfa1482Bt7pfla81IZ_b4bgMh6yqRor1tDcHsWmuSJY5s5zfZ0wwpDgyhNyHnaWEd5sGg8oFeucf1c1sja3gUzr3NfsIJwDMZ-Y4YJFhw4FzAq5iel9r7ied9aPppdqKrnCIvG5NY9l2vUgDI4GAkzjCeTxXVKQs"/><span class="material-symbols-outlined text-outline text-[18px] group-hover:text-on-surface transition-colors hidden sm:inline">keyboard_arrow_down</span></button></div></div></header><main class="w-full pt-16 bg-surface min-h-screen"><div class="flex flex-col w-full">
+<div class="w-full px-gutter-desktop max-w-7xl mx-auto py-space-xl">
+<!-- Top Progress / Mode Switcher -->
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-space-md mb-space-xl">
+<div>
+<div class="flex items-center gap-2 mb-1">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full bg-primary-fixed text-on-primary-fixed font-label-sm text-label-sm uppercase tracking-wider font-semibold">
+            Kreator Podróży • Pełna Kontrola Manualna
+          </span>
+<span class="font-label-sm text-label-sm text-on-surface-variant flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px] text-tertiary-container">edit_calendar</span>
+            Ręczne definiowanie etapów &amp; lotów
+          </span>
+</div>
+<h1 class="font-display-lg text-display-lg text-primary tracking-tight">Zaplanuj nową ekspedycję</h1>
+<p class="font-body-md text-body-md text-on-surface-variant mt-1">Skonfiguruj trasę i szkielet harmonogramu krok po kroku. Asystent AI pozostaje w tle jako opcjonalne wsparcie.</p>
+</div>
+<!-- Mode Selector Pills -->
+<div class="flex items-center bg-surface-container-low p-1.5 rounded-xl shadow-inner gap-1 self-start md:self-auto">
+<button class="flex items-center gap-2 px-space-md py-2 rounded-lg font-label-md text-label-md bg-surface-container-lowest text-primary shadow-sm font-semibold transition-all" id="mode-express" type="button">
+<span class="material-symbols-outlined text-[18px]">edit_note</span>
+<span>Kreator manualny (Domyślny)</span>
+</button>
+<button class="flex items-center gap-2 px-space-md py-2 rounded-lg font-label-md text-label-md text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-all" id="mode-ai" type="button">
+<span class="material-symbols-outlined text-[18px] text-secondary">auto_awesome</span>
+<span>Tryb sugestii AI</span>
+</button>
+<button class="flex items-center gap-2 px-space-md py-2 rounded-lg font-label-md text-label-md text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-all" id="mode-import" type="button">
+<span class="material-symbols-outlined text-[18px]">receipt_long</span>
+<span>Import rezerwacji</span>
+</button>
+</div>
+</div>
+<!-- Main Grid Workspace -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-space-xl items-start">
+<!-- Left 8-col: Manual-First Comprehensive Express Form -->
+<div class="lg:col-span-8 flex flex-col gap-space-lg">
+<!-- Interactive Form Card -->
+<div class="bg-surface-container-lowest p-space-xl rounded-2xl shadow-sm flex flex-col gap-space-lg border border-outline-variant/30">
+<!-- Route Type Selector (Round-trip vs Open-jaw vs One-way) -->
+<div class="flex flex-col gap-2 pb-space-xs border-b border-outline-variant/30">
+<div class="flex items-center justify-between">
+<span class="font-label-md text-label-md font-bold text-on-surface uppercase tracking-wider text-[11px] text-on-surface-variant">Konfiguracja trasy</span>
+<span class="font-label-sm text-label-sm text-secondary font-medium">Obsługa tras wieloodcinkowych</span>
+</div>
+<div class="inline-flex p-1 bg-surface-container-low rounded-xl gap-1 w-full sm:w-auto">
+<button class="flex-1 sm:flex-initial px-space-md py-1.5 rounded-lg font-label-md text-label-md text-on-surface-variant hover:text-on-surface transition-all flex items-center justify-center gap-1.5" type="button">
+<span class="material-symbols-outlined text-[16px]">sync_alt</span>
+<span>W obie strony</span>
+</button>
+<button class="flex-1 sm:flex-initial px-space-md py-1.5 rounded-lg font-label-md text-label-md bg-surface-container-lowest text-primary font-bold shadow-xs transition-all flex items-center justify-center gap-1.5 border border-outline-variant/40" type="button">
+<span class="material-symbols-outlined text-[16px] text-secondary">alt_route</span>
+<span>Inne miasto powrotu (Open-jaw / Multi-city)</span>
+</button>
+<button class="flex-1 sm:flex-initial px-space-md py-1.5 rounded-lg font-label-md text-label-md text-on-surface-variant hover:text-on-surface transition-all flex items-center justify-center gap-1.5" type="button">
+<span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+<span>W jedną stronę</span>
+</button>
+</div>
+</div>
+<!-- Multi-City Segments Section -->
+<div class="flex flex-col gap-space-md">
+<div class="flex items-center justify-between">
+<span class="font-headline-sm text-headline-sm font-semibold text-primary">Odcinki podróży (Loty / Transfery)</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Łącznie: 2 odcinki główne (14 dni)</span>
+</div>
+<!-- Segment 1: WAW -> DEL -->
+<div class="p-space-md rounded-xl bg-surface-container-low/70 border border-outline-variant/40 relative">
+<div class="flex items-center justify-between mb-2">
+<div class="flex items-center gap-2">
+<span class="px-2 py-0.5 rounded bg-primary text-on-primary font-label-sm text-label-sm font-bold">Odcinek 1 (Tam)</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant font-medium">Lot główny</span>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface-variant flex items-center gap-1">
+<span class="material-symbols-outlined text-[15px] text-tertiary-container">schedule</span> 10.11.2025
+</span>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-12 gap-space-sm items-center">
+<!-- Departure Input -->
+<div class="md:col-span-5 flex flex-col gap-1">
+<label class="font-label-sm text-label-sm font-semibold text-on-surface" for="seg1-origin">Wylot</label>
+<div class="relative flex items-center">
+<span class="material-symbols-outlined absolute left-3 text-outline text-[18px] pointer-events-none">flight_takeoff</span>
+<input class="w-full pl-9 pr-3 py-2.5 rounded-lg bg-surface-container-lowest border border-outline-variant/50 text-on-surface font-body-sm text-body-sm font-semibold focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none" id="seg1-origin" type="text" value="Warszawa (WAW), Polska"/>
+</div>
+</div>
+<div class="hidden md:flex md:col-span-1 justify-center pt-5">
+<span class="material-symbols-outlined text-outline-variant text-[20px]">trending_flat</span>
+</div>
+<!-- Arrival Input -->
+<div class="md:col-span-4 flex flex-col gap-1">
+<label class="font-label-sm text-label-sm font-semibold text-on-surface" for="seg1-destination">Przylot</label>
+<div class="relative flex items-center">
+<span class="material-symbols-outlined absolute left-3 text-secondary text-[18px] pointer-events-none">flight_land</span>
+<input class="w-full pl-9 pr-3 py-2.5 rounded-lg bg-surface-container-lowest border border-outline-variant/50 text-on-surface font-body-sm text-body-sm font-semibold focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none" id="seg1-destination" type="text" value="Delhi (DEL), Indie"/>
+</div>
+</div>
+<!-- Date Input -->
+<div class="md:col-span-2 flex flex-col gap-1">
+<label class="font-label-sm text-label-sm font-semibold text-on-surface" for="seg1-date">Data wylotu</label>
+<div class="relative flex items-center">
+<input class="w-full px-2.5 py-2.5 rounded-lg bg-surface-container-lowest border border-outline-variant/50 text-on-surface font-body-sm text-body-sm font-semibold focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none text-center" id="seg1-date" type="text" value="10.11.2025"/>
+</div>
+</div>
+</div>
+</div>
+<!-- Segment 2: BOM -> KTW (Open-jaw return) -->
+<div class="p-space-md rounded-xl bg-surface-container-low/70 border border-outline-variant/40 relative">
+<div class="flex items-center justify-between mb-2">
+<div class="flex items-center gap-2">
+<span class="px-2 py-0.5 rounded bg-secondary text-on-secondary font-label-sm text-label-sm font-bold">Odcinek 2 (Powrót / Open-Jaw)</span>
+<span class="font-label-sm text-label-sm text-secondary font-medium">Inne lotnisko wylotu &amp; powrotu</span>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface-variant flex items-center gap-1">
+<span class="material-symbols-outlined text-[15px] text-tertiary-container">schedule</span> 24.11.2025
+</span>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-12 gap-space-sm items-center">
+<!-- Departure Input -->
+<div class="md:col-span-5 flex flex-col gap-1">
+<label class="font-label-sm text-label-sm font-semibold text-on-surface" for="seg2-origin">Wylot z innego miasta</label>
+<div class="relative flex items-center">
+<span class="material-symbols-outlined absolute left-3 text-outline text-[18px] pointer-events-none">flight_takeoff</span>
+<input class="w-full pl-9 pr-3 py-2.5 rounded-lg bg-surface-container-lowest border border-outline-variant/50 text-on-surface font-body-sm text-body-sm font-semibold focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none" id="seg2-origin" type="text" value="Mumbaj (BOM), Indie"/>
+</div>
+</div>
+<div class="hidden md:flex md:col-span-1 justify-center pt-5">
+<span class="material-symbols-outlined text-outline-variant text-[20px]">trending_flat</span>
+</div>
+<!-- Arrival Input -->
+<div class="md:col-span-4 flex flex-col gap-1">
+<label class="font-label-sm text-label-sm font-semibold text-on-surface" for="seg2-destination">Powrót do</label>
+<div class="relative flex items-center">
+<span class="material-symbols-outlined absolute left-3 text-secondary text-[18px] pointer-events-none">flight_land</span>
+<input class="w-full pl-9 pr-3 py-2.5 rounded-lg bg-surface-container-lowest border border-outline-variant/50 text-on-surface font-body-sm text-body-sm font-semibold focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none" id="seg2-destination" type="text" value="Katowice (KTW), Polska"/>
+</div>
+</div>
+<!-- Date Input -->
+<div class="md:col-span-2 flex flex-col gap-1">
+<label class="font-label-sm text-label-sm font-semibold text-on-surface" for="seg2-date">Data powrotu</label>
+<div class="relative flex items-center">
+<input class="w-full px-2.5 py-2.5 rounded-lg bg-surface-container-lowest border border-outline-variant/50 text-on-surface font-body-sm text-body-sm font-semibold focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none text-center" id="seg2-date" type="text" value="24.11.2025"/>
+</div>
+</div>
+</div>
+</div>
+<!-- Add segment button -->
+<button class="w-full py-2.5 border-2 border-dashed border-outline-variant/60 hover:border-primary text-primary hover:bg-surface-container-low rounded-xl font-label-md text-label-md font-semibold transition-all flex items-center justify-center gap-2 group" type="button">
+<span class="material-symbols-outlined text-[20px] group-hover:scale-110 transition-transform">add_circle</span>
+<span>+ Dodaj kolejny odcinek lotu / przejazdu (np. pociąg DEL → AGRA)</span>
+</button>
+</div>
+<!-- Interactive Blank Planning Template / Manual Skeleton -->
+<div class="flex flex-col gap-space-sm pt-space-xs border-t border-outline-variant/30">
+<div class="flex items-center justify-between">
+<div>
+<h3 class="font-headline-sm text-headline-sm font-bold text-primary flex items-center gap-2">
+<span class="material-symbols-outlined text-secondary text-[22px]">format_list_bulleted_add</span>
+<span>Szkielet planu do ręcznego uzupełnienia</span>
+</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Zdefiniuj puste sloty na noclegi i transfery pomiędzy miastami przed utworzeniem osi czasu.</p>
+</div>
+<span class="px-2.5 py-1 rounded-md bg-surface-container-high text-primary font-label-sm text-label-sm font-bold">3 etapy trasy</span>
+</div>
+<div class="flex flex-col gap-3">
+<!-- Slot 1: Delhi -->
+<div class="p-space-md rounded-xl bg-surface-container-low border border-outline-variant/30 flex flex-col gap-2.5 hover:border-outline transition-colors">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="w-6 h-6 rounded-full bg-primary text-on-primary font-label-sm text-label-sm font-bold flex items-center justify-center">1</span>
+<span class="font-label-lg text-label-lg font-bold text-on-surface">Etap: Delhi (3 dni • 10.11 - 13.11)</span>
+</div>
+<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-surface-container-high text-primary flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-primary"></span> Planowany (niezarezerwowany)
+</span>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-12 gap-space-sm items-center">
+<div class="md:col-span-8 flex flex-col gap-1">
+<label class="font-label-sm text-label-sm text-on-surface-variant">Zaplanowany nocleg / lokalizacja</label>
+<div class="relative flex items-center">
+<span class="material-symbols-outlined absolute left-3 text-outline text-[18px]">hotel</span>
+<input class="w-full pl-9 pr-3 py-2 rounded-lg bg-surface-container-lowest border border-outline-variant/40 text-on-surface font-body-sm text-body-sm" type="text" value="Hotel w rejonie Connaught Place"/>
+</div>
+</div>
+<div class="md:col-span-4 flex items-end">
+<button class="w-full py-2 px-3 rounded-lg bg-surface-container-lowest hover:bg-surface-container-high text-primary border border-outline-variant/40 font-label-sm text-label-sm font-semibold flex items-center justify-center gap-1.5 transition-colors" type="button">
+<span class="material-symbols-outlined text-[16px]">train</span>
+<span>+ Dodaj pociąg do Agry</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Slot 2: Agra & Jaipur -->
+<div class="p-space-md rounded-xl bg-surface-container-lowest border border-dashed border-outline-variant/60 flex flex-col gap-2.5 hover:bg-surface-container-low transition-colors">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="w-6 h-6 rounded-full bg-surface-container-high text-on-surface-variant font-label-sm text-label-sm font-bold flex items-center justify-center">2</span>
+<span class="font-label-lg text-label-lg font-bold text-on-surface">Etap: Agra &amp; Jaipur (4 dni • 13.11 - 17.11)</span>
+</div>
+<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-secondary-fixed text-on-secondary-fixed flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span> Pusty slot (do uzupełnienia)
+</span>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-12 gap-space-sm items-center">
+<div class="md:col-span-8 flex flex-col gap-1">
+<label class="font-label-sm text-label-sm text-on-surface-variant">Nocleg w Agrze / Jaipurze</label>
+<div class="relative flex items-center">
+<span class="material-symbols-outlined absolute left-3 text-outline text-[18px]">add_home</span>
+<input class="w-full pl-9 pr-3 py-2 rounded-lg bg-surface-container-lowest border border-outline-variant/40 text-on-surface font-body-sm text-body-sm text-on-surface-variant/80 italic" placeholder="Wpisz nazwę hotelu, link z Booking lub pozostaw puste..." type="text"/>
+</div>
+</div>
+<div class="md:col-span-4 flex items-end">
+<button class="w-full py-2 px-3 rounded-lg bg-surface-container-lowest hover:bg-surface-container-high text-on-surface-variant hover:text-on-surface border border-outline-variant/40 font-label-sm text-label-sm font-medium flex items-center justify-center gap-1.5 transition-colors" type="button">
+<span class="material-symbols-outlined text-[16px]">add_location_alt</span>
+<span>+ Dodaj aktywność</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Slot 3: Mumbaj -->
+<div class="p-space-md rounded-xl bg-surface-container-low border border-outline-variant/30 flex flex-col gap-2.5 hover:border-outline transition-colors">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="w-6 h-6 rounded-full bg-primary text-on-primary font-label-sm text-label-sm font-bold flex items-center justify-center">3</span>
+<span class="font-label-lg text-label-lg font-bold text-on-surface">Etap: Mumbaj (4 dni • 20.11 - 24.11)</span>
+</div>
+<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-surface-variant text-on-surface-variant flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-outline"></span> Do zarezerwowania
+</span>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-12 gap-space-sm items-center">
+<div class="md:col-span-8 flex flex-col gap-1">
+<label class="font-label-sm text-label-sm text-on-surface-variant">Zaplanowany nocleg / dzielnica</label>
+<div class="relative flex items-center">
+<span class="material-symbols-outlined absolute left-3 text-outline text-[18px]">hotel</span>
+<input class="w-full pl-9 pr-3 py-2 rounded-lg bg-surface-container-lowest border border-outline-variant/40 text-on-surface font-body-sm text-body-sm" type="text" value="Do uzupełnienia (rejon Colaba lub Bandra)"/>
+</div>
+</div>
+<div class="md:col-span-4 flex items-end">
+<button class="w-full py-2 px-3 rounded-lg bg-surface-container-lowest hover:bg-surface-container-high text-primary border border-outline-variant/40 font-label-sm text-label-sm font-semibold flex items-center justify-center gap-1.5 transition-colors" type="button">
+<span class="material-symbols-outlined text-[16px]">flight</span>
+<span>Odcinek wylotowy BOM</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<div class="pt-1 flex justify-start">
+<button class="text-xs font-semibold text-secondary hover:underline flex items-center gap-1" type="button">
+<span class="material-symbols-outlined text-[16px]">add</span> Dodaj kolejny etap podróży / przystanek pośredni
+</button>
+</div>
+</div>
+<!-- Instant Upload / Booking Dropzone (Optional) -->
+<div class="flex flex-col gap-1.5 pt-space-xs border-t border-outline-variant/30">
+<div class="flex items-center justify-between">
+<label class="font-label-md text-label-md font-semibold text-on-surface flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[18px] text-tertiary-container">upload_file</span>
+<span>Posiadasz bilety PNR lub potwierdzenia rezerwacji?</span>
+</label>
+<span class="font-label-sm text-label-sm text-on-surface-variant font-normal">Opcjonalnie</span>
+</div>
+<div class="relative group p-space-md rounded-xl bg-surface-container-low hover:bg-surface-container transition-all flex flex-col sm:flex-row items-center justify-between gap-space-md cursor-pointer border border-outline-variant/30">
+<div class="flex items-center gap-space-sm">
+<div class="w-11 h-11 rounded-xl bg-surface-container-lowest flex items-center justify-center text-primary shadow-xs group-hover:scale-105 transition-transform">
+<span class="material-symbols-outlined text-[22px]">cloud_upload</span>
+</div>
+<div class="flex flex-col">
+<span class="font-label-md text-label-md font-bold text-on-surface">Przeciągnij e-bilety PDF lub potwierdzenia hoteli</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Automatycznie przypiszemy numery rezerwacji i godziny do pustych slotów.</span>
+</div>
+</div>
+<button class="shrink-0 px-space-md py-2 rounded-lg bg-surface-container-lowest text-primary hover:bg-primary hover:text-on-primary font-label-sm text-label-sm font-semibold transition-all shadow-2xs border border-outline-variant/40" type="button">
+Wybierz pliki
+</button>
+</div>
+</div>
+<!-- Main Action Buttons: Manual Skeleton First + Optional AI Fill -->
+<div class="pt-space-sm flex flex-col sm:flex-row items-center justify-between gap-space-md border-t border-outline-variant/30">
+<div class="flex items-center gap-2 text-on-surface-variant">
+<span class="material-symbols-outlined text-[18px] text-tertiary">check_circle</span>
+<span class="font-label-sm text-label-sm">Ręczna edycja każdego elementu w osi czasu</span>
+</div>
+<div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full sm:w-auto">
+<button class="order-2 sm:order-1 px-space-md py-3 rounded-xl bg-surface-container-low hover:bg-surface-container text-on-surface border border-outline-variant/50 font-label-md text-label-md font-semibold transition-all flex items-center justify-center gap-2 shadow-xs" title="Wykorzystaj AI do automatycznego podpowiedzenia atrakcji dla pustych slotów" type="button">
+<span class="material-symbols-outlined text-[18px] text-secondary">auto_awesome</span>
+<span>Wypełnij pusty harmonogram z sugestiami AI</span>
+</button>
+<button class="order-1 sm:order-2 px-space-lg py-3.5 rounded-xl bg-primary text-on-primary font-label-lg text-label-lg font-bold hover:bg-primary-container transition-all shadow-md active:scale-[0.99] flex items-center justify-center gap-2" type="button">
+<span class="material-symbols-outlined text-[20px]">calendar_add_on</span>
+<span>Utwórz pustą oś czasu do ręcznego planowania</span>
+<span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Right 4-col: Open-Jaw Visual Preview + Budget Tracker + Optional AI Dock -->
+<div class="lg:col-span-4 flex flex-col gap-space-lg">
+<!-- Open-Jaw Route & Timeline Summary Card -->
+<div class="bg-surface-container-lowest rounded-2xl p-space-md shadow-sm flex flex-col gap-space-sm border border-outline-variant/30">
+<div class="flex items-center justify-between pb-1 border-b border-outline-variant/20">
+<span class="font-label-sm text-label-sm font-bold uppercase tracking-wider text-secondary">Podgląd trasy wieloodcinkowej</span>
+<span class="px-2 py-0.5 rounded bg-surface-container-high text-primary font-label-sm text-label-sm font-bold">Open-jaw</span>
+</div>
+<!-- Route schematic graphic -->
+<div class="relative w-full rounded-xl overflow-hidden bg-primary p-space-md text-on-primary flex flex-col gap-3">
+<div class="flex items-center justify-between text-xs text-primary-fixed">
+<span class="flex items-center gap-1 font-semibold"><span class="material-symbols-outlined text-[14px]">flight_takeoff</span> Wylot</span>
+<span class="flex items-center gap-1 font-semibold"><span class="material-symbols-outlined text-[14px]">flight_land</span> Powrót</span>
+</div>
+<div class="flex items-center justify-between relative z-10">
+<div class="flex flex-col">
+<span class="font-headline-sm text-headline-sm font-bold tracking-tight">WAW</span>
+<span class="text-xs text-surface-variant">Warszawa</span>
+</div>
+<div class="flex-1 flex flex-col items-center px-2">
+<span class="text-[10px] font-bold tracking-widest uppercase text-secondary-fixed">Lot tam • 10 lis</span>
+<div class="w-full flex items-center">
+<div class="w-2 h-2 rounded-full bg-secondary-fixed"></div>
+<div class="h-0.5 w-full bg-secondary-fixed/60 border-t border-dashed border-white/60"></div>
+<span class="material-symbols-outlined text-secondary-fixed text-[14px]">flight</span>
+</div>
+</div>
+<div class="flex flex-col items-end">
+<span class="font-headline-sm text-headline-sm font-bold tracking-tight">DEL</span>
+<span class="text-xs text-surface-variant">Nowe Delhi</span>
+</div>
+</div>
+<!-- Middle transfer indicator -->
+<div class="py-1 px-2.5 rounded-lg bg-white/10 flex items-center justify-between text-xs backdrop-blur-sm">
+<span class="flex items-center gap-1 text-surface-variant"><span class="material-symbols-outlined text-[14px] text-secondary-fixed">transfer_within_a_station</span> Transfer wewnątrz kraju:</span>
+<span class="font-bold text-white">Delhi → Agra → Mumbaj</span>
+</div>
+<div class="flex items-center justify-between relative z-10 pt-1">
+<div class="flex flex-col">
+<span class="font-headline-sm text-headline-sm font-bold tracking-tight text-secondary-fixed">BOM</span>
+<span class="text-xs text-surface-variant">Mumbaj</span>
+</div>
+<div class="flex-1 flex flex-col items-center px-2">
+<span class="text-[10px] font-bold tracking-widest uppercase text-secondary-fixed">Lot powrót • 24 lis</span>
+<div class="w-full flex items-center">
+<span class="material-symbols-outlined text-secondary-fixed text-[14px] rotate-180">flight</span>
+<div class="h-0.5 w-full bg-secondary-fixed/60 border-t border-dashed border-white/60"></div>
+<div class="w-2 h-2 rounded-full bg-secondary-fixed"></div>
+</div>
+</div>
+<div class="flex flex-col items-end">
+<span class="font-headline-sm text-headline-sm font-bold tracking-tight">KTW</span>
+<span class="text-xs text-surface-variant">Katowice</span>
+</div>
+</div>
+</div>
+<!-- Manual Stats Breakdown -->
+<div class="grid grid-cols-3 gap-2 py-1">
+<div class="bg-surface-container-low p-2.5 rounded-lg flex flex-col items-center text-center">
+<span class="font-label-sm text-label-sm text-on-surface-variant">Dni / Nocy</span>
+<span class="font-label-md text-label-md font-bold text-primary">15 dni / 14 n.</span>
+</div>
+<div class="bg-surface-container-low p-2.5 rounded-lg flex flex-col items-center text-center">
+<span class="font-label-sm text-label-sm text-on-surface-variant">Miasta / Bazy</span>
+<span class="font-label-md text-label-md font-bold text-primary">3 bazy</span>
+</div>
+<div class="bg-surface-container-low p-2.5 rounded-lg flex flex-col items-center text-center">
+<span class="font-label-sm text-label-sm text-on-surface-variant">Status szkicu</span>
+<span class="font-label-md text-label-md font-bold text-secondary">Manualny</span>
+</div>
+</div>
+<!-- Real-time Manual Budget Status Card -->
+<div class="p-space-sm bg-surface-container-low rounded-xl flex flex-col gap-2 border border-outline-variant/30">
+<div class="flex items-center justify-between">
+<span class="font-label-sm text-label-sm font-bold text-on-surface flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[16px] text-primary">account_balance_wallet</span>
+<span>Budżet i koszty manualne</span>
+</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Suma cząstkowa</span>
+</div>
+<div class="flex items-center justify-between text-xs">
+<span class="text-on-surface-variant">Wydatki potwierdzone (rezerwacje):</span>
+<span class="font-bold text-on-surface">0,00 PLN</span>
+</div>
+<div class="flex items-center justify-between text-xs">
+<span class="text-on-surface-variant">Szacowany koszt etapów:</span>
+<span class="font-semibold text-secondary">Do uzupełnienia w osi</span>
+</div>
+<div class="w-full bg-surface-container-highest rounded-full h-1.5 mt-1 overflow-hidden">
+<div class="bg-secondary h-full rounded-full w-[8%]"></div>
+</div>
+</div>
+</div>
+<!-- Optional AI Assistant Drawer / Helper Card -->
+<div class="bg-surface-container-lowest p-space-lg rounded-2xl shadow-sm flex flex-col gap-space-sm border border-outline-variant/30">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<div class="w-8 h-8 rounded-lg bg-surface-container-high flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-[20px]">psychology</span>
+</div>
+<div class="flex flex-col">
+<span class="font-label-lg text-label-lg font-bold text-on-surface leading-tight">Potrzebujesz pomocy AI?</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Opcjonalny asystent w tle</span>
+</div>
+</div>
+<span class="px-2 py-0.5 rounded text-[10px] bg-surface-container-high text-on-surface-variant font-semibold">Tylko na żądanie</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant">
+Możesz w każdej chwili poprosić AI o wygenerowanie rekomendacji kawiarni, pociągów IRCTC lub optymalnej kolejności zwiedzania dla wybranych slotów.
+</p>
+<div class="flex flex-col gap-2 pt-1">
+<button class="text-left p-2.5 rounded-xl bg-surface-container-low hover:bg-surface-container text-on-surface transition-all group flex items-center justify-between" type="button">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px] text-secondary">explore</span>
+<span class="font-label-sm text-label-sm font-semibold group-hover:text-primary">Zasugeruj transfer kolejowy Delhi → Agra</span>
+</div>
+<span class="material-symbols-outlined text-outline text-[16px] group-hover:translate-x-0.5 transition-transform">chevron_right</span>
+</button>
+<button class="text-left p-2.5 rounded-xl bg-surface-container-low hover:bg-surface-container text-on-surface transition-all group flex items-center justify-between" type="button">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px] text-secondary">wb_twilight</span>
+<span class="font-label-sm text-label-sm font-semibold group-hover:text-primary">Najlepsze punkty zachodu słońca w Mumbaju</span>
+</div>
+<span class="material-symbols-outlined text-outline text-[16px] group-hover:translate-x-0.5 transition-transform">chevron_right</span>
+</button>
+</div>
+<button class="mt-2 w-full py-2.5 px-3 rounded-xl bg-surface-container-low hover:bg-surface-container-high border border-outline-variant/40 text-primary font-label-md text-label-md font-bold flex items-center justify-center gap-2 transition-colors" type="button">
+<span class="material-symbols-outlined text-[18px] text-secondary">forum</span>
+<span>Otwórz boczny czat asystenta</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</div></main><footer class="w-full bg-surface-container-lowest border-t border-outline-variant/30 py-space-xl mt-auto"><div class="w-full px-gutter-desktop max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-space-md"><div class="flex items-center gap-space-xs"><span class="font-headline-sm text-headline-sm text-primary font-bold tracking-tight">VoyageAI</span><span class="text-on-surface-variant font-body-sm text-body-sm">© 2025 Wszelkie prawa zastrzeżone. Inteligentne i manualne planowanie podróży.</span></div><div class="flex items-center gap-space-lg font-label-md text-label-md text-on-surface-variant"><a class="hover:text-on-surface transition-colors" href="#">Prywatność</a><a class="hover:text-on-surface transition-colors" href="#">Regulamin</a><a class="hover:text-on-surface transition-colors" href="#">Centrum pomocy</a><a class="hover:text-on-surface transition-colors" href="#">Status API</a></div></div></footer></body></html>
