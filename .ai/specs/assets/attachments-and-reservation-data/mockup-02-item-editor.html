@@ -49,7 +49,7 @@
 </header>
 
 <div class="wrap">
-  <p class="banner">Illustrative mockup for <code>.ai/specs/2026-09-05-attachments-and-reservation-data.md</code>, rendered in the English locale because R01 makes both first-class. This is the moment R04 and D07 describe: the voucher has just been attached, so the reservation fields are offered <em>once</em> — inline, optional, dismissible, and never a condition of anything. The dates are <b>not</b> here: the reservation's dates are the item's own time span, edited above.</p>
+  <p class="banner">Illustrative mockup for <code>.ai/specs/2026-09-05-attachments-and-reservation-data.md</code>, rendered in the English locale because R01 makes both first-class. This is R04 and D07 in one screen. The voucher has just been attached and the user has <em>opened</em> the reservation disclosure himself — nothing in the app opens it for him, and nothing prompts him to. Every field in it is optional, and none of them is a condition of saving, attaching, or reaching <b>Done</b>. The dates are <b>not</b> here: the reservation's dates are the item's own time span, edited above.</p>
 
   <div class="grid">
     <div class="dialog">
@@ -103,9 +103,9 @@
         <div class="disc">
           <div class="head">
             <b>Reservation details <span class="opt" style="color:#b45309">— optional</span></b>
-            <span class="muted" style="font-size:13px;font-weight:600">Hide ▲</span>
+            <span class="muted" style="font-size:13px;font-weight:600">Collapse ▲</span>
           </div>
-          <p class="why">Voucher in front of you? You can save the number and the cost. Skipping this changes nothing — not the status, not the counter, and you will not be asked again.</p>
+          <p class="why">Anything you already have. Leaving all of it empty changes nothing — not the status, not the readiness counter, and nothing will ask you for it later.</p>
           <div class="fields">
             <div>
               <label class="f">Confirmation number</label>
@@ -138,11 +138,11 @@
         <ul class="callout" style="margin:10px 0 0;padding-left:18px">
           <li>Require a reservation field to save, attach, or reach <b>Done</b>.</li>
           <li>Block on a modal, or interrupt the flow.</li>
-          <li>Auto-expand more than once per item.</li>
-          <li>Show any "incomplete" badge, count, or reminder for an empty field.</li>
+          <li>Open this panel by itself, ever — the user opens it.</li>
+          <li>Show any "incomplete" badge, count, prompt or reminder for an empty field.</li>
           <li>Let reservation data move the readiness counter.</li>
         </ul>
-        <p class="note" style="margin-top:12px">These are R04's "never demanded", written as invariants — Phase 3 steps 4 and 5 test each one.</p>
+        <p class="note" style="margin-top:12px">These are R04's "never demanded", written as invariants — Phase 3 steps 3, 5 and 6 test each one.</p>
       </div>
       <div class="card">
         <h3>Money formatting</h3>
