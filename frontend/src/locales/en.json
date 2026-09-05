@@ -1,0 +1,37 @@
+{
+  "app": {
+    "name": "Smart Trip Planner",
+    "loading": "Loading…"
+  },
+  "locale": {
+    "label": "Language",
+    "en": "English",
+    "pl": "Polski"
+  },
+  "login": {
+    "title": "Sign in",
+    "subtitle": "Sign in to see your trips.",
+    "emailLabel": "E-mail",
+    "passwordLabel": "Password",
+    "submit": "Sign in",
+    "submitting": "Signing in…",
+    "failed": "We could not sign you in. Check your e-mail and password.",
+    "sessionExpired": "Your session expired. Please sign in again."
+  },
+  "nav": {
+    "signOut": "Sign out"
+  },
+  "trip": {
+    "stageCount": "{count, plural, one {# stage} other {# stages}}",
+    "nightCount": "{count, plural, one {# night} other {# nights}}"
+  },
+  "error": {
+    "invalid_credentials": "We could not sign you in. Check your e-mail and password.",
+    "not_authenticated": "You need to sign in to see this.",
+    "csrf_token_invalid": "Your session could not be verified. Reload the page and try again.",
+    "validation_error": "Some of the details are not valid. Check the highlighted fields.",
+    "not_found": "We could not find that.",
+    "service_unavailable": "The service is temporarily unavailable. Please try again in a moment.",
+    "unknown": "Something went wrong. Please try again."
+  }
+}

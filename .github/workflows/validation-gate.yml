@@ -1,0 +1,86 @@
+name: Validation gate
+
+# Runs the six commands from `validation.commands` in `.ai/agentic.config.json`,
+# in the order that file lists them. When the gate changes there, change it here
+# and in AGENTS.md in the same PR.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: validation-gate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gate:
+    name: Validation gate
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        # The suite needs a real PostgreSQL server: the schema uses a functional
+        # unique index, a DEFERRABLE unique constraint and an INET column.
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: trip_planner
+          POSTGRES_PASSWORD: trip_planner
+          POSTGRES_DB: trip_planner_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U trip_planner"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      TEST_DATABASE_URL: postgresql+psycopg://trip_planner:trip_planner@127.0.0.1:5432/trip_planner_test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install backend dependencies
+        run: cd backend && uv sync --frozen
+
+      - name: Install frontend dependencies
+        run: cd frontend && npm ci
+
+      # --- the validation gate, in `.ai/agentic.config.json` order ---
+
+      - name: python3 scripts/check_locales.py
+        run: python3 scripts/check_locales.py
+
+      - name: backend — ruff
+        run: (cd backend && uv run ruff check .)
+
+      - name: backend — pytest
+        run: (cd backend && uv run pytest)
+
+      - name: frontend — typecheck
+        run: (cd frontend && npm run typecheck)
+
+      - name: frontend — test
+        run: (cd frontend && npm run test -- --run)
+
+      - name: frontend — build
+        run: (cd frontend && npm run build)
+
