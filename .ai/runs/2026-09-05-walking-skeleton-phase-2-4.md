@@ -180,8 +180,8 @@ are removed. This is the rule that makes the date editor safe to use.
 - [x] 2.2 domain/days.py — generate_days, inclusive, bounded at 366 — e26cd4b
 - [x] 2.3 domain/stages.py — stages_for_day and the truncated label — f1a1858
 - [x] 2.4 POST /trips, GET /trips, GET /trips/{id} — dfde501
-- [ ] 2.5 The /trips list and the /trips/new multi-stop creator
-- [ ] 2.6 The /trips/:id timeline with its empty state
+- [x] 2.5 The /trips list and the /trips/new multi-stop creator — 8e40817
+- [x] 2.6 The /trips/:id timeline with its empty state — 8e40817 (landed with 2.5: the timeline shares AppShell and format.ts with the list, and splitting the commit would have left one of them not building)
 
 ### Phase 3: Items, statuses and the readiness counter
 
