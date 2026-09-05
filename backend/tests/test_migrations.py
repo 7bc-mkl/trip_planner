@@ -46,3 +46,27 @@ def test_every_revision_defines_a_downgrade(alembic_config: Config) -> None:
     for revision in revisions:
         module = revision.module
         assert hasattr(module, "downgrade"), f"{revision.revision} has no downgrade()"
+
+
+def test_models_and_migrations_do_not_drift(alembic_config: Config, engine: sa.Engine) -> None:
+    """`alembic upgrade head` must produce exactly the schema the models declare.
+
+    Without this, a model edit that nobody wrote a migration for passes every
+    other test — the models are used to build the test schema in some projects,
+    and the divergence only shows up in production where the migration is the
+    only thing that ran.
+    """
+    from alembic.autogenerate import compare_metadata
+    from alembic.migration import MigrationContext
+
+    from trip_planner.db import models  # noqa: F401  (registers the models)
+    from trip_planner.db.base import Base
+
+    with engine.connect() as connection:
+        context = MigrationContext.configure(connection)
+        diff = compare_metadata(context, Base.metadata)
+
+    assert diff == [], (
+        "The models and the migrations disagree. Generate a revision for this diff:\n"
+        + "\n".join(repr(entry) for entry in diff)
+    )
