@@ -81,7 +81,10 @@ def resolve_session(
 
     if session.expires_at <= moment:
         db.delete(session)
-        db.flush()
+        # Committed, not merely flushed: the caller answers an expired session
+        # with 401, and `get_db` rolls a failing request back — a flush here
+        # would be undone on the way out and the dead row would live forever.
+        db.commit()
         return None
 
     if moment - session.last_seen_at >= LAST_SEEN_REFRESH_INTERVAL:

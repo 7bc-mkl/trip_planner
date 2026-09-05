@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 
 import { LocaleSwitch } from './i18n/LocaleSwitch'
+import { isLocale } from './i18n'
 import { LoginPage } from './features/auth/LoginPage'
 import { RequireSession } from './features/auth/RequireSession'
 import { useSession } from './features/auth/SessionContext'
@@ -21,7 +22,15 @@ function TripsPlaceholder() {
     <main className="app-shell">
       <header>
         <h1>{t('app.name')}</h1>
-        <LocaleSwitch />
+        {/* Signed in, the choice is stored on the owner rather than only in this
+            browser, so the language survives a new one (R01). */}
+        <LocaleSwitch
+          onChange={(locale) => {
+            if (isLocale(locale)) {
+              void session.persistLocale(locale)
+            }
+          }}
+        />
         <button type="button" onClick={() => void session.signOut()}>
           {t('nav.signOut')}
         </button>

@@ -34,6 +34,33 @@ def static_dir() -> Path | None:
     return candidate if (candidate / "index.html").is_file() else None
 
 
+def public_file(directory: Path, url_path: str) -> Path | None:
+    """A file the build put in the bundle root, or None.
+
+    The bundler copies everything in `public/` (favicon.svg, icons.svg, a future
+    robots.txt) to the root of the bundle rather than under `/assets`, so without
+    this they fall through to the index fallback and answer with the app shell:
+    a 200 of `text/html` where an image was asked for, which fails silently.
+
+    `index.html` is deliberately excluded so it keeps going through the fallback
+    that sets `Cache-Control: no-store`.
+    """
+    relative = url_path.lstrip("/")
+    if not relative or relative == "index.html":
+        return None
+
+    root = directory.resolve()
+    candidate = (root / relative).resolve()
+
+    # `..` in a path must not reach outside the bundle. Resolving first and then
+    # requiring the root to be an ancestor is the check that survives symlinks
+    # and encoded separators alike.
+    if root not in candidate.parents or not candidate.is_file():
+        return None
+
+    return candidate
+
+
 def mount_spa(app: FastAPI, api_prefix: str, directory: Path) -> None:
     """Serve the SPA's assets, and its index for every non-API path.
 
@@ -56,6 +83,10 @@ def mount_spa(app: FastAPI, api_prefix: str, directory: Path) -> None:
             # HTML: a fetch caller parses this, and an unknown API path must look
             # like every other API error.
             return JSONResponse(status_code=404, content=error_body(ErrorCode.NOT_FOUND))
+
+        asset = public_file(directory, request.url.path)
+        if asset is not None:
+            return FileResponse(asset)
 
         # index.html must never be cached: it names the hashed asset bundles, so
         # a stale copy pins the browser to a deleted build.

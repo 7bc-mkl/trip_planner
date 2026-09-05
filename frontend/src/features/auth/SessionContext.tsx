@@ -1,23 +1,44 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 
-import { fetchMe, login as loginRequest, logout as logoutRequest } from '../../api/auth'
+import {
+  fetchMe,
+  login as loginRequest,
+  logout as logoutRequest,
+  updateLocale,
+} from '../../api/auth'
 import type { Owner } from '../../api/auth'
 import { ApiError, setUnauthenticatedHandler } from '../../api/client'
 import { applyLocale, isLocale } from '../../i18n'
+import type { Locale } from '../../i18n'
 import { clearAllDrafts } from './draftStore'
 
 type SessionState =
   /** The initial /auth/me call has not finished; we do not yet know either way. */
   | { status: 'loading' }
   | { status: 'authenticated'; owner: Owner }
-  | { status: 'anonymous' }
+  /** `expired` distinguishes "was signed in and got thrown out" from "never was". */
+  | { status: 'anonymous'; expired?: boolean }
 
 type SessionValue = SessionState & {
   signIn: (email: string, password: string) => Promise<void>
   signOut: () => Promise<void>
   /** Called when any request answers 401, so an expired session is noticed everywhere. */
   handleUnauthenticated: () => void
+  /**
+   * Store the owner's language choice on the server.
+   *
+   * The locale lives in the `owner` row rather than only in localStorage so it
+   * survives a new browser (R01) — which it only does if something actually
+   * writes it. A no-op while signed out: there is no owner to store it against,
+   * and the local preference already carries the login screen.
+   */
+  persistLocale: (locale: Locale) => Promise<void>
+  /**
+   * True when a session we believed in was rejected, so the login screen can say
+   * why the owner is suddenly back on it rather than looking like a random bounce.
+   */
+  sessionExpired: boolean
 }
 
 const SessionContext = createContext<SessionValue | null>(null)
@@ -80,11 +101,27 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
+  const persistLocale = useCallback(
+    async (locale: Locale) => {
+      if (state.status !== 'authenticated') {
+        return
+      }
+
+      try {
+        adopt(await updateLocale(locale))
+      } catch {
+        // The language already changed locally. Failing to store the preference
+        // is worth nothing to shout about — refusing to switch would be worse.
+      }
+    },
+    [adopt, state.status],
+  )
+
   const handleUnauthenticated = useCallback(() => {
     setState((current) =>
       // Only a session we believed in can expire. Collapsing 'loading' here would
       // race the initial /auth/me call and flash the login screen.
-      current.status === 'authenticated' ? { status: 'anonymous' } : current,
+      current.status === 'authenticated' ? { status: 'anonymous', expired: true } : current,
     )
   }, [])
 
@@ -94,8 +131,15 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, [handleUnauthenticated])
 
   const value = useMemo<SessionValue>(
-    () => ({ ...state, signIn, signOut, handleUnauthenticated }),
-    [state, signIn, signOut, handleUnauthenticated],
+    () => ({
+      ...state,
+      signIn,
+      signOut,
+      handleUnauthenticated,
+      persistLocale,
+      sessionExpired: state.status === 'anonymous' && state.expired === true,
+    }),
+    [state, signIn, signOut, handleUnauthenticated, persistLocale],
   )
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>

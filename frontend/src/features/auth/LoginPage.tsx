@@ -79,6 +79,12 @@ export function LoginPage() {
           onChange={(event) => setPassword(event.target.value)}
         />
 
+        {/* Why the owner is suddenly back here. Shown only until they try again,
+            at which point the sign-in result is the more useful message. */}
+        {error === null && session.sessionExpired && (
+          <p role="status">{t('login.sessionExpired')}</p>
+        )}
+
         {/* role="alert" so the failure is announced, not only shown. */}
         {error !== null && <p role="alert">{error}</p>}
 

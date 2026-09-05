@@ -2,11 +2,15 @@
 
 One engine per process, created lazily so importing the app does not require a
 reachable database (tests import the app to enumerate its routes).
+
+The request-scoped session lives in `trip_planner.api.deps.get_db`, which owns
+the commit-on-success / rollback-on-failure contract. There is deliberately only
+one of those: a second, non-committing `get_db` here was easy to import by
+mistake and would have silently discarded every write.
 """
 
 from __future__ import annotations
 
-from collections.abc import Iterator
 from functools import lru_cache
 
 from sqlalchemy import Engine, create_engine
@@ -23,9 +27,3 @@ def get_engine() -> Engine:
 @lru_cache(maxsize=1)
 def get_sessionmaker() -> sessionmaker[Session]:
     return sessionmaker(bind=get_engine(), expire_on_commit=False, future=True)
-
-
-def get_db() -> Iterator[Session]:
-    """FastAPI dependency yielding a transactional session."""
-    with get_sessionmaker()() as session:
-        yield session

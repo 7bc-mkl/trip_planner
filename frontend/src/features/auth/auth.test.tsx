@@ -298,3 +298,92 @@ describe('the draft store', () => {
     expect(document.cookie).not.toContain('private')
   })
 })
+
+describe('the language choice', () => {
+  it('is stored on the owner, not only in this browser', async () => {
+    // R01 makes both languages first-class, and the locale lives in the `owner`
+    // row precisely so it survives a new browser. That only holds if the switch
+    // actually writes it — the endpoint existing is not the same as it being called.
+    const user = userEvent.setup()
+    mockApi((url, init) => {
+      if (url.endsWith('/auth/me') && init?.method === 'PATCH') {
+        return json(200, { ...OWNER, locale: 'en' })
+      }
+      return json(200, OWNER)
+    })
+
+    renderApp('/trips')
+    await screen.findByText('owner@example.com')
+
+    await user.selectOptions(screen.getByRole('combobox'), 'en')
+
+    await waitFor(() => {
+      const call = vi
+        .mocked(fetch)
+        .mock.calls.find(([, init]) => (init as RequestInit | undefined)?.method === 'PATCH')
+      expect(call).toBeDefined()
+      expect(String(call?.[0])).toContain('/auth/me')
+      expect(JSON.parse(String(call?.[1]?.body))).toEqual({ locale: 'en' })
+    })
+  })
+
+  it('still switches the interface when storing the preference fails', async () => {
+    // A failed PATCH must not leave the owner staring at the language they just
+    // switched away from.
+    const user = userEvent.setup()
+    mockApi((url, init) => {
+      if (url.endsWith('/auth/me') && init?.method === 'PATCH') {
+        return json(503, { error: { code: 'service_unavailable', field: null } })
+      }
+      return json(200, OWNER)
+    })
+
+    renderApp('/trips')
+    await screen.findByText('owner@example.com')
+
+    await user.selectOptions(screen.getByRole('combobox'), 'en')
+
+    expect(await screen.findByRole('button', { name: 'Sign out' })).toBeInTheDocument()
+  })
+
+  it('is not sent to the server from the signed-out login screen', async () => {
+    const user = userEvent.setup()
+    mockApi(() => unauthenticated())
+
+    renderApp('/login')
+    await screen.findByRole('heading', { name: 'Zaloguj się' })
+
+    await user.selectOptions(screen.getByRole('combobox'), 'en')
+
+    expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeInTheDocument()
+    expect(
+      vi.mocked(fetch).mock.calls.some(([, init]) => (init as RequestInit | undefined)?.method === 'PATCH'),
+    ).toBe(false)
+  })
+})
+
+describe('the login screen after an expiry', () => {
+  it('says why the owner is back on it', async () => {
+    let signedIn = true
+    mockApi((url) => (signedIn && url.endsWith('/auth/me') ? json(200, OWNER) : unauthenticated()))
+
+    renderApp('/trips')
+    await screen.findByText('owner@example.com')
+
+    signedIn = false
+    const { request } = await import('../../api/client')
+    await expect(request('/auth/me')).rejects.toThrow()
+
+    expect(await screen.findByText('Sesja wygasła. Zaloguj się ponownie.')).toBeInTheDocument()
+  })
+
+  it('says nothing to a visitor who was never signed in', async () => {
+    // "Your session expired" is a lie on a first visit.
+    mockApi(() => unauthenticated())
+
+    renderApp('/login')
+    await screen.findByRole('heading', { name: 'Zaloguj się' })
+
+    expect(screen.queryByText('Sesja wygasła. Zaloguj się ponownie.')).not.toBeInTheDocument()
+  })
+})

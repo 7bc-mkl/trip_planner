@@ -78,6 +78,13 @@ def login(
         limited = limiter.is_limited(db, email=email, source_ip=source_ip)
         limiter.record_attempt(db, email=email, source_ip=source_ip)
 
+        # The attempt has to outlive this request, and a failed login *is* an
+        # exception: `get_db` rolls the request transaction back on the way out,
+        # which would discard the very row the limiter counts and leave
+        # brute-force protection inert while every test still passed. Committing
+        # here is what makes the record durable on the failing path.
+        db.commit()
+
         owner = db.execute(sa.select(Owner).where(Owner.email == email)).scalar_one_or_none()
 
         # Verify unconditionally, against a real hash when the owner is unknown,
