@@ -130,6 +130,6 @@ Implementation Plan, no more:
 - [x] 1.5 Database-backed login rate limiting and the fixed response floor — 25cabdd
 - [x] 1.6 Auth-by-default route dependency, get_owned_trip, route-enumeration test — 1814b81
 - [x] 1.7 create-owner command reading the password from stdin — 1ea3d7b
-- [ ] 1.8 /login screen, session context, route guard and the draft store
-- [ ] 1.9 Deployment artifacts: Dockerfile, compose, fatal env check, release step
+- [x] 1.8 /login screen, session context, route guard and the draft store — 83b9218
+- [x] 1.9 Deployment artifacts: Dockerfile, compose, fatal env check, release step — 5b0cdb6
 - [ ] 1.9d Deployment itself — a real TLS URL where /api/v1/trips answers 401 and /login answers 200 (BLOCKED: awaiting owner authorization of a host)
