@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link, useParams, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 
 import { ApiError } from '../../api/client'
-import { fetchTrip } from '../../api/trips'
+import { deleteTrip, fetchTrip } from '../../api/trips'
 import type { Stage, TripDetail } from '../../api/trips'
 import { AppShell } from './AppShell'
+import { ConfirmDialog } from './ConfirmDialog'
 import { FilterBar } from './FilterBar'
 import { ItemRow } from './ItemRow'
 import { ReadinessTile } from './ReadinessTile'
@@ -30,7 +31,9 @@ import { formatDateRange, formatDayChip, routeSummary, stageLabel } from './form
 export function TimelinePage() {
   const { t, i18n } = useTranslation()
   const { tripId } = useParams<{ tripId: string }>()
+  const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
+  const [confirmingDelete, setConfirmingDelete] = useState(false)
   const [trip, setTrip] = useState<TripDetail | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -93,6 +96,15 @@ export function TimelinePage() {
         <nav aria-label={t('nav.breadcrumb')} className="breadcrumb">
           <Link to="/trips">{t('trips.title')}</Link>
         </nav>
+      }
+      actions={
+        <button
+          type="button"
+          className="button-danger"
+          onClick={() => setConfirmingDelete(true)}
+        >
+          {t('trip.delete')}
+        </button>
       }
     >
       <header className="trip-header">
@@ -172,6 +184,21 @@ export function TimelinePage() {
           )
         })}
       </ol>
+
+      {confirmingDelete && (
+        <ConfirmDialog
+          title={t('trip.deleteTitle')}
+          // Naming the trip is the point: "are you sure?" tells the owner
+          // nothing about what is about to be destroyed, and there is no undo.
+          message={t('trip.deleteMessage', { title: trip.title })}
+          confirmLabel={t('trip.deleteConfirm')}
+          onCancel={() => setConfirmingDelete(false)}
+          onConfirm={async () => {
+            await deleteTrip(trip.id)
+            navigate('/trips', { replace: true })
+          }}
+        />
+      )}
     </AppShell>
   )
 }

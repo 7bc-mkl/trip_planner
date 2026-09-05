@@ -24,7 +24,11 @@
   },
   "trip": {
     "stageCount": "{count, plural, one {# etap} few {# etapy} many {# etapów} other {# etapu}}",
-    "nightCount": "{count, plural, one {# noc} few {# noce} many {# nocy} other {# nocy}}"
+    "nightCount": "{count, plural, one {# noc} few {# noce} many {# nocy} other {# nocy}}",
+    "delete": "Usuń podróż",
+    "deleteTitle": "Usunąć tę podróż?",
+    "deleteMessage": "„{title}” i wszystko, co w niej zaplanowano — każdy cel, każdy dzień i każdy element — zostanie usunięte. Tej operacji nie można cofnąć.",
+    "deleteConfirm": "Usuń podróż"
   },
   "trips": {
     "title": "Podróże",

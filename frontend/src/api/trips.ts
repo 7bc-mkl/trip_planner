@@ -82,3 +82,11 @@ export function fetchTrip(tripId: string, signal?: AbortSignal): Promise<TripDet
 export function createTrip(input: TripInput): Promise<TripDetail> {
   return request<TripDetail>('/trips', { method: 'POST', body: input })
 }
+
+export function updateTrip(tripId: string, input: Partial<TripInput>): Promise<TripDetail> {
+  return request<TripDetail>(`/trips/${tripId}`, { method: 'PATCH', body: input })
+}
+
+export function deleteTrip(tripId: string): Promise<void> {
+  return request<void>(`/trips/${tripId}`, { method: 'DELETE' })
+}

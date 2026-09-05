@@ -779,3 +779,20 @@ h2 {
   font-size: 0.75rem;
   font-weight: 600;
 }
+
+/* --- the confirmation dialog --- */
+
+.dialog--confirm p {
+  margin: 0;
+  color: var(--colour-text-muted);
+}
+
+/* Solid, so the destructive action is unmistakable — but it is not the one that
+   holds focus when the dialog opens. */
+.button-danger--solid {
+  margin-right: 0;
+  border-color: var(--colour-danger);
+  background: var(--colour-danger);
+  color: var(--colour-accent-text);
+  font-weight: 600;
+}
