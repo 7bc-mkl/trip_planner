@@ -22,7 +22,7 @@
 </header>
 
 <div class="wrap">
-  <p class="banner">Illustrative mockup for <code>.ai/specs/2026-09-05-trip-sharing-magic-link.md</code> — the two guest error pages, rendered in <b>English</b> because R01 makes both locales first-class. Full pages with the same chrome and the locale switch, because the recipient has nowhere else to go in this application. The distinction is deliberate: a revoked link says so; an unknown or deleted one does not claim the owner made a decision he did not make.</p>
+  <p class="banner">Illustrative mockup for <code>.ai/specs/2026-09-05-trip-sharing-magic-link.md</code> — the three guest dead-link pages, rendered in <b>English</b> because R01 makes both locales first-class. Full pages with the same chrome and the locale switch, because the recipient has nowhere else to go in this application. The three states are kept apart deliberately: <code>BACKWARD_COMPATIBILITY.md</code> §3 requires a shared link to resolve to an explicit „no longer available” rather than vanish, and a deleted plan must not be reported as a sharing decision the owner never took.</p>
 
   <p class="lbl2">Revoked link · HTTP 410</p>
   <div class="state">
@@ -32,11 +32,19 @@
     <span class="code">410 · share_link_revoked</span>
   </div>
 
-  <p class="lbl2">Unknown, malformed or deleted · HTTP 404</p>
+  <p class="lbl2">Trip deleted · HTTP 410</p>
+  <div class="state">
+    <div class="big">🗺</div>
+    <h1>This plan no longer exists</h1>
+    <p>The trip this link pointed to has been deleted. The link itself was genuine — there is simply nothing left to show.</p>
+    <span class="code">410 · share_link_gone</span>
+  </div>
+
+  <p class="lbl2">Unknown or malformed link · HTTP 404</p>
   <div class="state">
     <div class="big">🔗</div>
     <h1>This link does not work</h1>
-    <p>The link may have been copied incompletely, or the trip it pointed to no longer exists. Check the message you received, or ask the sender for the link again.</p>
+    <p>The link may have been copied incompletely. Check the message you received, or ask the sender for the link again.</p>
     <span class="code">404 · share_link_not_found</span>
   </div>
 
