@@ -123,13 +123,13 @@ Implementation Plan, no more:
 
 ### Phase 1: Owner authentication and deployment
 
-- [ ] 1.1 Migration and models for owner, session and login_attempt
-- [ ] 1.2 security/: Argon2id hashing, opaque tokens, constant-time comparison
-- [ ] 1.3 errors.py ErrorCode enum, generated TypeScript union, both-locales test
-- [ ] 1.4 Auth endpoints with cookie and CSRF handling
-- [ ] 1.5 Database-backed login rate limiting and the fixed response floor
-- [ ] 1.6 Auth-by-default route dependency, get_owned_trip, route-enumeration test
-- [ ] 1.7 create-owner command reading the password from stdin
+- [x] 1.1 Migration and models for owner, session and login_attempt — 8e8899d
+- [x] 1.2 security/: Argon2id hashing, opaque tokens, constant-time comparison — e229764
+- [x] 1.3 errors.py ErrorCode enum, generated TypeScript union, both-locales test — c61c641
+- [x] 1.4 Auth endpoints with cookie and CSRF handling — 25cabdd
+- [x] 1.5 Database-backed login rate limiting and the fixed response floor — 25cabdd
+- [x] 1.6 Auth-by-default route dependency, get_owned_trip, route-enumeration test — 1814b81
+- [x] 1.7 create-owner command reading the password from stdin — 1ea3d7b
 - [ ] 1.8 /login screen, session context, route guard and the draft store
 - [ ] 1.9 Deployment artifacts: Dockerfile, compose, fatal env check, release step
 - [ ] 1.9d Deployment itself — a real TLS URL where /api/v1/trips answers 401 and /login answers 200 (BLOCKED: awaiting owner authorization of a host)
