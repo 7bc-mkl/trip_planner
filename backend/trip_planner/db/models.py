@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import date as date_type
-from datetime import datetime
+from datetime import datetime, time
 
 from sqlalchemy import (
     BigInteger,
@@ -21,6 +21,7 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
+    Time,
     UniqueConstraint,
     func,
     text,
@@ -32,6 +33,9 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from trip_planner.db.base import Base
 
 __all__ = [
+    "ITEM_KINDS",
+    "ITEM_STATUSES",
+    "Item",
     "LoginAttempt",
     "Owner",
     "Session",
@@ -41,6 +45,17 @@ __all__ = [
     "normalise_email",
     "normalise_place",
 ]
+
+#: The five item types the filter bar's chips are built from.
+ITEM_KINDS = ("accommodation", "transport", "activity", "meal", "other")
+
+#: The three statuses R02 and D05 fix, in the order they progress.
+#:
+#: English identifiers in the database and on the wire; the Polish and English
+#: labels are translation keys (R09). Storing a Polish string as the enum value
+#: would make the English UI a translation of the database rather than of the
+#: product.
+ITEM_STATUSES = ("to_plan", "to_book", "done")
 
 
 def normalise_place(place: str) -> str:
@@ -333,6 +348,84 @@ class TripDay(Base):
     )
 
     trip: Mapped[Trip] = relationship(back_populates="days")
+    items: Mapped[list[Item]] = relationship(
+        back_populates="trip_day",
+        cascade="all, delete-orphan",
+        order_by="Item.position",
+    )
 
     def __repr__(self) -> str:
         return f"<TripDay id={self.id!r} date={self.date!r}>"
+
+
+def _in_list(column: str, values: tuple[str, ...]) -> str:
+    """A `CHECK (col IN (...))` clause built from the tuple that defines the values.
+
+    Written from the constant rather than typed out twice so the constraint and
+    the application's idea of the allowed values cannot drift apart — which, for
+    `status`, would quietly break the readiness arithmetic R02 depends on.
+    """
+    rendered = ", ".join(f"'{value}'" for value in values)
+    return f"{column} IN ({rendered})"
+
+
+class Item(Base):
+    """One entry on a day: a hotel, a flight, a museum, a dinner.
+
+    An item belongs to a **day**, never directly to a stage, and the day it
+    belongs to is its *start* day. `end_date` and `end_time` give it a span, which
+    is in this first migration on purpose: without one, the overnight flight that
+    leaves Warsaw at 23:50 and lands in Kuala Lumpur at 14:00 the next day has to
+    be split in two, and the two halves then count as **two** entries in the
+    readiness arithmetic — the shape of the item would silently change the number
+    the whole product exists to show. Adding a second day pointer later to a table
+    full of split-in-two flights is a backfill nobody can perform correctly.
+
+    `status` is a CHECK-constrained TEXT column rather than a PostgreSQL ENUM:
+    R02 is active until 2026-12-31 and a superseding decision is the documented
+    way to change it, so the column that is an ordinary migration to alter is the
+    right one. The constraint itself is what makes R02 structural rather than
+    conventional — a fourth status cannot be written even by a path that forgets.
+    """
+
+    __tablename__ = "item"
+    __table_args__ = (
+        CheckConstraint(_in_list("kind", ITEM_KINDS), name="ck_item_kind"),
+        CheckConstraint(_in_list("status", ITEM_STATUSES), name="ck_item_status"),
+        CheckConstraint("position >= 0", name="ck_item_position"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        PgUUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    trip_day_id: Mapped[uuid.UUID] = mapped_column(
+        PgUUID(as_uuid=True),
+        ForeignKey("trip_day.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    #: Assigned server-side as max(position)+1 within the day; the tie-break for
+    #: items with no time. Manual reordering is out of scope for this milestone,
+    #: so there is no deferrable unique constraint here — unlike `trip_stage`,
+    #: nothing renumbers these in bulk.
+    position: Mapped[int] = mapped_column(Integer, nullable=False)
+    kind: Mapped[str] = mapped_column(Text, nullable=False)
+    status: Mapped[str] = mapped_column(Text, nullable=False, server_default="to_plan")
+    #: Local wall-clock, no timezone (spec, Edge Cases). NULL means "sometime that day".
+    start_time: Mapped[time | None] = mapped_column(Time, nullable=True)
+    end_time: Mapped[time | None] = mapped_column(Time, nullable=True)
+    #: NULL means the item ends on its start day.
+    end_date: Mapped[date_type | None] = mapped_column(Date, nullable=True)
+    title: Mapped[str] = mapped_column(Text, nullable=False)
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
+    )
+
+    trip_day: Mapped[TripDay] = relationship(back_populates="items")
+
+    def __repr__(self) -> str:
+        return f"<Item id={self.id!r} kind={self.kind!r} status={self.status!r}>"
