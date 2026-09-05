@@ -190,9 +190,9 @@ are removed. This is the rule that makes the date editor safe to use.
 - [x] 3.3 GET /trips/{id}/days/{date} with prev/next — 2186fb2
 - [x] 3.4 Item POST, PATCH and DELETE — 2186fb2
 - [x] 3.5 readiness on the trip list and timeline payloads — 2186fb2
-- [ ] 3.6 The /trips/:id/days/:date screen and the item editor dialog
-- [ ] 3.7 Status chips with a translated text node and data-status
-- [ ] 3.8 Items and the counter tile on the timeline and the trip list
+- [x] 3.6 The /trips/:id/days/:date screen and the item editor dialog — 4a92d29
+- [x] 3.7 Status chips with a translated text node and data-status — 4a92d29
+- [x] 3.8 Items and the counter tile on the timeline and the trip list — 4a92d29
 
 ### Phase 4: The filter and the trip-management tail
 
