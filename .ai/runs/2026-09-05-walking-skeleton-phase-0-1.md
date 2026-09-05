@@ -114,12 +114,12 @@ Implementation Plan, no more:
 
 ### Phase 0: Foundation and a green gate
 
-- [ ] 0.1 Scaffold backend as a uv project with ruff, pytest and GET /api/v1/health
-- [ ] 0.2 Scaffold frontend as Vite + React + TypeScript strict with Vitest
-- [ ] 0.3 Add react-i18next + i18next-icu, real en/pl locales and the ICU plural proving key
-- [ ] 0.4 Add SQLAlchemy 2.0 + Alembic empty baseline and the throwaway-database fixture
-- [ ] 0.5 Replace the resolved TODOs in AGENTS.md and BACKWARD_COMPATIBILITY.md
-- [ ] 0.6 Add the GitHub Actions workflow running the six gate commands in config order
+- [x] 0.1 Scaffold backend as a uv project with ruff, pytest and GET /api/v1/health — cd7b4ca
+- [x] 0.2 Scaffold frontend as Vite + React + TypeScript strict with Vitest — 0c4b71a
+- [x] 0.3 Add react-i18next + i18next-icu, real en/pl locales and the ICU plural proving key — 7e061a9
+- [x] 0.4 Add SQLAlchemy 2.0 + Alembic empty baseline and the throwaway-database fixture — 3e02e4c
+- [x] 0.5 Replace the resolved TODOs in AGENTS.md and BACKWARD_COMPATIBILITY.md — 7256ac8
+- [x] 0.6 Add the GitHub Actions workflow running the six gate commands in config order — 4d72c34
 
 ### Phase 1: Owner authentication and deployment
 
