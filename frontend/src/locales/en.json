@@ -19,11 +19,47 @@
     "sessionExpired": "Your session expired. Please sign in again."
   },
   "nav": {
-    "signOut": "Sign out"
+    "signOut": "Sign out",
+    "breadcrumb": "Breadcrumb"
   },
   "trip": {
     "stageCount": "{count, plural, one {# stage} other {# stages}}",
     "nightCount": "{count, plural, one {# night} other {# nights}}"
+  },
+  "trips": {
+    "title": "Trips",
+    "new": "New trip",
+    "emptyTitle": "No trips yet",
+    "emptyBody": "Create your first trip and its empty timeline, then fill it in day by day."
+  },
+  "tripCreate": {
+    "title": "New trip",
+    "titleLabel": "Trip name",
+    "titlePlaceholder": "Malaysia, October 2026",
+    "startDate": "Start date",
+    "endDate": "End date",
+    "routeMode": "Route",
+    "routeModes": {
+      "roundTrip": "Return to the same place",
+      "openJaw": "Return from somewhere else (open-jaw)",
+      "oneWay": "One way"
+    },
+    "departurePlace": "Departing from",
+    "returnPlace": "Returning to",
+    "stages": "Destinations",
+    "stagesHint": "Add each base of the trip, in order. Dates are optional — leave them empty if you have not decided how to split the days yet.",
+    "stagePlace": "Destination {position, number}",
+    "stageStart": "From",
+    "stageEnd": "To",
+    "addStage": "Add destination",
+    "removeStage": "Remove",
+    "summary": "{days, plural, one {# day} other {# days}} / {nights, plural, one {# night} other {# nights}} · {stages, plural, one {# base} other {# bases}}",
+    "submit": "Create an empty timeline to plan by hand",
+    "submitting": "Creating…"
+  },
+  "timeline": {
+    "emptyTimeline": "This timeline is empty. Open a day and add your first item.",
+    "emptyDay": "Nothing planned yet"
   },
   "error": {
     "invalid_credentials": "We could not sign you in. Check your e-mail and password.",

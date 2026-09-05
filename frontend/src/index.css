@@ -185,13 +185,9 @@ h2 {
   display: flex;
   align-items: center;
   gap: var(--space-4);
+  margin-bottom: var(--space-6);
   padding-bottom: var(--space-4);
   border-bottom: 1px solid var(--colour-border);
-}
-
-.app-shell > header h1 {
-  font-size: 1.25rem;
-  margin-right: auto;
 }
 
 .app-shell button {
@@ -202,4 +198,287 @@ h2 {
   color: inherit;
   font: inherit;
   cursor: pointer;
+}
+
+/* --- shared authenticated chrome --- */
+
+.app-shell__brand {
+  margin-right: auto;
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: inherit;
+  text-decoration: none;
+  letter-spacing: -0.01em;
+}
+
+.app-shell main {
+  width: min(56rem, 100%);
+  margin-inline: auto;
+}
+
+.page-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+}
+
+.page-heading h1 {
+  font-size: 1.75rem;
+  letter-spacing: -0.02em;
+}
+
+.breadcrumb {
+  margin-bottom: var(--space-3);
+  font-size: 0.875rem;
+}
+
+.breadcrumb a {
+  color: var(--colour-text-muted);
+}
+
+.button-primary {
+  display: inline-block;
+  padding: var(--space-3) var(--space-4);
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--colour-accent);
+  color: var(--colour-accent-text);
+  font: inherit;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.button-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.button-quiet {
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--colour-border);
+  border-radius: var(--radius-sm);
+  background: var(--colour-surface);
+  color: inherit;
+  font: inherit;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.button-quiet:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+[role='alert'] {
+  margin: var(--space-2) 0 0;
+  color: var(--colour-danger);
+  font-size: 0.875rem;
+}
+
+/* An empty state is a designed state, not a blank page. */
+.empty-state {
+  padding: var(--space-8);
+  border: 1px dashed var(--colour-border);
+  border-radius: var(--radius-lg);
+  background: var(--colour-surface);
+  text-align: center;
+}
+
+.empty-state h2 {
+  margin-bottom: var(--space-2);
+  font-size: 1.25rem;
+}
+
+.empty-state p {
+  margin: 0 0 var(--space-4);
+  color: var(--colour-text-muted);
+}
+
+.empty-state--inline {
+  margin-bottom: var(--space-6);
+  padding: var(--space-4);
+  color: var(--colour-text-muted);
+}
+
+/* --- /trips --- */
+
+.trip-list {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.trip-list a {
+  display: block;
+  padding: var(--space-4);
+  border: 1px solid var(--colour-border);
+  border-radius: var(--radius-md);
+  background: var(--colour-surface);
+  color: inherit;
+  text-decoration: none;
+  box-shadow: var(--shadow-card);
+}
+
+.trip-list h2 {
+  font-size: 1.125rem;
+}
+
+.trip-list p {
+  margin: var(--space-1) 0 0;
+  color: var(--colour-text-muted);
+  font-size: 0.875rem;
+}
+
+/* --- /trips/new --- */
+
+.trip-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-6);
+  border: 1px solid var(--colour-border);
+  border-radius: var(--radius-lg);
+  background: var(--colour-surface);
+  box-shadow: var(--shadow-card);
+}
+
+.trip-form label {
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.trip-form input {
+  width: 100%;
+  padding: var(--space-3);
+  border: 1px solid var(--colour-border);
+  border-radius: var(--radius-sm);
+  background: var(--colour-surface);
+  color: inherit;
+  font: inherit;
+}
+
+.trip-form .field-row {
+  display: flex;
+  gap: var(--space-4);
+}
+
+.trip-form .field-row > div {
+  flex: 1;
+}
+
+.trip-form fieldset {
+  margin: 0;
+  padding: var(--space-4);
+  border: 1px solid var(--colour-border);
+  border-radius: var(--radius-md);
+}
+
+.trip-form legend {
+  padding-inline: var(--space-2);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.route-mode label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) 0;
+  font-weight: 400;
+}
+
+.trip-form .hint {
+  margin: 0 0 var(--space-3);
+  color: var(--colour-text-muted);
+  font-size: 0.8125rem;
+}
+
+.stage-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr auto;
+  align-items: end;
+  gap: var(--space-2);
+  padding: var(--space-3) 0;
+  border-top: 1px solid var(--colour-border);
+}
+
+.stage-row [role='alert'] {
+  grid-column: 1 / -1;
+}
+
+.trip-form__summary {
+  margin: 0;
+  padding: var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--colour-bg);
+  color: var(--colour-text-muted);
+  font-size: 0.875rem;
+}
+
+/* --- /trips/:id --- */
+
+.trip-header {
+  margin-bottom: var(--space-6);
+}
+
+.trip-header p {
+  margin: 0;
+  color: var(--colour-text-muted);
+}
+
+.trip-header__route {
+  font-weight: 600;
+  color: var(--colour-text) !important;
+}
+
+.timeline {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.timeline__day {
+  padding: var(--space-4);
+  border: 1px solid var(--colour-border);
+  border-radius: var(--radius-md);
+  background: var(--colour-surface);
+}
+
+.timeline__day h2 {
+  font-size: 1rem;
+}
+
+.timeline__day h2 a {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  color: inherit;
+  text-decoration: none;
+}
+
+.timeline__chip {
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--colour-bg);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.timeline__stages {
+  color: var(--colour-text-muted);
+  font-weight: 500;
+}
+
+.timeline__empty-day {
+  margin: var(--space-2) 0 0;
+  color: var(--colour-text-muted);
+  font-size: 0.875rem;
 }
