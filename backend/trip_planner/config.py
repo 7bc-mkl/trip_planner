@@ -17,7 +17,14 @@ from functools import lru_cache
 #: able to fix it without reading the source.
 REQUIRED_ENVIRONMENT_VARIABLES: dict[str, str] = {
     "DATABASE_URL": "PostgreSQL connection string, e.g. postgresql+psycopg://user:pass@host/db",
+    "SESSION_SECRET": (
+        "random secret (32+ bytes) keying the session-token hash and the CSRF token; "
+        "rotating it signs every session out"
+    ),
 }
+
+#: Below this, the secret is not doing the job its name claims.
+MINIMUM_SESSION_SECRET_LENGTH = 32
 
 
 class MissingConfiguration(RuntimeError):
@@ -39,9 +46,14 @@ class MissingConfiguration(RuntimeError):
         )
 
 
+class WeakConfiguration(RuntimeError):
+    """Raised when a required variable is set but not to a usable value."""
+
+
 @dataclass(frozen=True, slots=True)
 class Settings:
     database_url: str
+    session_secret: str
 
     @property
     def sqlalchemy_url(self) -> str:
@@ -67,7 +79,19 @@ def require_settings(environ: dict[str, str] | None = None) -> Settings:
     if missing:
         raise MissingConfiguration(missing)
 
-    return Settings(database_url=env["DATABASE_URL"].strip())
+    session_secret = env["SESSION_SECRET"].strip()
+    if len(session_secret) < MINIMUM_SESSION_SECRET_LENGTH:
+        # A short secret is worse than a missing one: it looks configured.
+        raise WeakConfiguration(
+            f"SESSION_SECRET must be at least {MINIMUM_SESSION_SECRET_LENGTH} characters; "
+            f"got {len(session_secret)}. Generate one with: python3 -c "
+            "'import secrets; print(secrets.token_urlsafe(48))'"
+        )
+
+    return Settings(
+        database_url=env["DATABASE_URL"].strip(),
+        session_secret=session_secret,
+    )
 
 
 @lru_cache(maxsize=1)

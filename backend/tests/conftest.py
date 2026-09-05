@@ -30,6 +30,10 @@ DEFAULT_TEST_DATABASE_URL = (
     "postgresql+psycopg://trip_planner:trip_planner@127.0.0.1:55432/trip_planner_test"
 )
 
+#: Test-only value. Production reads SESSION_SECRET from the environment and the
+#: app refuses to start without it.
+TEST_SESSION_SECRET = "test-session-secret-not-used-outside-the-suite"
+
 
 def _admin_url() -> str:
     return os.environ.get("TEST_DATABASE_URL", DEFAULT_TEST_DATABASE_URL)
@@ -41,6 +45,7 @@ def _alembic_config(database_url: str) -> Config:
     # env.py reads DATABASE_URL through trip_planner.config, so the throwaway
     # database is selected the same way production selects the real one.
     os.environ["DATABASE_URL"] = database_url
+    os.environ.setdefault("SESSION_SECRET", TEST_SESSION_SECRET)
     return config
 
 
