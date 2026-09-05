@@ -18,7 +18,7 @@ from sqlalchemy.orm import Session as OrmSession
 from sqlalchemy.orm import selectinload
 
 from trip_planner.config import Settings, get_settings
-from trip_planner.db.models import Owner, Session, Trip
+from trip_planner.db.models import Owner, Session, Trip, TripDay
 from trip_planner.db.session import get_sessionmaker
 from trip_planner.errors import ApiError, ErrorCode
 from trip_planner.security.csrf import verify_csrf
@@ -83,14 +83,18 @@ def get_owned_trip(trip_id: uuid.UUID, db: DbSession, owner: CurrentOwner) -> Tr
     **A trip belonging to someone else answers 404, not 403.** A 403 would confirm
     the id exists, which is a membership oracle over the whole table.
 
-    Stages and days are eager-loaded because every consumer needs them: the
-    timeline payload derives each day's stages from them, and lazy loading would
-    turn one timeline into a query per day.
+    Stages, days and the days' items are eager-loaded because every consumer
+    needs them: the timeline payload derives each day's stages from the first,
+    renders the third, and computes the readiness counter over all of them. Lazily
+    loaded, one timeline would cost a query per day.
     """
     trip = db.execute(
         sa.select(Trip)
         .where(Trip.id == trip_id, Trip.owner_id == owner.id)
-        .options(selectinload(Trip.stages), selectinload(Trip.days))
+        .options(
+            selectinload(Trip.stages),
+            selectinload(Trip.days).selectinload(TripDay.items),
+        )
     ).scalar_one_or_none()
 
     if trip is None:

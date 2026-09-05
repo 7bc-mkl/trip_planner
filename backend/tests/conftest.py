@@ -161,8 +161,25 @@ def app(db_session: Session, settings: Settings) -> Iterator[FastAPI]:
     from trip_planner.app import create_app
     from trip_planner.config import get_settings
 
+    def request_scoped_db() -> Iterator[Session]:
+        """Hand out the rolled-back session, but expired first.
+
+        In production `get_db` opens a **new** session per request, so an eager
+        `selectinload` always reflects what the previous request wrote. Here one
+        session is shared so the whole test can roll back as a unit — which means
+        its identity map, and every relationship collection already loaded into
+        it, would otherwise survive into the next request and serve stale data
+        that production never would.
+
+        Expiring on entry makes the shared session behave like the fresh one it
+        stands in for. Without it, a test asserting that an item it just created
+        shows up in the next response fails against code that is correct.
+        """
+        db_session.expire_all()
+        yield db_session
+
     application = create_app(check_configuration=False)
-    application.dependency_overrides[get_db] = lambda: db_session
+    application.dependency_overrides[get_db] = request_scoped_db
     application.dependency_overrides[get_settings] = lambda: settings
 
     yield application

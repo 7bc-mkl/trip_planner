@@ -1,15 +1,8 @@
 """Trip endpoints: the list, the creator, and the timeline payload.
 
-Three shapes of trip come out of this module, and they are separate response
-models on purpose rather than one model with optional fields:
-
-- `TripSummary` — a row of `/trips`. Enough to render the list, no days, no stages.
-- `TripDetail` — the timeline payload for `/trips/{id}`: the trip, its ordered
-  stages, and every day with its **derived** `stage_ids`.
-
-The alternative — one model whose heavy fields are null in list context — makes
-"absent because this is the list" indistinguishable from "absent because there
-are none", which is exactly the ambiguity BACKWARD_COMPATIBILITY.md warns about.
+The response models live in `api/schemas.py`, shared with the item router — the
+timeline payload embeds items and the day-detail payload embeds stages, so any
+other arrangement makes the two routers import each other.
 
 There are no filter query parameters here. A11 puts filtering in the browser and
 the timeline payload is complete, so `?status=` would be a contract surface with
@@ -18,16 +11,26 @@ no caller.
 
 from __future__ import annotations
 
-import uuid
 from datetime import date
 
 import sqlalchemy as sa
 from fastapi import APIRouter, status
 from pydantic import BaseModel, ConfigDict, Field
+from sqlalchemy.orm import selectinload
 
 from trip_planner.api.deps import CurrentOwner, DbSession, OwnedTrip
-from trip_planner.db.models import Trip, TripDay, TripStage
+from trip_planner.api.schemas import (
+    DayRead,
+    ItemRead,
+    ReadinessRead,
+    StageRead,
+    TripDetail,
+    TripSummary,
+)
+from trip_planner.db.models import Item, Trip, TripDay, TripStage
 from trip_planner.domain.days import generate_days
+from trip_planner.domain.items import sorted_items
+from trip_planner.domain.readiness import readiness
 from trip_planner.domain.stages import stages_for_day, validate_stage_range
 from trip_planner.errors import ApiError, ErrorCode
 
@@ -63,73 +66,48 @@ class TripCreate(BaseModel):
     stages: list[StageCreate] = Field(default_factory=list)
 
 
-class StageRead(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
+def all_items(trip: Trip) -> list[Item]:
+    """Every item of the trip, across its days.
 
-    id: uuid.UUID
-    position: int
-    place: str
-    start_date: date | None
-    end_date: date | None
-
-
-class DayRead(BaseModel):
-    """One day of the timeline.
-
-    `stage_ids` is derived at read time from the stages' dates, never stored — see
-    `domain/stages.py`. `items` is present and always empty until Phase 3 fills it;
-    shipping the key from the start means the SPA's rendering path is the same on
-    both sides of that change.
+    The readiness arithmetic is over the whole trip, not a day, so both payloads
+    flatten the days here rather than each summing their own way.
     """
-
-    id: uuid.UUID
-    date: date
-    stage_ids: list[uuid.UUID]
-    items: list[dict[str, object]] = Field(default_factory=list)
+    return [item for day in trip.days for item in day.items]
 
 
-class TripSummary(BaseModel):
-    """A row of the trip list."""
+def summary(trip: Trip) -> TripSummary:
+    """A list row, with its counter."""
+    arranged, tracked = readiness(all_items(trip))
 
-    model_config = ConfigDict(from_attributes=True)
-
-    id: uuid.UUID
-    title: str
-    start_date: date
-    end_date: date
-    departure_place: str
-    return_place: str | None
-
-
-class TripDetail(TripSummary):
-    """The timeline payload."""
-
-    stages: list[StageRead]
-    days: list[DayRead]
-
-
-def timeline(trip: Trip) -> TripDetail:
-    """Build the timeline payload, deriving each day's stages once.
-
-    The stages are read from the already-loaded relationship, so a trip of any
-    length costs the two queries `get_owned_trip` already issued.
-    """
-    stages = sorted(trip.stages, key=lambda stage: stage.position)
-
-    return TripDetail(
+    return TripSummary(
         id=trip.id,
         title=trip.title,
         start_date=trip.start_date,
         end_date=trip.end_date,
         departure_place=trip.departure_place,
         return_place=trip.return_place,
+        readiness=ReadinessRead(arranged=arranged, tracked=tracked),
+    )
+
+
+def timeline(trip: Trip) -> TripDetail:
+    """Build the timeline payload, deriving each day's stages once.
+
+    Everything is read from the already-loaded relationships, so a trip of any
+    length costs the queries `get_owned_trip` already issued rather than one per
+    day.
+    """
+    stages = sorted(trip.stages, key=lambda stage: stage.position)
+
+    return TripDetail(
+        **summary(trip).model_dump(),
         stages=[StageRead.model_validate(stage) for stage in stages],
         days=[
             DayRead(
                 id=day.id,
                 date=day.date,
                 stage_ids=[stage.id for stage in stages_for_day(stages, day.date)],
-                items=[],
+                items=[ItemRead.model_validate(item) for item in sorted_items(day.items)],
             )
             for day in sorted(trip.days, key=lambda day: day.date)
         ],
@@ -137,20 +115,26 @@ def timeline(trip: Trip) -> TripDetail:
 
 
 @router.get("", response_model=list[TripSummary])
-def list_trips(db: DbSession, owner: CurrentOwner) -> list[Trip]:
+def list_trips(db: DbSession, owner: CurrentOwner) -> list[TripSummary]:
     """The owner's trips, soonest first.
 
     Ordered by start date rather than by creation: the list answers "what is
     coming up", and creation order is an implementation detail of when the owner
     happened to type them in.
+
+    Days and their items are eager-loaded because each row carries a readiness
+    counter, which is computed from the trip's items. Lazily loaded, a list of ten
+    trips would issue one query per trip and then one per day of each — the
+    classic N+1, on the screen the owner opens first.
     """
-    return list(
-        db.execute(
-            sa.select(Trip)
-            .where(Trip.owner_id == owner.id)
-            .order_by(Trip.start_date, Trip.created_at)
-        ).scalars()
-    )
+    trips = db.execute(
+        sa.select(Trip)
+        .where(Trip.owner_id == owner.id)
+        .options(selectinload(Trip.days).selectinload(TripDay.items))
+        .order_by(Trip.start_date, Trip.created_at)
+    ).scalars()
+
+    return [summary(trip) for trip in trips]
 
 
 @router.post("", response_model=TripDetail, status_code=status.HTTP_201_CREATED)
