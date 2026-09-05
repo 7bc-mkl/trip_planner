@@ -161,7 +161,7 @@ def app(db_session: Session, settings: Settings) -> Iterator[FastAPI]:
     from trip_planner.app import create_app
     from trip_planner.config import get_settings
 
-    application = create_app()
+    application = create_app(check_configuration=False)
     application.dependency_overrides[get_db] = lambda: db_session
     application.dependency_overrides[get_settings] = lambda: settings
 

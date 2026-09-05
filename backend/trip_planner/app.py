@@ -21,7 +21,9 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from trip_planner.api import auth, health
 from trip_planner.api.deps import get_current_session
+from trip_planner.config import require_settings
 from trip_planner.errors import ApiError, ErrorCode, error_body
+from trip_planner.spa import mount_spa, static_dir
 
 API_PREFIX = "/api/v1"
 
@@ -88,7 +90,17 @@ def _install_exception_handlers(app: FastAPI) -> None:
         return JSONResponse(status_code=503, content=error_body(ErrorCode.SERVICE_UNAVAILABLE))
 
 
-def create_app() -> FastAPI:
+def create_app(*, check_configuration: bool = True) -> FastAPI:
+    """Build the application.
+
+    `check_configuration` exists only for tests that construct an app while
+    injecting settings; the deployed entry point always validates, and a missing
+    variable raises `MissingConfiguration` naming it rather than failing later
+    with a confusing connection error.
+    """
+    if check_configuration:
+        require_settings()
+
     app = FastAPI(title="Smart Trip Planner", version="0.1.0", docs_url=None, redoc_url=None)
 
     _install_exception_handlers(app)
@@ -104,7 +116,15 @@ def create_app() -> FastAPI:
     #
     # Phase 2 adds the first one.
 
+    # The built SPA, when present. Absent in development and in the test suite,
+    # where the Vite dev server serves it instead.
+    bundle = static_dir()
+    if bundle is not None:
+        mount_spa(app, API_PREFIX, bundle)
+
     return app
 
 
-app = create_app()
+def create_production_app() -> FastAPI:
+    """The deployed entry point. Validates configuration before serving anything."""
+    return create_app(check_configuration=True)

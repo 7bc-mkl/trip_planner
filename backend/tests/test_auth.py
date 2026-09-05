@@ -333,7 +333,7 @@ class TestCookieSecurity:
             environment="production",
         )
 
-        application = create_app()
+        application = create_app(check_configuration=False)
         application.dependency_overrides[get_db] = lambda: db_session
         application.dependency_overrides[get_settings] = lambda: production
 

@@ -92,7 +92,7 @@ def dependency_callables(route: RouteInfo) -> frozenset[object]:
 
 @pytest.fixture(scope="module")
 def application() -> FastAPI:
-    return create_app()
+    return create_app(check_configuration=False)
 
 
 def test_the_application_registers_routes(application: FastAPI) -> None:
