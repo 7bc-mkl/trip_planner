@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<title>Mockup 01 — /trips/new (PL)</title>
+<link rel="stylesheet" href="_tokens.css">
+<style>
+  .modes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .mode { border: 1px solid var(--line); border-radius: var(--r); padding: 12px; text-align: center; font-size: 14px; font-weight: 600; color: var(--ink-2); background: #fff; }
+  .mode.on { border-color: var(--primary); box-shadow: inset 0 0 0 1px var(--primary); color: var(--primary); }
+  .mode small { display: block; font-weight: 400; font-size: 11px; color: var(--ink-3); margin-top: 3px; }
+  .stage { border: 1px solid var(--line); border-radius: var(--r); padding: 14px; background: #fff; }
+  .stage + .stage { margin-top: 10px; }
+  .stage-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .num { width: 22px; height: 22px; border-radius: 999px; background: var(--primary); color: #fff; font-size: 12px; font-weight: 700; display: grid; place-items: center; }
+  .cols3 { display: grid; grid-template-columns: 1fr 150px 150px; gap: 10px; }
+  .cols2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .add { border: 1.5px dashed var(--line-strong); border-radius: var(--r); padding: 12px; text-align: center; color: var(--primary); font-weight: 600; font-size: 14px; margin-top: 10px; background: #fff; }
+  .summary dt { font-size: 11px; text-transform: uppercase; letter-spacing: .015em; color: var(--ink-3); font-weight: 600; }
+  .summary dd { margin: 2px 0 14px; font-size: 15px; font-weight: 600; }
+  .route { background: var(--primary); color: #fff; border-radius: var(--r-lg); padding: 16px; margin-bottom: 16px; }
+  .route .leg { display: flex; justify-content: space-between; font-size: 13px; opacity: .85; }
+  .route .pt { font-size: 18px; font-weight: 700; }
+  .route hr { border: 0; border-top: 1px solid rgba(255,255,255,.22); margin: 12px 0; }
+  .actions { display: flex; gap: 12px; align-items: center; margin-top: 20px; }
+</style>
+</head>
+<body>
+<header class="top">
+  <span class="brand">Smart Trip Planner</span>
+  <nav><b style="color:var(--primary)">Nowa podróż</b><span>Moje podróże</span></nav>
+  <span class="spacer"></span>
+  <span class="locale"><span class="on">PL</span><span>EN</span></span>
+  <span class="muted">michal@…&nbsp;· Wyloguj</span>
+</header>
+
+<div class="wrap">
+  <p class="banner">Illustrative mockup for <code>.ai/specs/2026-09-05-walking-skeleton.md</code> — not a rendering of the application, which does not exist yet. Adapted from the design export <code>kreator_podr_y_manualny_i_wieloodcinkowy</code>; every AI, import, budget and attachment element of that screen is out of scope (D03, D04, D07).</p>
+
+  <h1>Zaplanuj nową podróż</h1>
+  <p class="sub">Podaj daty, punkt startu i przystanki. Dni powstaną automatycznie — resztę uzupełnisz ręcznie.</p>
+
+  <div class="grid">
+    <div>
+      <div class="card">
+        <h2>Trasa</h2>
+        <div class="modes">
+          <div class="mode">W obie strony<small>powrót = wylot</small></div>
+          <div class="mode on">Inne miasto powrotu<small>open-jaw</small></div>
+          <div class="mode">W jedną stronę<small>bez powrotu</small></div>
+        </div>
+        <p class="note" style="margin:10px 0 18px">R03 / D06 — te trzy tryby to trzy stany kolumn <code>departure_place</code> i <code>return_place</code>; open-jaw nie wymaga żadnej migracji później.</p>
+
+        <div class="cols2">
+          <div><label class="f">Wylot z</label><div class="input">Warszawa (WAW)</div></div>
+          <div><label class="f">Powrót do</label><div class="input">Katowice (KTW)</div></div>
+        </div>
+        <div class="cols2" style="margin-top:14px">
+          <div><label class="f">Data wyjazdu</label><div class="input">10.10.2026</div></div>
+          <div><label class="f">Data powrotu</label><div class="input">24.10.2026</div></div>
+        </div>
+        <div style="margin-top:14px"><label class="f">Nazwa podróży</label><div class="input">Malezja, październik 2026</div></div>
+      </div>
+
+      <div class="card">
+        <h2>Etapy (bazy)</h2>
+        <p class="muted" style="margin:-6px 0 14px">Miejsce, w którym się zatrzymujesz na część podróży. Etapy mogą dzielić dzień przejazdu.</p>
+
+        <div class="stage">
+          <div class="stage-head"><span class="num">1</span><h3>Kuala Lumpur</h3></div>
+          <div class="cols3">
+            <div class="input">Kuala Lumpur</div>
+            <div class="input">10.10.2026</div>
+            <div class="input">14.10.2026</div>
+          </div>
+        </div>
+        <div class="stage">
+          <div class="stage-head"><span class="num">2</span><h3>Penang</h3></div>
+          <div class="cols3">
+            <div class="input">Penang (George Town)</div>
+            <div class="input">14.10.2026</div>
+            <div class="input">19.10.2026</div>
+          </div>
+          <p class="note" style="margin:8px 0 0">14.10 należy do etapu 1 i 2 — to dzień przejazdu. Model na to pozwala.</p>
+        </div>
+        <div class="stage">
+          <div class="stage-head"><span class="num">3</span><h3>Langkawi</h3></div>
+          <div class="cols3">
+            <div class="input">Langkawi</div>
+            <div class="input">19.10.2026</div>
+            <div class="input">24.10.2026</div>
+          </div>
+        </div>
+        <div class="add">+ Dodaj kolejny etap</div>
+      </div>
+
+      <div class="actions">
+        <span class="btn primary">Utwórz pustą oś czasu</span>
+        <span class="muted">15 dni zostanie wygenerowanych od razu.</span>
+      </div>
+    </div>
+
+    <aside>
+      <div class="route">
+        <div class="leg"><span>Wylot</span><span>Powrót</span></div>
+        <div class="leg" style="opacity:1"><span class="pt">WAW</span><span class="pt">KTW</span></div>
+        <div class="leg"><span>Warszawa</span><span>Katowice</span></div>
+        <hr>
+        <div style="font-size:13px">Kuala Lumpur → Penang → Langkawi</div>
+      </div>
+      <div class="card">
+        <dl class="summary" style="margin:0">
+          <dt>Dni / nocy</dt><dd>15 dni / 14 nocy</dd>
+          <dt>Etapy (bazy)</dt><dd>3</dd>
+          <dt>Typ trasy</dt><dd>Open-jaw</dd>
+          <dt>Pozycje</dt><dd>0 — dodasz je na osi czasu</dd>
+        </dl>
+      </div>
+      <p class="note" style="margin-top:12px">Nie ma tu: trybu AI, importu rezerwacji, wgrywania biletów PDF ani panelu budżetu — wszystkie odłożone (D03, D04, D07).</p>
+    </aside>
+  </div>
+</div>
+</body>
+</html>

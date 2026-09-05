@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<title>Mockup 02 — /trips/:id timeline (PL)</title>
+<link rel="stylesheet" href="_tokens.css">
+<style>
+  .hero { background: var(--primary); color: #fff; border-radius: var(--r-lg); padding: 22px 24px; }
+  .hero h1 { color: #fff; margin-bottom: 8px; }
+  .hero .meta { display: flex; gap: 20px; font-size: 14px; opacity: .85; }
+  .counter { background: rgba(255,255,255,.10); border: 1px solid rgba(255,255,255,.20); border-radius: var(--r-lg); padding: 14px 18px; min-width: 260px; }
+  .counter .lbl { font-size: 11px; letter-spacing: .02em; text-transform: uppercase; opacity: .75; font-weight: 600; }
+  .counter .big { font-size: 26px; font-weight: 700; letter-spacing: -.02em; margin: 2px 0 4px; }
+  .counter .exp { font-size: 12px; opacity: .8; }
+  .bar { height: 6px; border-radius: 999px; background: rgba(255,255,255,.22); margin-top: 10px; overflow: hidden; }
+  .bar i { display: block; height: 100%; width: 57%; background: #4edea3; }
+  .filters { display: flex; gap: 8px; flex-wrap: wrap; margin: 20px 0 18px; }
+  .fchip { border: 1px solid var(--line); background: #fff; border-radius: 999px; padding: 7px 14px; font-size: 13px; font-weight: 600; color: var(--ink-2); }
+  .fchip.on { background: var(--primary); border-color: var(--primary); color: #fff; }
+  .day { display: grid; grid-template-columns: 74px 1fr; gap: 16px; margin-bottom: 22px; }
+  .datechip { background: #fff; border: 1px solid var(--line); border-radius: var(--r); text-align: center; padding: 8px 0; height: fit-content; }
+  .datechip .m { font-size: 11px; font-weight: 700; letter-spacing: .04em; color: var(--ink-3); text-transform: uppercase; }
+  .datechip .d { font-size: 22px; font-weight: 700; line-height: 26px; }
+  .dayhead { display: flex; align-items: baseline; gap: 10px; margin-bottom: 10px; }
+  .item { background: #fff; border: 1px solid var(--line); border-radius: var(--r-lg); padding: 14px 16px; display: grid; grid-template-columns: 34px 1fr auto; gap: 12px; align-items: start; }
+  .item + .item { margin-top: 10px; }
+  .ico { width: 34px; height: 34px; border-radius: var(--r); background: var(--plan-bg); display: grid; place-items: center; font-size: 16px; }
+  .time { font-size: 13px; font-weight: 700; color: var(--ink); }
+  .item h3 { margin: 3px 0 2px; }
+  .empty { border: 1.5px dashed var(--line-strong); border-radius: var(--r-lg); padding: 18px; text-align: center; color: var(--ink-3); font-size: 14px; background: #fff; }
+</style>
+</head>
+<body>
+<header class="top">
+  <span class="brand">Smart Trip Planner</span>
+  <nav><span>Moje podróże</span><b style="color:var(--primary)">Oś czasu</b></nav>
+  <span class="spacer"></span>
+  <span class="locale"><span class="on">PL</span><span>EN</span></span>
+  <span class="muted">michal@…&nbsp;· Wyloguj</span>
+</header>
+
+<div class="wrap">
+  <p class="banner">Illustrative mockup for <code>.ai/specs/2026-09-05-walking-skeleton.md</code>. Adapted from the design export <code>g_wny_pulpit_i_o_czasu</code>; the AI concierge drawer, the PLN/EUR toggle, the budget tile, prices, booking actions, weather, "Eksportuj PDF" and "Udostępnij" are all out of scope (D03, D04, D07, D08).</p>
+
+  <div class="hero" style="display:flex; gap:24px; align-items:center; justify-content:space-between">
+    <div>
+      <h1>Malezja, październik 2026</h1>
+      <div class="meta">
+        <span>10 – 24 października 2026 · 15 dni</span>
+        <span>Warszawa → Kuala Lumpur → Penang → Langkawi → Katowice</span>
+      </div>
+    </div>
+    <div class="counter">
+      <div class="lbl">Status gotowości</div>
+      <div class="big">4 z 7 załatwionych</div>
+      <div class="exp">5 pozycji jest jeszcze <i>do zaplanowania</i> — poza rachunkiem (R02).</div>
+      <div class="bar"><i></i></div>
+    </div>
+  </div>
+
+  <div class="filters">
+    <span class="fchip on">Wszystko (12)</span>
+    <span class="fchip">Tylko do zrobienia (8)</span>
+    <span class="fchip">Noclegi (3)</span>
+    <span class="fchip">Transport (3)</span>
+    <span class="fchip">Atrakcje (4)</span>
+    <span class="fchip">Jedzenie (2)</span>
+  </div>
+  <p class="note" style="margin:-8px 0 22px">Licznik nie zmienia się przy filtrowaniu — odpowiada na inne pytanie niż filtr.</p>
+
+  <div class="day">
+    <div class="datechip"><div class="m">PAŹ</div><div class="d">10</div></div>
+    <div>
+      <div class="dayhead"><h2 style="margin:0">Dzień 1 · Przylot do Kuala Lumpur</h2><span class="muted">Etap: Kuala Lumpur · sobota</span></div>
+      <div class="item">
+        <div class="ico">✈</div>
+        <div><div class="time">11:20</div><h3>Lot Warszawa → Kuala Lumpur</h3><p class="muted" style="margin:2px 0 0">Przesiadka w Dosze, 2h 05m. Bagaż rejestrowany do KUL.</p></div>
+        <span class="chip st-done"><span class="dot"></span>gotowe</span>
+      </div>
+      <div class="item">
+        <div class="ico">🛏</div>
+        <div><div class="time">Cały dzień</div><h3>Nocleg: Bukit Bintang, 4 noce</h3><p class="muted" style="margin:2px 0 0">Blisko monorail; do potwierdzenia dokładny adres.</p></div>
+        <span class="chip st-done"><span class="dot"></span>gotowe</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="day">
+    <div class="datechip"><div class="m">PAŹ</div><div class="d">11</div></div>
+    <div>
+      <div class="dayhead"><h2 style="margin:0">Dzień 2</h2><span class="muted">Etap: Kuala Lumpur · niedziela</span></div>
+      <div class="item">
+        <div class="ico">🎟</div>
+        <div><div class="time">09:30</div><h3>Petronas Towers — Skybridge</h3><p class="muted" style="margin:2px 0 0">Bilety czasowe, trzeba kupić z wyprzedzeniem.</p></div>
+        <span class="chip st-book"><span class="dot"></span>do zarezerwowania</span>
+      </div>
+      <div class="item">
+        <div class="ico">🍽</div>
+        <div><div class="time">19:00</div><h3>Kolacja — Jalan Alor</h3><p class="muted" style="margin:2px 0 0">Bez rezerwacji, po prostu iść.</p></div>
+        <span class="chip st-plan"><span class="dot"></span>do zaplanowania</span>
+      </div>
+      <div class="item">
+        <div class="ico">🎟</div>
+        <div><div class="time">Cały dzień</div><h3>Batu Caves — dojazd i pora dnia</h3><p class="muted" style="margin:2px 0 0">Rano czy po południu? Do rozstrzygnięcia.</p></div>
+        <span class="chip st-plan"><span class="dot"></span>do zaplanowania</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="day">
+    <div class="datechip"><div class="m">PAŹ</div><div class="d">14</div></div>
+    <div>
+      <div class="dayhead"><h2 style="margin:0">Dzień 5</h2><span class="muted">Etap: Kuala Lumpur → Penang · dzień przejazdu · środa</span></div>
+      <div class="item">
+        <div class="ico">🚆</div>
+        <div><div class="time">08:40</div><h3>Pociąg ETS KL Sentral → Butterworth</h3><p class="muted" style="margin:2px 0 0">Ok. 4 godziny; bilety w kasie online.</p></div>
+        <span class="chip st-book"><span class="dot"></span>do zarezerwowania</span>
+      </div>
+      <div class="item">
+        <div class="ico">🛏</div>
+        <div><div class="time">Cały dzień</div><h3>Nocleg: George Town, 5 nocy</h3></div>
+        <span class="chip st-book"><span class="dot"></span>do zarezerwowania</span>
+      </div>
+      <p class="note" style="margin:10px 0 0">14.10 należy do dwóch etapów naraz — nagłówek pokazuje „Kuala Lumpur → Penang”. Powiązanie dnia z etapem jest wyliczane z dat, nie zapisane w bazie.</p>
+    </div>
+  </div>
+
+  <div class="day">
+    <div class="datechip"><div class="m">PAŹ</div><div class="d">15</div></div>
+    <div>
+      <div class="dayhead"><h2 style="margin:0">Dzień 6</h2><span class="muted">Etap: Penang · czwartek</span></div>
+      <div class="empty">Ten dzień jest jeszcze pusty. <b style="color:var(--primary)">Dodaj pierwszą pozycję</b></div>
+    </div>
+  </div>
+</div>
+</body>
+</html>
