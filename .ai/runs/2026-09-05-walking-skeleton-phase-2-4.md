@@ -196,9 +196,9 @@ are removed. This is the rule that makes the date editor safe to use.
 
 ### Phase 4: The filter and the trip-management tail
 
-- [ ] 4.1 The All / Only outstanding filter, reflected in the URL
-- [ ] 4.2 The per-type chips with counts
-- [ ] 4.3 PATCH /trips/{id} with range regeneration and mode stability
-- [ ] 4.4 DELETE /trips/{id} and its confirmation dialog
-- [ ] 4.5 Stage POST/PATCH/DELETE with dense position reassignment
-- [ ] 4.6 End-to-end walk of the brief's success flow, with screenshots
+- [x] 4.1 The All / Only outstanding filter, reflected in the URL — 9f1023d
+- [x] 4.2 The per-type chips with counts — 9f1023d
+- [x] 4.3 PATCH /trips/{id} with range regeneration and mode stability — 449b605
+- [x] 4.4 DELETE /trips/{id} and its confirmation dialog — 449b605 (endpoint), e1bc24f (dialog)
+- [x] 4.5 Stage POST/PATCH/DELETE with dense position reassignment — 449b605
+- [x] 4.6 End-to-end walk of the brief's success flow, with screenshots — 03d9b9f
