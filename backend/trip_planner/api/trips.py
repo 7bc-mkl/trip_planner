@@ -14,7 +14,7 @@ from __future__ import annotations
 from datetime import date
 
 import sqlalchemy as sa
-from fastapi import APIRouter, status
+from fastapi import APIRouter, Response, status
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.orm import selectinload
 
@@ -64,6 +64,23 @@ class TripCreate(BaseModel):
     #: `stages_required` code rather than a generic `validation_error`, because the
     #: creator surfaces it against the stage list rather than against a field.
     stages: list[StageCreate] = Field(default_factory=list)
+
+
+class TripUpdate(BaseModel):
+    """A partial update. Every field is optional.
+
+    `return_place` is nullable and its absence is meaningful, so which keys were
+    sent is read from `model_fields_set`: omitting it lets the mode-stability
+    rule run, while sending `null` is an explicit switch to one-way.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    title: str | None = Field(default=None, min_length=1, max_length=TITLE_MAX)
+    start_date: date | None = None
+    end_date: date | None = None
+    departure_place: str | None = Field(default=None, min_length=1, max_length=PLACE_MAX)
+    return_place: str | None = Field(default=None, max_length=PLACE_MAX)
 
 
 def all_items(trip: Trip) -> list[Item]:
@@ -194,3 +211,124 @@ def create_trip(payload: TripCreate, db: DbSession, owner: CurrentOwner) -> Trip
 def get_trip(trip: OwnedTrip) -> TripDetail:
     """The timeline payload. Ownership is resolved by the dependency, never here."""
     return timeline(trip)
+
+
+@router.patch("/{trip_id}", response_model=TripDetail)
+def update_trip(trip: OwnedTrip, payload: TripUpdate, db: DbSession) -> TripDetail:
+    """Edit a trip's title, dates and places.
+
+    Two rules do the work here, and both exist to stop an edit from destroying
+    something the owner did not ask to lose.
+
+    **No item is ever destroyed by a date edit.** Shortening the range past a day
+    that carries items answers `409 days_have_items` listing those dates and
+    changes *nothing*; shortening past a stage answers `409
+    stages_outside_new_range` naming the stages. Days that are empty are removed
+    silently, because an empty day carries no decision. Both checks run before
+    any mutation, so a refusal cannot leave the trip half-edited.
+
+    **The mode-stability rule.** The route mode is derived from `return_place`, so
+    editing `departure_place` on a round trip would silently convert it to
+    open-jaw — correcting a typo in the departure city would change what kind of
+    trip it is. When the trip is in round-trip mode and `departure_place` changes
+    without an explicit `return_place`, the server rewrites `return_place` to
+    match, in the same transaction.
+    """
+    sent = payload.model_fields_set
+    start = payload.start_date if payload.start_date is not None else trip.start_date
+    end = payload.end_date if payload.end_date is not None else trip.end_date
+
+    # Raises invalid_date_range / trip_too_long before anything is touched.
+    wanted_dates = set(generate_days(start, end))
+
+    if start != trip.start_date or end != trip.end_date:
+        _refuse_if_days_would_be_lost(trip, wanted_dates)
+        _refuse_if_stages_would_escape(trip, start, end)
+
+    # Read the round-trip state *before* departure_place is changed — afterwards
+    # the comparison it is derived from no longer describes the trip as it was.
+    was_round_trip = trip.is_round_trip
+
+    if payload.title is not None:
+        trip.title = payload.title
+    if payload.departure_place is not None:
+        trip.departure_place = payload.departure_place
+    if "return_place" in sent:
+        trip.return_place = payload.return_place
+    elif was_round_trip and payload.departure_place is not None:
+        # The mode-stability rewrite. An explicit return_place always wins: the
+        # owner asked for a specific mode and the server must not overrule it.
+        trip.return_place = trip.departure_place
+
+    trip.start_date = start
+    trip.end_date = end
+    _resize_days(db, trip, wanted_dates)
+    db.flush()
+    db.refresh(trip)
+
+    return timeline(trip)
+
+
+def _refuse_if_days_would_be_lost(trip: Trip, wanted: set[date]) -> None:
+    """409 when a day that would be dropped still carries items."""
+    losing = sorted(
+        day.date for day in trip.days if day.date not in wanted and len(day.items) > 0
+    )
+
+    if losing:
+        # The dates are named so the owner knows what to move, rather than being
+        # told "somewhere in this trip there is a problem".
+        raise ApiError(
+            ErrorCode.DAYS_HAVE_ITEMS,
+            field=", ".join(day.isoformat() for day in losing),
+        )
+
+
+def _refuse_if_stages_would_escape(trip: Trip, start: date, end: date) -> None:
+    """409 when a stage's own range would fall outside the new trip range.
+
+    Symmetric with the rule above: a stage is a decision too, and silently
+    truncating or dropping one would lose it.
+    """
+    escaping = [
+        stage.place
+        for stage in trip.stages
+        if any(
+            boundary is not None and not (start <= boundary <= end)
+            for boundary in (stage.start_date, stage.end_date)
+        )
+    ]
+
+    if escaping:
+        raise ApiError(ErrorCode.STAGES_OUTSIDE_NEW_RANGE, field=", ".join(escaping))
+
+
+def _resize_days(db: DbSession, trip: Trip, wanted: set[date]) -> None:
+    """Add the days the new range gained and drop the empty ones it lost.
+
+    Only reached once the two refusals above have passed, so every day removed
+    here is known to be empty.
+    """
+    existing = {day.date for day in trip.days}
+
+    for day in list(trip.days):
+        if day.date not in wanted:
+            db.delete(day)
+
+    for missing in sorted(wanted - existing):
+        db.add(TripDay(trip_id=trip.id, date=missing))
+
+
+@router.delete("/{trip_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_trip(trip: OwnedTrip, db: DbSession) -> Response:
+    """Delete a trip and everything under it.
+
+    The cascade is the database's (`ON DELETE CASCADE` on stages, days and
+    items), so nothing is orphaned even if this handler is bypassed. There is no
+    undo in this milestone, which is why the SPA puts a confirmation dialog
+    naming the trip in front of this call.
+    """
+    db.delete(trip)
+    db.flush()
+
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

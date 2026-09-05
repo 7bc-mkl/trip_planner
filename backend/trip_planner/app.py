@@ -19,7 +19,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.exc import OperationalError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from trip_planner.api import auth, health, items, trips
+from trip_planner.api import auth, health, items, stages, trips
 from trip_planner.api.deps import get_current_session
 from trip_planner.config import require_settings
 from trip_planner.errors import ApiError, ErrorCode, error_body
@@ -114,6 +114,7 @@ def create_app(*, check_configuration: bool = True) -> FastAPI:
     # caught by the route enumeration in tests/test_route_protection.py.
     app.include_router(trips.router, prefix=API_PREFIX, dependencies=AUTHENTICATED)
     app.include_router(items.router, prefix=API_PREFIX, dependencies=AUTHENTICATED)
+    app.include_router(stages.router, prefix=API_PREFIX, dependencies=AUTHENTICATED)
 
     # The built SPA, when present. Absent in development and in the test suite,
     # where the Vite dev server serves it instead.
