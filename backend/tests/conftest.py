@@ -17,12 +17,20 @@ import os
 import uuid
 from collections.abc import Iterator
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
 import sqlalchemy as sa
 from alembic import command
 from alembic.config import Config
 from sqlalchemy.orm import Session, sessionmaker
+
+if TYPE_CHECKING:
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+
+    from trip_planner.config import Settings
+    from trip_planner.db.models import Owner
 
 BACKEND_ROOT = Path(__file__).resolve().parent.parent
 
@@ -33,6 +41,14 @@ DEFAULT_TEST_DATABASE_URL = (
 #: Test-only value. Production reads SESSION_SECRET from the environment and the
 #: app refuses to start without it.
 TEST_SESSION_SECRET = "test-session-secret-not-used-outside-the-suite"
+
+#: The non-database settings the app requires. Set once, here, so a new required
+#: variable is added in one place rather than in every test that builds an app.
+TEST_ENVIRONMENT = {
+    "SESSION_SECRET": TEST_SESSION_SECRET,
+    "APP_BASE_URL": "http://testserver",
+    "ENVIRONMENT": "development",
+}
 
 
 def _admin_url() -> str:
@@ -45,7 +61,8 @@ def _alembic_config(database_url: str) -> Config:
     # env.py reads DATABASE_URL through trip_planner.config, so the throwaway
     # database is selected the same way production selects the real one.
     os.environ["DATABASE_URL"] = database_url
-    os.environ.setdefault("SESSION_SECRET", TEST_SESSION_SECRET)
+    for key, value in TEST_ENVIRONMENT.items():
+        os.environ.setdefault(key, value)
     return config
 
 
@@ -122,3 +139,81 @@ def db_session(engine: sa.Engine) -> Iterator[Session]:
 @pytest.fixture
 def alembic_config(database_url: str) -> Config:
     return _alembic_config(database_url)
+
+
+@pytest.fixture
+def settings(database_url: str) -> Settings:
+    """Settings built from the test environment, bypassing the process-wide cache."""
+    from trip_planner.config import require_settings
+
+    return require_settings({"DATABASE_URL": database_url, **TEST_ENVIRONMENT})
+
+
+@pytest.fixture
+def app(db_session: Session, settings: Settings) -> Iterator[FastAPI]:
+    """The real application, wired to the test transaction.
+
+    `get_db` is overridden to hand out the rolled-back session so an endpoint test
+    leaves no rows behind; everything else — routing, dependencies, exception
+    handlers, cookie policy — is the production wiring.
+    """
+    from trip_planner.api.deps import get_db
+    from trip_planner.app import create_app
+    from trip_planner.config import get_settings
+
+    application = create_app()
+    application.dependency_overrides[get_db] = lambda: db_session
+    application.dependency_overrides[get_settings] = lambda: settings
+
+    yield application
+
+    application.dependency_overrides.clear()
+
+
+@pytest.fixture
+def client(app: FastAPI) -> Iterator[TestClient]:
+    from fastapi.testclient import TestClient
+
+    with TestClient(app, base_url="http://testserver") as test_client:
+        yield test_client
+
+
+@pytest.fixture
+def owner_password() -> str:
+    return "a-correct-horse-battery-staple"
+
+
+@pytest.fixture
+def owner(db_session: Session, owner_password: str) -> Owner:
+    from trip_planner.db.models import Owner
+    from trip_planner.security.passwords import hash_password
+
+    record = Owner(email="owner@example.com", password_hash=hash_password(owner_password))
+    db_session.add(record)
+    db_session.flush()
+    return record
+
+
+@pytest.fixture(autouse=True)
+def instant_clock() -> Iterator[None]:
+    """Remove the response floor's real sleeping from the suite.
+
+    The floor is asserted directly in tests/test_rate_limit.py through this same
+    seam; making every other login test wait 400 ms would only buy slowness.
+    """
+    from trip_planner.security import rate_limit
+
+    class NoSleepClock:
+        def __init__(self) -> None:
+            self.slept: list[float] = []
+
+        def monotonic(self) -> float:
+            return 0.0
+
+        def sleep(self, seconds: float) -> None:
+            self.slept.append(seconds)
+
+    previous = rate_limit.get_clock()
+    rate_limit.set_clock(NoSleepClock())
+    yield
+    rate_limit.set_clock(previous)

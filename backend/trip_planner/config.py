@@ -21,10 +21,14 @@ REQUIRED_ENVIRONMENT_VARIABLES: dict[str, str] = {
         "random secret (32+ bytes) keying the session-token hash and the CSRF token; "
         "rotating it signs every session out"
     ),
+    "APP_BASE_URL": "absolute public URL of this installation, e.g. https://planner.example.com",
+    "ENVIRONMENT": "'production' or 'development'; production refuses to start without HTTPS",
 }
 
 #: Below this, the secret is not doing the job its name claims.
 MINIMUM_SESSION_SECRET_LENGTH = 32
+
+VALID_ENVIRONMENTS = frozenset({"production", "development"})
 
 
 class MissingConfiguration(RuntimeError):
@@ -54,6 +58,22 @@ class WeakConfiguration(RuntimeError):
 class Settings:
     database_url: str
     session_secret: str
+    app_base_url: str
+    environment: str
+
+    @property
+    def is_production(self) -> bool:
+        return self.environment == "production"
+
+    @property
+    def cookies_are_secure(self) -> bool:
+        """`Secure` in production, so the session cookie cannot travel in clear.
+
+        It is off in development because a `Secure` cookie is simply not stored
+        over plain http, which would make local sign-in fail in a way that looks
+        like a bug in the login handler.
+        """
+        return self.is_production
 
     @property
     def sqlalchemy_url(self) -> str:
@@ -88,9 +108,27 @@ def require_settings(environ: dict[str, str] | None = None) -> Settings:
             "'import secrets; print(secrets.token_urlsafe(48))'"
         )
 
+    environment = env["ENVIRONMENT"].strip().lower()
+    if environment not in VALID_ENVIRONMENTS:
+        raise WeakConfiguration(
+            f"ENVIRONMENT must be one of {sorted(VALID_ENVIRONMENTS)}; got {environment!r}"
+        )
+
+    app_base_url = env["APP_BASE_URL"].strip().rstrip("/")
+    if environment == "production" and not app_base_url.startswith("https://"):
+        # D14 puts this on the public internet and the session cookie is Secure.
+        # Starting without TLS would hand out a cookie the browser then refuses to
+        # send back, so sign-in would fail on every request instead of loudly here.
+        raise WeakConfiguration(
+            "ENVIRONMENT=production requires APP_BASE_URL to be an https:// URL; "
+            f"got {app_base_url!r}"
+        )
+
     return Settings(
         database_url=env["DATABASE_URL"].strip(),
         session_secret=session_secret,
+        app_base_url=app_base_url,
+        environment=environment,
     )
 
 
