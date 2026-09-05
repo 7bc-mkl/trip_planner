@@ -6,6 +6,7 @@ import { listTrips } from '../../api/trips'
 import type { TripSummary } from '../../api/trips'
 import { ApiError } from '../../api/client'
 import { AppShell } from './AppShell'
+import { ReadinessTile } from './ReadinessTile'
 import { formatDateRange, routeSummary } from './format'
 
 /**
@@ -75,6 +76,9 @@ export function TripListPage() {
                   {formatDateRange(trip.start_date, trip.end_date, i18n.language)}
                 </p>
                 <p className="trip-list__route">{routeSummary(trip)}</p>
+                {/* The same component as the timeline tile, so the two screens
+                    cannot end up phrasing the counter differently. */}
+                <ReadinessTile readiness={trip.readiness} compact />
               </Link>
             </li>
           ))}

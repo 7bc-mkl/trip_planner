@@ -6,6 +6,8 @@ import { ApiError } from '../../api/client'
 import { fetchTrip } from '../../api/trips'
 import type { Stage, TripDetail } from '../../api/trips'
 import { AppShell } from './AppShell'
+import { ItemRow } from './ItemRow'
+import { ReadinessTile } from './ReadinessTile'
 import { formatDateRange, formatDayChip, routeSummary, stageLabel } from './format'
 
 /**
@@ -83,6 +85,10 @@ export function TimelinePage() {
           {formatDateRange(trip.start_date, trip.end_date, i18n.language)}
         </p>
         <p className="trip-header__route">{routeSummary(trip, trip.stages)}</p>
+        {/* The export's "STATUS LOGISTYKI" tile. Its layout is adopted; its
+            arithmetic is not — the export's denominator is the all-items count,
+            which includes do zaplanowania and contradicts R02. */}
+        <ReadinessTile readiness={trip.readiness} />
       </header>
 
       {!hasItems && (
@@ -107,8 +113,16 @@ export function TimelinePage() {
                 </Link>
               </h2>
 
-              {day.items.length === 0 && (
+              {day.items.length === 0 ? (
                 <p className="timeline__empty-day">{t('timeline.emptyDay')}</p>
+              ) : (
+                <ul className="timeline__items">
+                  {day.items.map((item) => (
+                    <li key={item.id}>
+                      <ItemRow item={item} dayDate={day.date} />
+                    </li>
+                  ))}
+                </ul>
               )}
             </li>
           )

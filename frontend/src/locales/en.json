@@ -61,6 +61,50 @@
     "emptyTimeline": "This timeline is empty. Open a day and add your first item.",
     "emptyDay": "Nothing planned yet"
   },
+  "readiness": {
+    "label": "Logistics status",
+    "fraction": "{arranged, number} of {tracked, number} arranged",
+    "nothingArranged": "Nothing arranged yet"
+  },
+  "day": {
+    "title": "Day",
+    "backToTimeline": "Timeline",
+    "navLabel": "Day navigation",
+    "previous": "Previous day",
+    "next": "Next day",
+    "empty": "Nothing planned for this day yet. Add the first item."
+  },
+  "item": {
+    "add": "Add item",
+    "addTitle": "New item",
+    "editTitle": "Edit item",
+    "titleLabel": "Title",
+    "kindLabel": "Type",
+    "statusLabel": "Status",
+    "startTime": "Start time",
+    "endTime": "End time",
+    "endDate": "Ends on",
+    "endDateHint": "Only for something that runs past midnight — an overnight flight, or several nights in one place.",
+    "notesLabel": "Notes",
+    "save": "Save",
+    "saving": "Saving…",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "allDay": "All day",
+    "spansUntil": "→ {date}",
+    "kind": {
+      "accommodation": "Accommodation",
+      "transport": "Transport",
+      "activity": "Activity",
+      "meal": "Meal",
+      "other": "Other"
+    },
+    "status": {
+      "to_plan": "To plan",
+      "to_book": "To book",
+      "done": "Done"
+    }
+  },
   "error": {
     "invalid_credentials": "We could not sign you in. Check your e-mail and password.",
     "not_authenticated": "You need to sign in to see this.",

@@ -47,6 +47,7 @@ const TRIP = {
   end_date: '2026-10-13',
   departure_place: 'Warszawa',
   return_place: 'Katowice',
+  readiness: { arranged: 0, tracked: 0 },
   stages: [KUALA_LUMPUR],
   days: [
     { id: 'day-1', date: '2026-10-10', stage_ids: [], items: [] },

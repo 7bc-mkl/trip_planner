@@ -482,3 +482,242 @@ h2 {
   color: var(--colour-text-muted);
   font-size: 0.875rem;
 }
+
+/* --- the readiness counter (R02) --- */
+
+.readiness {
+  margin: var(--space-3) 0 0;
+}
+
+.readiness__label {
+  display: block;
+  color: var(--colour-text-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.readiness__value {
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.readiness--compact .readiness__value {
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+/* Nothing tracked yet is a neutral statement, not a failure. There is
+   deliberately no bar and no percentage here: the percentage is undefined at a
+   zero denominator, and "0%" would read as failure. */
+.readiness[data-nothing-tracked='true'] .readiness__value {
+  color: var(--colour-text-muted);
+  font-weight: 600;
+}
+
+/* --- status chips --- */
+
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--colour-border);
+  border-radius: 999px;
+  background: var(--colour-surface);
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* Colour is an addition to the glyph and the label, never a replacement:
+   removing every rule below must still leave the status readable. */
+.status-chip[data-status='to_plan'] {
+  color: var(--colour-text-muted);
+}
+
+.status-chip[data-status='to_book'] {
+  border-color: #b8781f;
+  color: #8a5a12;
+  background: #fdf6e9;
+}
+
+.status-chip[data-status='done'] {
+  border-color: var(--colour-accent);
+  color: var(--colour-accent);
+  background: #eef5f2;
+}
+
+/* --- items --- */
+
+.item-list,
+.timeline__items {
+  display: grid;
+  gap: var(--space-2);
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.item-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2) var(--space-3);
+  width: 100%;
+  padding: var(--space-3);
+  border: 1px solid var(--colour-border);
+  border-radius: var(--radius-sm);
+  background: var(--colour-surface);
+  color: inherit;
+  font: inherit;
+  text-align: start;
+}
+
+.item-row--button {
+  cursor: pointer;
+}
+
+.item-row--button:hover {
+  border-color: var(--colour-accent);
+}
+
+.item-row__time {
+  min-width: 6.5rem;
+  color: var(--colour-text-muted);
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.item-row__kind {
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--colour-bg);
+  font-size: 0.75rem;
+  color: var(--colour-text-muted);
+}
+
+.item-row__title {
+  flex: 1;
+  font-weight: 600;
+}
+
+.item-row__spans {
+  color: var(--colour-text-muted);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.item-row__notes {
+  flex-basis: 100%;
+  color: var(--colour-text-muted);
+  font-size: 0.875rem;
+}
+
+/* --- the day detail --- */
+
+.day-stages {
+  margin: 0 0 var(--space-4);
+  font-weight: 600;
+}
+
+.day-nav {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--colour-border);
+  font-size: 0.875rem;
+}
+
+/* Disabled rather than hidden: the trip's first and last days should look like
+   boundaries, not like a navigator that lost half its controls. */
+.day-nav__disabled {
+  color: var(--colour-text-muted);
+  opacity: 0.5;
+}
+
+/* --- the item editor dialog --- */
+
+.dialog-overlay {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: var(--space-4);
+  background: rgb(27 36 48 / 45%);
+  z-index: 10;
+}
+
+.dialog {
+  width: min(32rem, 100%);
+  max-height: 90dvh;
+  overflow-y: auto;
+  padding: var(--space-6);
+  border-radius: var(--radius-lg);
+  background: var(--colour-surface);
+  box-shadow: var(--shadow-card);
+}
+
+.dialog h2 {
+  margin-bottom: var(--space-4);
+  font-size: 1.25rem;
+}
+
+.dialog form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.dialog label {
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.dialog input,
+.dialog select,
+.dialog textarea {
+  width: 100%;
+  padding: var(--space-3);
+  border: 1px solid var(--colour-border);
+  border-radius: var(--radius-sm);
+  background: var(--colour-surface);
+  color: inherit;
+  font: inherit;
+}
+
+.dialog .field-row {
+  display: flex;
+  gap: var(--space-4);
+}
+
+.dialog .field-row > div {
+  flex: 1;
+}
+
+.dialog .hint {
+  margin: 0;
+  color: var(--colour-text-muted);
+  font-size: 0.8125rem;
+}
+
+.dialog__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+}
+
+.button-danger {
+  margin-right: auto;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--colour-danger);
+  border-radius: var(--radius-sm);
+  background: var(--colour-surface);
+  color: var(--colour-danger);
+  font: inherit;
+  font-size: 0.875rem;
+  cursor: pointer;
+}

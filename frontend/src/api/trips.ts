@@ -1,3 +1,4 @@
+import type { Item } from './items'
 import { request } from './client'
 
 /**
@@ -24,7 +25,19 @@ export type Day = {
   date: string
   /** Derived server-side by date containment; never stored. */
   stage_ids: string[]
-  items: unknown[]
+  items: Item[]
+}
+
+/**
+ * The readiness counter (R02).
+ *
+ * `tracked`, never `total`: a trip with ten items all still `to_plan` has
+ * `tracked = 0`. A consumer reading this as the item count would be wrong in
+ * exactly the case the counter exists to describe.
+ */
+export type Readiness = {
+  arranged: number
+  tracked: number
 }
 
 export type TripSummary = {
@@ -35,6 +48,7 @@ export type TripSummary = {
   departure_place: string
   /** `null` means one-way: the trip does not return. */
   return_place: string | null
+  readiness: Readiness
 }
 
 export type TripDetail = TripSummary & {

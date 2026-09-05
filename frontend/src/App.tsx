@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 
 import { LoginPage } from './features/auth/LoginPage'
 import { RequireSession } from './features/auth/RequireSession'
+import { DayDetailPage } from './features/trips/DayDetailPage'
 import { TimelinePage } from './features/trips/TimelinePage'
 import { TripCreatePage } from './features/trips/TripCreatePage'
 import { TripListPage } from './features/trips/TripListPage'
@@ -22,6 +23,7 @@ export default function App() {
         <Route path="/trips" element={<TripListPage />} />
         <Route path="/trips/new" element={<TripCreatePage />} />
         <Route path="/trips/:tripId" element={<TimelinePage />} />
+        <Route path="/trips/:tripId/days/:date" element={<DayDetailPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/trips" replace />} />
     </Routes>

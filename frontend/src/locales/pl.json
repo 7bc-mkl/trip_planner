@@ -61,6 +61,50 @@
     "emptyTimeline": "Ta oś czasu jest pusta. Otwórz dzień i dodaj pierwszy element.",
     "emptyDay": "Nic jeszcze nie zaplanowano"
   },
+  "readiness": {
+    "label": "Status logistyki",
+    "fraction": "{arranged, number} z {tracked, number} załatwionych",
+    "nothingArranged": "Nic jeszcze nie załatwione"
+  },
+  "day": {
+    "title": "Dzień",
+    "backToTimeline": "Oś czasu",
+    "navLabel": "Nawigacja po dniach",
+    "previous": "Poprzedni dzień",
+    "next": "Następny dzień",
+    "empty": "Nic jeszcze nie zaplanowano na ten dzień. Dodaj pierwszy element."
+  },
+  "item": {
+    "add": "Dodaj element",
+    "addTitle": "Nowy element",
+    "editTitle": "Edytuj element",
+    "titleLabel": "Nazwa",
+    "kindLabel": "Typ",
+    "statusLabel": "Status",
+    "startTime": "Godzina rozpoczęcia",
+    "endTime": "Godzina zakończenia",
+    "endDate": "Kończy się",
+    "endDateHint": "Tylko dla czegoś, co trwa po północy — nocnego lotu albo kilku nocy w jednym miejscu.",
+    "notesLabel": "Notatki",
+    "save": "Zapisz",
+    "saving": "Zapisywanie…",
+    "cancel": "Anuluj",
+    "delete": "Usuń",
+    "allDay": "Cały dzień",
+    "spansUntil": "→ {date}",
+    "kind": {
+      "accommodation": "Nocleg",
+      "transport": "Transport",
+      "activity": "Atrakcja",
+      "meal": "Jedzenie",
+      "other": "Inne"
+    },
+    "status": {
+      "to_plan": "Do zaplanowania",
+      "to_book": "Do zarezerwowania",
+      "done": "Gotowe"
+    }
+  },
   "error": {
     "invalid_credentials": "Nie udało się zalogować. Sprawdź e-mail i hasło.",
     "not_authenticated": "Aby to zobaczyć, musisz się zalogować.",
