@@ -1,24 +1,26 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useParams, useSearchParams } from 'react-router-dom'
 
 import { ApiError } from '../../api/client'
 import { fetchTrip } from '../../api/trips'
 import type { Stage, TripDetail } from '../../api/trips'
 import { AppShell } from './AppShell'
+import { FilterBar } from './FilterBar'
 import { ItemRow } from './ItemRow'
 import { ReadinessTile } from './ReadinessTile'
+import { DEFAULT_FILTER, applyFilter, isFilter } from './filter'
 import { formatDateRange, formatDayChip, routeSummary, stageLabel } from './format'
 
 /**
  * `/trips/:id` — the vertical day-by-day timeline.
  *
  * Adapted from `g_wny_pulpit_i_o_czasu`. Kept: the trip header with its route
- * summary, the day-by-day column with a date chip per day, and the position the
- * export gives the readiness counter and the filter bar (both arrive in Phases 3
- * and 4). Dropped, per the spec: the concierge drawer and every AI card, the
- * currency toggle and budget tile, export and share, reservation codes, ticket
- * pills and the weather strip.
+ * summary, the readiness counter in the position of the export's "STATUS
+ * LOGISTYKI" tile, the filter bar where the export puts its chips, and the
+ * day-by-day column with a date chip and item cards per day. Dropped, per the
+ * spec: the concierge drawer and every AI card, the currency toggle and budget
+ * tile, export and share, reservation codes, ticket pills and the weather strip.
  *
  * The empty state is the deliverable of Phase 2 and has to look deliberate: a
  * trip whose days are all empty shows **the days**, each inviting the first item,
@@ -28,8 +30,20 @@ import { formatDateRange, formatDayChip, routeSummary, stageLabel } from './form
 export function TimelinePage() {
   const { t, i18n } = useTranslation()
   const { tripId } = useParams<{ tripId: string }>()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [trip, setTrip] = useState<TripDetail | null>(null)
   const [error, setError] = useState<string | null>(null)
+
+  /**
+   * The filter lives in the URL, not in component state.
+   *
+   * That makes a filtered timeline linkable and survivable across a reload, and
+   * it is the state most worth keeping when the owner comes back to the tab. An
+   * unrecognised value falls back to `all` rather than showing nothing, since a
+   * hand-edited URL should not be able to hide the plan.
+   */
+  const filterParam = searchParams.get('filter')
+  const filter = isFilter(filterParam) ? filterParam : DEFAULT_FILTER
 
   useEffect(() => {
     if (tripId === undefined) {
@@ -69,7 +83,8 @@ export function TimelinePage() {
   }
 
   const stagesById = new Map(trip.stages.map((stage) => [stage.id, stage]))
-  const hasItems = trip.days.some((day) => day.items.length > 0)
+  const everyItem = trip.days.flatMap((day) => day.items)
+  const hasItems = everyItem.length > 0
 
   return (
     <AppShell
@@ -91,6 +106,25 @@ export function TimelinePage() {
         <ReadinessTile readiness={trip.readiness} />
       </header>
 
+      <FilterBar
+        // The chips count the whole trip, and the counter above is computed
+        // server-side — so neither moves when the filter changes. Only the day
+        // cards below do.
+        items={everyItem}
+        filter={filter}
+        onChange={(next) => {
+          const params = new URLSearchParams(searchParams)
+          if (next === DEFAULT_FILTER) {
+            // The default is absence: /trips/1 and /trips/1?filter=all are the
+            // same view and should not be two URLs.
+            params.delete('filter')
+          } else {
+            params.set('filter', next)
+          }
+          setSearchParams(params, { replace: true })
+        }}
+      />
+
       {!hasItems && (
         <p className="empty-state empty-state--inline">{t('timeline.emptyTimeline')}</p>
       )}
@@ -101,6 +135,8 @@ export function TimelinePage() {
             .map((id) => stagesById.get(id))
             .filter((stage): stage is Stage => stage !== undefined)
           const label = stageLabel(dayStages)
+
+          const visible = applyFilter(day.items, filter)
 
           return (
             <li className="timeline__day" key={day.id}>
@@ -113,11 +149,19 @@ export function TimelinePage() {
                 </Link>
               </h2>
 
-              {day.items.length === 0 ? (
+              {day.items.length === 0 && (
                 <p className="timeline__empty-day">{t('timeline.emptyDay')}</p>
-              ) : (
+              )}
+
+              {/* A day whose items are all filtered out says so, rather than
+                  looking like a day with nothing planned. */}
+              {day.items.length > 0 && visible.length === 0 && (
+                <p className="timeline__empty-day">{t('timeline.allFilteredOut')}</p>
+              )}
+
+              {visible.length > 0 && (
                 <ul className="timeline__items">
-                  {day.items.map((item) => (
+                  {visible.map((item) => (
                     <li key={item.id}>
                       <ItemRow item={item} dayDate={day.date} />
                     </li>

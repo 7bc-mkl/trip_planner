@@ -59,7 +59,8 @@
   },
   "timeline": {
     "emptyTimeline": "Ta oś czasu jest pusta. Otwórz dzień i dodaj pierwszy element.",
-    "emptyDay": "Nic jeszcze nie zaplanowano"
+    "emptyDay": "Nic jeszcze nie zaplanowano",
+    "allFilteredOut": "Wszystko tutaj jest już gotowe"
   },
   "readiness": {
     "label": "Status logistyki",
@@ -104,6 +105,12 @@
       "to_book": "Do zarezerwowania",
       "done": "Gotowe"
     }
+  },
+  "filter": {
+    "legend": "Pokaż",
+    "all": "Wszystko",
+    "outstanding": "Tylko do zrobienia",
+    "kindCount": "{kind} ({count, number})"
   },
   "error": {
     "invalid_credentials": "Nie udało się zalogować. Sprawdź e-mail i hasło.",

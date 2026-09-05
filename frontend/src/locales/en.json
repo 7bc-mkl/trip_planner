@@ -59,7 +59,8 @@
   },
   "timeline": {
     "emptyTimeline": "This timeline is empty. Open a day and add your first item.",
-    "emptyDay": "Nothing planned yet"
+    "emptyDay": "Nothing planned yet",
+    "allFilteredOut": "Everything here is already done"
   },
   "readiness": {
     "label": "Logistics status",
@@ -104,6 +105,12 @@
       "to_book": "To book",
       "done": "Done"
     }
+  },
+  "filter": {
+    "legend": "Show",
+    "all": "All",
+    "outstanding": "Only outstanding",
+    "kindCount": "{kind} ({count, number})"
   },
   "error": {
     "invalid_credentials": "We could not sign you in. Check your e-mail and password.",

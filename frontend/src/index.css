@@ -721,3 +721,61 @@ h2 {
   font-size: 0.875rem;
   cursor: pointer;
 }
+
+/* --- the filter bar --- */
+
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3) var(--space-4);
+  margin-bottom: var(--space-4);
+  padding: var(--space-3);
+  border: 1px solid var(--colour-border);
+  border-radius: var(--radius-md);
+  background: var(--colour-surface);
+}
+
+.filter-bar__filters {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.filter-bar__filters legend {
+  float: left;
+  margin-right: var(--space-3);
+  padding: 0;
+  color: var(--colour-text-muted);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.filter-bar__filters label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: 0.875rem;
+}
+
+/* Counts, not controls — they are not buttons and must not look like them. */
+.filter-bar__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0 0 0 auto;
+  padding: 0;
+  list-style: none;
+}
+
+.kind-chip {
+  padding: var(--space-1) var(--space-2);
+  border-radius: 999px;
+  background: var(--colour-bg);
+  color: var(--colour-text-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
