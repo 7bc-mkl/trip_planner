@@ -18,7 +18,7 @@ function TripsPlaceholder() {
   const session = useSession()
 
   return (
-    <main>
+    <main className="app-shell">
       <header>
         <h1>{t('app.name')}</h1>
         <LocaleSwitch />

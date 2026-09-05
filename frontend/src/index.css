@@ -1,111 +1,205 @@
+/**
+ * Design tokens and the base layer.
+ *
+ * The spec's cross-cutting UI rules put the palette, type scale, radii and
+ * spacing in CSS custom properties. This is the minimum that makes the screens
+ * this milestone ships look deliberate; the full token set from the design
+ * export lands with the screens that need it in Phases 2 to 4.
+ */
+
 :root {
-  --text: #6b6375;
-  --text-h: #08060d;
-  --bg: #fff;
-  --border: #e5e4e7;
-  --code-bg: #f4f3ec;
-  --accent: #aa3bff;
-  --accent-bg: rgba(170, 59, 255, 0.1);
-  --accent-border: rgba(170, 59, 255, 0.5);
-  --social-bg: rgba(244, 243, 236, 0.5);
-  --shadow:
-    rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
+  --colour-bg: #f6f7f9;
+  --colour-surface: #ffffff;
+  --colour-border: #dfe3e8;
+  --colour-text: #1b2430;
+  --colour-text-muted: #5c6b7a;
+  --colour-accent: #2f6f5e;
+  --colour-accent-text: #ffffff;
+  --colour-danger: #a4302a;
+  --colour-danger-bg: #fdf1f0;
 
-  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --mono: ui-monospace, Consolas, monospace;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
 
-  font: 18px/145% var(--sans);
-  letter-spacing: 0.18px;
-  color-scheme: light dark;
-  color: var(--text);
-  background: var(--bg);
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
 
-  @media (max-width: 1024px) {
-    font-size: 16px;
-  }
+  --font-sans: 'Plus Jakarta Sans', ui-sans-serif, system-ui, -apple-system, 'Segoe UI',
+    Roboto, sans-serif;
+
+  --shadow-card: 0 1px 2px rgb(27 36 48 / 6%), 0 8px 24px rgb(27 36 48 / 8%);
+
+  color-scheme: light;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --text: #9ca3af;
-    --text-h: #f3f4f6;
-    --bg: #16171d;
-    --border: #2e303a;
-    --code-bg: #1f2028;
-    --accent: #c084fc;
-    --accent-bg: rgba(192, 132, 252, 0.15);
-    --accent-border: rgba(192, 132, 252, 0.5);
-    --social-bg: rgba(47, 48, 58, 0.5);
-    --shadow:
-      rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
-  }
-
-  #social .button-icon {
-    filter: invert(1) brightness(2);
-  }
-}
-
-#root {
-  width: 1126px;
-  max-width: 100%;
-  margin: 0 auto;
-  text-align: center;
-  border-inline: 1px solid var(--border);
-  min-height: 100svh;
-  display: flex;
-  flex-direction: column;
+*,
+*::before,
+*::after {
   box-sizing: border-box;
 }
 
 body {
   margin: 0;
+  background: var(--colour-bg);
+  color: var(--colour-text);
+  font-family: var(--font-sans);
+  line-height: 1.5;
 }
 
 h1,
 h2 {
-  font-family: var(--heading);
-  font-weight: 500;
-  color: var(--text-h);
-}
-
-h1 {
-  font-size: 56px;
-  letter-spacing: -1.68px;
-  margin: 32px 0;
-  @media (max-width: 1024px) {
-    font-size: 36px;
-    margin: 20px 0;
-  }
-}
-h2 {
-  font-size: 24px;
-  line-height: 118%;
-  letter-spacing: -0.24px;
-  margin: 0 0 8px;
-  @media (max-width: 1024px) {
-    font-size: 20px;
-  }
-}
-p {
   margin: 0;
+  line-height: 1.2;
 }
 
-code,
-.counter {
-  font-family: var(--mono);
+/* Never remove the focus ring: keyboard navigation is a requirement, not a
+   preference. Replace it with a clearer one instead. */
+:focus-visible {
+  outline: 2px solid var(--colour-accent);
+  outline-offset: 2px;
+}
+
+/* --- the locale switch, present on every screen (R01) --- */
+
+.locale-switch {
   display: inline-flex;
-  border-radius: 4px;
-  color: var(--text-h);
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 0.875rem;
+  color: var(--colour-text-muted);
 }
 
-code {
-  font-size: 15px;
-  line-height: 135%;
-  padding: 4px 8px;
-  background: var(--code-bg);
+.locale-switch select {
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--colour-border);
+  border-radius: var(--radius-sm);
+  background: var(--colour-surface);
+  color: inherit;
+  font: inherit;
+  font-size: 0.875rem;
+}
+
+/* --- /login --- */
+
+.login {
+  min-height: 100dvh;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  gap: var(--space-8);
+  padding: var(--space-6);
+}
+
+.login > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.login > header h1 {
+  font-size: 1.25rem;
+  letter-spacing: -0.01em;
+}
+
+.login form {
+  width: min(26rem, 100%);
+  margin-inline: auto;
+  align-self: start;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-8);
+  background: var(--colour-surface);
+  border: 1px solid var(--colour-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+}
+
+.login form h2 {
+  font-size: 1.5rem;
+}
+
+.login form p {
+  margin: 0;
+  color: var(--colour-text-muted);
+}
+
+.login label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  margin-bottom: calc(var(--space-1) * -1);
+}
+
+.login input {
+  width: 100%;
+  padding: var(--space-3);
+  border: 1px solid var(--colour-border);
+  border-radius: var(--radius-sm);
+  background: var(--colour-surface);
+  color: inherit;
+  font: inherit;
+}
+
+.login button[type='submit'] {
+  margin-top: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--colour-accent);
+  color: var(--colour-accent-text);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.login button[type='submit']:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+/* The failure message carries colour AND a border and its own text, so it is not
+   conveyed by colour alone. */
+.login [role='alert'] {
+  margin: 0;
+  padding: var(--space-3);
+  border: 1px solid var(--colour-danger);
+  border-radius: var(--radius-sm);
+  background: var(--colour-danger-bg);
+  color: var(--colour-danger);
+  font-size: 0.875rem;
+}
+
+/* --- the authenticated shell --- */
+
+.app-shell {
+  min-height: 100dvh;
+  padding: var(--space-6);
+}
+
+.app-shell > header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--colour-border);
+}
+
+.app-shell > header h1 {
+  font-size: 1.25rem;
+  margin-right: auto;
+}
+
+.app-shell button {
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--colour-border);
+  border-radius: var(--radius-sm);
+  background: var(--colour-surface);
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
 }
