@@ -72,6 +72,8 @@
     "trip_too_long": "Podróż może trwać maksymalnie 366 dni. Sprawdź daty.",
     "stages_required": "Dodaj do podróży co najmniej jeden cel.",
     "stage_outside_trip": "Daty jednego z celów wykraczają poza daty podróży.",
+    "invalid_time_span": "Podany początek i koniec nie opisują realnego przedziału czasu. Sprawdź godziny i datę zakończenia.",
+    "date_outside_trip": "Ta data jest poza zakresem podróży.",
     "unknown": "Coś poszło nie tak. Spróbuj ponownie."
   }
 }

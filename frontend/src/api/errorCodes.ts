@@ -12,6 +12,8 @@ export type ErrorCode =
   | 'trip_too_long'
   | 'stages_required'
   | 'stage_outside_trip'
+  | 'invalid_time_span'
+  | 'date_outside_trip'
 
 export const ERROR_CODES: readonly ErrorCode[] = [
   'invalid_credentials',
@@ -24,4 +26,6 @@ export const ERROR_CODES: readonly ErrorCode[] = [
   'trip_too_long',
   'stages_required',
   'stage_outside_trip',
+  'invalid_time_span',
+  'date_outside_trip',
 ] as const

@@ -72,6 +72,8 @@
     "trip_too_long": "A trip can be at most 366 days long. Check the dates.",
     "stages_required": "Add at least one destination to the trip.",
     "stage_outside_trip": "A destination's dates fall outside the trip's dates.",
+    "invalid_time_span": "That start and end do not describe a real stretch of time. Check the times and the end date.",
+    "date_outside_trip": "That date is outside this trip.",
     "unknown": "Something went wrong. Please try again."
   }
 }
