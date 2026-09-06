@@ -482,13 +482,18 @@ textarea:disabled {
   list-style: none;
 }
 
+/* The item card, on the timeline's rail and on the day detail alike: the time
+   in bold tabular figures on the left, the type as an icon tile plus its label,
+   the title, the status chip at the trailing edge and the notes on their own
+   line. `position: relative` is the rail dot's containing block. */
 .item-row {
+  position: relative;
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
+  align-items: center;
   gap: var(--space-xs) var(--space-sm);
   width: 100%;
-  padding: var(--space-sm);
+  padding: var(--space-md);
   color: inherit;
   font: inherit;
   text-align: start;
@@ -500,36 +505,89 @@ textarea:disabled {
   cursor: pointer;
 }
 
+/* The dot ON the rail — outside the card, centred on the track that runs at
+   `--timeline-track-offset`, one gutter to the card's left. The `--canvas` ring
+   is what stops the track from running through it.
+
+   It is DECORATION: `aria-hidden` in the markup, rendered only when the
+   timeline asks for it, and always beside the status chip that carries the same
+   state in a glyph and a translated word. Deleting every rule below must leave
+   the status readable, which is why the chip is never what moved. */
+.item-row__dot {
+  position: absolute;
+  top: calc(var(--space-md) + var(--space-2xs));
+  left: calc(-1 * var(--space-lg) - 5px);
+  width: 10px;
+  height: 10px;
+  border-radius: var(--radius-full);
+  background: var(--status-draft-dot);
+  box-shadow: 0 0 0 3px var(--canvas);
+}
+
+.item-row__dot[data-status='to_book'] {
+  background: var(--status-progress-dot);
+}
+
+.item-row__dot[data-status='done'] {
+  background: var(--status-confirmed-dot);
+}
+
 .item-row__time {
-  min-width: 6.5rem;
-  color: var(--text-muted);
-  font-size: 0.875rem;
+  min-width: 5.5rem;
+  color: var(--text);
+  font: var(--type-label-lg);
+  letter-spacing: var(--tracking-label-lg);
   font-variant-numeric: tabular-nums;
 }
 
+/* The type stops being a grey text pill and becomes icon-plus-label. */
+.item-row__type {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+/* The glyph slot. Empty until step 6.1 puts the item-kind sprite in it — the
+   tile is the part the layout needs now, and inventing a glyph here would put a
+   second sprite in the repository for one step. */
+.item-row__icon {
+  flex: none;
+  width: 2rem;
+  height: 2rem;
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+}
+
 .item-row__kind {
-  padding: var(--space-2xs) var(--space-xs);
-  border-radius: var(--radius-sm);
-  background: var(--canvas);
-  font-size: 0.75rem;
   color: var(--text-muted);
+  font: var(--type-label-md);
+  letter-spacing: var(--tracking-label-md);
 }
 
 .item-row__title {
   flex: 1;
-  font-weight: 600;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font: var(--type-headline-sm);
+  letter-spacing: var(--tracking-headline-sm);
 }
 
 .item-row__spans {
   color: var(--text-muted);
-  font-size: 0.8125rem;
-  font-weight: 600;
+  font: var(--type-label-md);
+  letter-spacing: var(--tracking-label-md);
+}
+
+/* The chip at the trailing edge, on the card's first line. */
+.item-row .status-chip {
+  margin-left: auto;
 }
 
 .item-row__notes {
   flex-basis: 100%;
   color: var(--text-muted);
-  font-size: 0.875rem;
+  font: var(--type-body-sm);
+  letter-spacing: var(--tracking-body-sm);
 }
 
 /* --- the item editor dialog --- */

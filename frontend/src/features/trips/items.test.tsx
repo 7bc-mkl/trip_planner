@@ -10,6 +10,7 @@ import { ITEM_STATUSES } from '../../api/items'
 import { applyLocale, initI18n } from '../../i18n'
 import { clearAllDrafts, readDraft } from '../auth/draftStore'
 import { SessionProvider } from '../auth/SessionContext'
+import { ItemRow } from './ItemRow'
 import { StatusChip } from './StatusChip'
 import { draftKey } from './itemDraft'
 import type { ItemDraft } from './itemDraft'
@@ -643,6 +644,31 @@ describe('items on the timeline', () => {
     const row = screen.getByText('Batu Caves').closest('.item-row')
 
     expect(within(row as HTMLElement).queryByRole('button')).not.toBeInTheDocument()
+  })
+})
+
+describe('the item card’s rail dot', () => {
+  it('is absent unless the timeline asks for one — the day detail case', () => {
+    // Rendered without `railDot`, exactly as `DayDetailPage` renders it. The
+    // card is whole without the dot: the screen it is on has no rail to hang
+    // one on, and the status is carried by the chip either way.
+    const { container } = render(<ItemRow item={MUSEUM} dayDate="2026-10-11" />)
+
+    expect(container.querySelector('.item-row__dot')).toBeNull()
+    expect(screen.getByText('Batu Caves')).toBeInTheDocument()
+    expect(screen.getByText('Do zaplanowania')).toBeInTheDocument()
+  })
+
+  it('is decoration beside the chip, never instead of it, when the timeline does', () => {
+    const { container } = render(<ItemRow item={MUSEUM} dayDate="2026-10-11" railDot />)
+    const dot = container.querySelector('.item-row__dot')
+
+    expect(dot).toHaveAttribute('aria-hidden', 'true')
+    expect(dot).toHaveAttribute('data-status', 'to_plan')
+    expect(dot?.textContent).toBe('')
+    // The colour-blindness contract: the glyph and the translated label are
+    // still there, and the dot is an addition to them.
+    expect(screen.getByText('Do zaplanowania')).toBeInTheDocument()
   })
 })
 

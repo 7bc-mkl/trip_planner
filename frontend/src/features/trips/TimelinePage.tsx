@@ -12,7 +12,14 @@ import { FilterBar } from './FilterBar'
 import { ItemRow } from './ItemRow'
 import { ReadinessTile } from './ReadinessTile'
 import { DEFAULT_FILTER, applyFilter, countByKind, isFilter } from './filter'
-import { dayCount, formatDateRange, formatDayChip, routeSummary, stageLabel } from './format'
+import {
+  dayCount,
+  formatAnchorDay,
+  formatAnchorMonth,
+  formatDateRange,
+  routeSummary,
+  stageLabel,
+} from './format'
 
 /**
  * `/trips/:id` — the vertical day-by-day timeline.
@@ -237,34 +244,50 @@ export function TimelinePage() {
 
           return (
             <li className="timeline__day" key={day.id}>
-              <h2>
-                <Link to={`/trips/${trip.id}/days/${day.date}`}>
-                  <span className="timeline__chip">{formatDayChip(day.date, i18n.language)}</span>
-                  {/* A day in no stage renders without a label rather than with
-                      placeholder copy — it is a day in transit, not missing data. */}
-                  {label !== '' && <span className="timeline__stages">{label}</span>}
+              {/* The date anchor: two lines, `PAŹ` over `10`, sticky beneath the
+                  header and the filter bar. It is the day's heading and its link
+                  to the day detail — the stage label moved out of the link and
+                  onto the day's own column, where there is room for it. */}
+              <h2 className="timeline__anchor">
+                <Link className="timeline__anchor-link" to={`/trips/${trip.id}/days/${day.date}`}>
+                  <span className="timeline__anchor-month">
+                    {formatAnchorMonth(day.date, i18n.language)}
+                  </span>
+                  <span className="timeline__anchor-day">
+                    {formatAnchorDay(day.date, i18n.language)}
+                  </span>
                 </Link>
               </h2>
 
-              {day.items.length === 0 && (
-                <p className="timeline__empty-day">{t('timeline.emptyDay')}</p>
-              )}
+              <div className="timeline__day-body">
+                {/* A day in no stage renders without a label rather than with
+                    placeholder copy — it is a day in transit, not missing data. */}
+                {label !== '' && <p className="timeline__stages">{label}</p>}
 
-              {/* A day whose items are all filtered out says so, rather than
-                  looking like a day with nothing planned. */}
-              {day.items.length > 0 && visible.length === 0 && (
-                <p className="timeline__empty-day">{t('timeline.allFilteredOut')}</p>
-              )}
+                {/* The invitation keeps its place on the rail rather than
+                    becoming a gap: an empty day is a day, not an absence. */}
+                {day.items.length === 0 && (
+                  <p className="timeline__empty-day">{t('timeline.emptyDay')}</p>
+                )}
 
-              {visible.length > 0 && (
-                <ul className="timeline__items">
-                  {visible.map((item) => (
-                    <li key={item.id}>
-                      <ItemRow item={item} dayDate={day.date} />
-                    </li>
-                  ))}
-                </ul>
-              )}
+                {/* A day whose items are all filtered out says so, rather than
+                    looking like a day with nothing planned. */}
+                {day.items.length > 0 && visible.length === 0 && (
+                  <p className="timeline__empty-day">{t('timeline.allFilteredOut')}</p>
+                )}
+
+                {visible.length > 0 && (
+                  <ul className="timeline__items">
+                    {visible.map((item) => (
+                      <li key={item.id}>
+                        {/* The dot on the rail is the timeline's alone; the day
+                            detail renders the same card without one. */}
+                        <ItemRow item={item} dayDate={day.date} railDot />
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
             </li>
           )
         })}

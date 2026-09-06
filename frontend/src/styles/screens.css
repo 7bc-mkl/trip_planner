@@ -24,8 +24,7 @@
 
 .login form,
 .trip-list a,
-.trip-form,
-.timeline__day {
+.trip-form {
   border: 1px solid var(--hairline);
   border-radius: var(--radius-lg);
   background: var(--surface);
@@ -478,48 +477,104 @@
   letter-spacing: var(--tracking-body-sm);
 }
 
+/* --- /trips/:id — the timeline rail ----------------------------------
+ *
+ * The structural change of the spec: a day stops being a bordered box holding
+ * an unrailed list and becomes a dated anchor beside a continuous track, with
+ * one card per item hanging off it. It is the genre's convention — every
+ * itinerary product benchmarked draws exactly this — and the box was ours.
+ *
+ * THE TRACK BELONGS TO THE LIST, NOT TO THE DAY. It is one absolutely
+ * positioned line on `.timeline`, so on a fifteen-day trip with items on three
+ * of them the rail runs continuously between the sparse days instead of
+ * restarting per day and leaving the reader with a dotted ladder.
+ */
+
 .timeline {
+  position: relative;
   display: grid;
-  gap: var(--space-sm);
+  gap: var(--space-lg);
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
+.timeline::before {
+  content: '';
+  position: absolute;
+  top: var(--space-xs);
+  bottom: var(--space-xs);
+  left: var(--timeline-track-offset);
+  width: 1.5px;
+  background: var(--hairline);
+}
+
+/* Two columns: the anchor in the first, everything the day holds in the second.
+   The first track is exactly `--timeline-track-offset` wide, so the line above
+   runs down its right edge and the cards begin one gutter clear of it. */
 .timeline__day {
-  padding: var(--space-md);
+  display: grid;
+  grid-template-columns: var(--timeline-track-offset) minmax(0, 1fr);
+  column-gap: var(--space-lg);
 }
 
-.timeline__day h2 {
-  font-size: 1rem;
+/* The anchor. Sticky beneath BOTH layers above it, through the same two custom
+   properties those layers set their own height from — a magic number here would
+   put the date under the filter bar on exactly the screens the anchor exists
+   for. `align-self: start` is what lets a grid item stick at all. */
+.timeline__anchor {
+  position: sticky;
+  top: calc(var(--header-height) + var(--filter-bar-height));
+  z-index: 4;
+  align-self: start;
+  background: var(--canvas);
 }
 
-.timeline__day h2 a {
+.timeline__anchor-link {
   display: flex;
-  align-items: baseline;
-  gap: var(--space-sm);
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2xs);
+  padding: var(--space-2xs) 0;
   color: inherit;
   text-decoration: none;
 }
 
-.timeline__chip {
-  padding: var(--space-2xs) var(--space-xs);
-  border-radius: var(--radius-sm);
-  background: var(--canvas);
-  font-size: 0.8125rem;
-  font-weight: 600;
-  white-space: nowrap;
+.timeline__anchor-month {
+  color: var(--text-muted);
+  font: var(--type-label-sm);
+  letter-spacing: var(--tracking-label-sm);
+  text-transform: uppercase;
+}
+
+.timeline__anchor-day {
+  font: var(--type-headline-md);
+  letter-spacing: var(--tracking-headline-md);
+  font-variant-numeric: tabular-nums;
+}
+
+.timeline__day-body {
+  min-width: 0;
+  padding-bottom: var(--space-xs);
 }
 
 .timeline__stages {
+  margin: 0 0 var(--space-xs);
   color: var(--text-muted);
-  font-weight: 500;
+  font: var(--type-label-lg);
+  letter-spacing: var(--tracking-label-lg);
 }
 
+/* The invitation on an empty day: still on the rail, still a card-shaped place
+   for the first item rather than a gap in the plan. */
 .timeline__empty-day {
-  margin: var(--space-xs) 0 0;
+  margin: 0;
+  padding: var(--space-sm) var(--space-md);
+  border: 1px dashed var(--hairline);
+  border-radius: var(--radius-lg);
   color: var(--text-muted);
-  font-size: 0.875rem;
+  font: var(--type-body-sm);
+  letter-spacing: var(--tracking-body-sm);
 }
 
 /* --- the day detail --- */
