@@ -1,0 +1,95 @@
+/**
+ * base.css — the element layer: the reset, `body`, the heading scale, link
+ * defaults, the focus ring and the reduced-motion contract.
+ *
+ * Everything here targets an element selector (or `:root`). Nothing here knows
+ * about a component or a screen: those live in the files imported after this
+ * one. The only tokens referenced are the canonical roles from `tokens.css`.
+ */
+
+:root {
+  color-scheme: light;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--canvas);
+  color: var(--text);
+  font-family: var(--font-sans);
+  line-height: 1.5;
+}
+
+/* The heading scale, bound to the design's type roles. `margin: 0` is kept
+   exactly where the skeleton set it — headings are spaced by their containers,
+   and this file must not move any layout. */
+
+h1,
+h2,
+h3,
+h4 {
+  margin: 0;
+}
+
+h1 {
+  font: var(--type-headline-xl);
+  letter-spacing: var(--tracking-headline-xl);
+}
+
+h2 {
+  font: var(--type-headline-lg);
+  letter-spacing: var(--tracking-headline-lg);
+}
+
+h3 {
+  font: var(--type-headline-md);
+  letter-spacing: var(--tracking-headline-md);
+}
+
+h4 {
+  font: var(--type-headline-sm);
+  letter-spacing: var(--tracking-headline-sm);
+}
+
+/* Link default: the primary role rather than the user-agent blue, which belongs
+   to no palette in `DESIGN.md`. Components that need an inherited colour (the
+   brand, the trip cards, the timeline day headings) already say so themselves. */
+a {
+  color: var(--primary);
+  text-underline-offset: 0.15em;
+}
+
+/* Never remove the focus ring: keyboard navigation is a requirement, not a
+   preference. Replace it with a clearer one instead. */
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* On a dark surface the `--primary` ring disappears — a #0f3f6d ring on a
+   #00294d fill is invisible — so anything painted in the deep primary opts into
+   the fixed-tone ring by carrying `.on-dark`. Phase 4's trip banner is its first
+   consumer; the class is defined here because the contract is accessibility,
+   not decoration. */
+.on-dark :focus-visible,
+.on-dark:focus-visible {
+  outline-color: var(--primary-fixed);
+}
+
+/* The ring renders at its final value under reduced motion: it is an outline,
+   not an animation, and nothing below may weaken it. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

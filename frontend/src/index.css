@@ -1,48 +1,24 @@
+/* THE ORDER OF THESE IMPORTS IS DELIBERATE: cascade order is the contract, so
+   every import lives here, at the top, and none of them may be reordered.
+   `tokens.css` declares the vocabulary, `base.css` the element layer; the
+   component and screen files join the list in the phases that split them out.
+   Vite inlines `@import` at build time, so the shipped bundle is still one
+   stylesheet; the imports have to stay the first statements in the file for the
+   CSS to be valid. */
 @import './styles/tokens.css';
+@import './styles/base.css';
 
 /**
- * The base layer, the components and the five screens.
+ * The components and the five screens.
  *
- * The token block that used to open this file now lives in
- * `./styles/tokens.css` — the design export, transcribed, plus the
- * compatibility bridge that keeps the skeleton's token names resolving while
- * the rules below are rewritten recipe by recipe. Vite inlines the `@import`
- * at build time, so the shipped bundle is still one stylesheet; the import has
- * to stay the first statement in the file for the CSS to be valid.
+ * The token block that used to open this file lives in `./styles/tokens.css` —
+ * the design export, transcribed, plus the compatibility bridge that keeps the
+ * skeleton's token names resolving while the rules below are rewritten recipe
+ * by recipe. The reset, `body`, the heading scale, link defaults, the focus
+ * ring and the reduced-motion rules live in `./styles/base.css`.
  *
- * The base/component/screen split lands in the following steps.
+ * The component/screen split lands in the following phases.
  */
-
-:root {
-  color-scheme: light;
-}
-
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-}
-
-body {
-  margin: 0;
-  background: var(--colour-bg);
-  color: var(--colour-text);
-  font-family: var(--font-sans);
-  line-height: 1.5;
-}
-
-h1,
-h2 {
-  margin: 0;
-  line-height: 1.2;
-}
-
-/* Never remove the focus ring: keyboard navigation is a requirement, not a
-   preference. Replace it with a clearer one instead. */
-:focus-visible {
-  outline: 2px solid var(--colour-accent);
-  outline-offset: 2px;
-}
 
 /* --- the locale switch, present on every screen (R01) --- */
 
