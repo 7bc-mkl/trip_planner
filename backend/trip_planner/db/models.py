@@ -37,6 +37,7 @@ from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from trip_planner.db.base import Base
+from trip_planner.domain.uploads import ATTACHMENT_CONTENT_TYPES, MAX_ATTACHMENT_BYTES
 
 __all__ = [
     "ATTACHMENT_CONTENT_TYPES",
@@ -60,17 +61,14 @@ __all__ = [
 #: The five item types the filter bar's chips are built from.
 ITEM_KINDS = ("accommodation", "transport", "activity", "meal", "other")
 
-#: The only three types the bytes of an upload are allowed to turn out to be.
-#:
-#: This is the *derived* type — what sniffing the file's own header concluded —
-#: never the `Content-Type` the client claimed. A constraint over a tuple the
-#: sniffer also reads is what keeps "what we accept" and "what we can store" one
-#: fact rather than two that drift.
-ATTACHMENT_CONTENT_TYPES = ("application/pdf", "image/jpeg", "image/png")
-
-#: 10 MiB, the per-file cap (A4). Enforced before the body is read *and* here, so
-#: a write path that skips the endpoint still cannot store a larger file.
-MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024
+# `ATTACHMENT_CONTENT_TYPES` and `MAX_ATTACHMENT_BYTES` are defined in
+# `domain/uploads.py` — the module that derives a type from an upload's bytes and
+# counts them — and re-exported here for the `attachment` `CHECK` constraints
+# below. One definition is what keeps "what the sniffer accepts" and "what the
+# database can store" a single fact rather than two that drift, and the
+# dependency runs `db` → `domain` so the pure module stays free of SQLAlchemy.
+# The 10 MiB cap is enforced before the body is read *and* by the constraint, so
+# a write path that skips the endpoint still cannot store a larger file.
 
 #: The three statuses R02 and D05 fix, in the order they progress.
 #:
