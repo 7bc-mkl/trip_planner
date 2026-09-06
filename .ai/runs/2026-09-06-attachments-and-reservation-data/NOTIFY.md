@@ -90,3 +90,26 @@
   path answers 404 without consuming quota — but a deviation from the spec's literal order), plus
   the two nits from checkpoint 1.
 - Tasks-table SHAs for rows 1.6..1.10 reconciled to their post-amend values.
+
+## 2026-09-06T20:14:41Z — Step 2.4 scope decisions
+- New-item case (`item === null`): `ItemAttachments` renders its heading, its shipped empty state
+  and a translated "save the item first" line, but **no dropzone at all** — there is no `itemId` yet
+  for `POST /trips/{tripId}/items/{itemId}/attachments` to target, so nothing is rendered that could
+  throw or silently no-op on the first drop. Pinned down by `itemAttachments.test.tsx`'s "the
+  new-item case" block.
+- `ItemRow` gains `attachmentCount?: number` as an **opt-in prop**, not a direct read of
+  `item.attachment_count` off the item it already receives (which would have painted the paperclip
+  on the timeline too, ahead of Step 2.7). Only `DayDetailPage` passes it (`attachmentCount=
+  {item.attachment_count}`); `TimelinePage` is untouched, matching 2.7's own plan text ("ItemRow's
+  existing callers that pass no count render exactly as before").
+- The `paperclip` glyph was added to the icon sprite here rather than in 2.7: `icons.svg`'s header
+  comment had pencilled it in for "the timeline's per-item badge", but the task brief for this Step
+  explicitly assigns "the paperclip and count on the item row" to 2.4, and the glyph needed a first
+  consumer regardless of which host reaches it first. The sprite's comment is updated accordingly.
+- `AttachmentRow` (the per-attachment card) was factored out of `DayAttachments.tsx` into its own
+  module and imported by both it and the new `ItemAttachments.tsx`, per this Step's explicit
+  instruction not to re-implement the same row twice.
+- The count text (`item.attachmentCount`, "Attachments ({count, number})" / "Załączniki ({count,
+  number})") deliberately does **not** pluralise the noun — that ICU plural key is Step 2.6's own
+  named deliverable. This Step's key can be swapped for 2.6's once it lands without changing where
+  it is called from.
