@@ -24,6 +24,7 @@ export function AppShell({
   breadcrumb,
   actions,
   context,
+  dock,
   children,
 }: {
   title: string
@@ -40,6 +41,16 @@ export function AppShell({
    * the header is exactly what it was.
    */
   context?: ReactNode
+  /**
+   * The contextual dock: trip metadata promoted out of the main column — the
+   * readiness figure, the stages, the route summary.
+   *
+   * Optional, and its absence costs nothing: a screen that passes no dock
+   * renders a single centred column and the grid reserves no space for one.
+   * Phase 4 fills it on `/trips/:id` and `/trips/new`; until then every screen
+   * is in exactly that undocked case, which is why it is the one with a test.
+   */
+  dock?: ReactNode
   children: ReactNode
 }) {
   const { t } = useTranslation()
@@ -76,14 +87,25 @@ export function AppShell({
         </div>
       </header>
 
-      <main>
-        {breadcrumb}
-        <div className="page-heading">
-          <h1>{title}</h1>
-          {actions}
-        </div>
-        {children}
-      </main>
+      {/* The page grid. The dock is an `<aside>` BESIDE `<main>`, never inside
+          it: `<main>` has to stay the main landmark and the canvas has to stay
+          the first thing inside it, so the dock is a complementary landmark of
+          its own that a screen reader can skip in one keystroke. It precedes
+          `<main>` in the markup because below 1280px that is where it renders —
+          a summary strip above the canvas — so the reading order and the
+          visual order say the same thing. */}
+      <div className={dock === undefined ? 'page' : 'page page--docked'}>
+        {dock !== undefined && <aside className="page__dock">{dock}</aside>}
+
+        <main className="page__canvas">
+          {breadcrumb}
+          <div className="page-heading">
+            <h1>{title}</h1>
+            {actions}
+          </div>
+          {children}
+        </main>
+      </div>
     </div>
   )
 }

@@ -66,6 +66,33 @@ describe('the app shell', () => {
     expect(screen.getByRole('banner').querySelector('.app-header__context')).toBeNull()
   })
 
+  it('renders one column and no dock landmark when no dock is passed', () => {
+    renderShell({ title: 'Malezja', children: <p>zawartość</p> })
+
+    // Every screen is in this case until Phase 4, so it is the one that must be
+    // exactly right: no complementary landmark, and no docked grid to reserve
+    // the column its content would have gone in.
+    expect(screen.queryByRole('complementary')).toBeNull()
+    expect(document.querySelector('.page--docked')).toBeNull()
+    expect(document.querySelector('.page')).toBeInTheDocument()
+  })
+
+  it('renders the dock beside the canvas, not inside it, when one is passed', () => {
+    renderShell({
+      title: 'Malezja',
+      dock: <p>3 z 7 załatwione</p>,
+      children: <p>zawartość</p>,
+    })
+
+    const dock = screen.getByRole('complementary')
+    expect(dock).toHaveTextContent('3 z 7 załatwione')
+    expect(document.querySelector('.page--docked')).toBeInTheDocument()
+
+    // Beside `<main>`, so the main landmark still contains only the canvas.
+    expect(screen.getByRole('main')).not.toContainElement(dock)
+    expect(screen.getByRole('main')).toHaveTextContent('zawartość')
+  })
+
   it('names the trip in the header when a context line is passed', () => {
     renderShell({
       title: 'Malezja',

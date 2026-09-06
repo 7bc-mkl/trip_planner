@@ -53,9 +53,9 @@
   }
 }
 
-/* The band is full-bleed; its contents are not. They sit on the same centred
-   measure and the same gutters as the page grid below, so the wordmark lines up
-   with the page heading. */
+/* The band is full-bleed; its contents are not. They sit on the page grid's own
+   cap (`--page-max`) and its own gutters, so the wordmark lines up with the
+   canvas on a docked screen at full width. */
 .app-header__inner {
   display: flex;
   align-items: center;
@@ -123,18 +123,79 @@
   margin-left: auto;
 }
 
-/* --- the canvas ------------------------------------------------------ */
+/* --- the page grid --------------------------------------------------- */
 
-/* One centred column. Step 15 replaces this with the page grid and its optional
-   dock column; the measure and the gutters are already the grid's. */
-.app-shell > main {
-  width: min(56rem, 100%);
+/*
+ * The canvas and the optional dock, in three states.
+ *
+ * The base state is the one every screen is in until Phase 4 fills a dock: ONE
+ * COLUMN AT THE READING MEASURE, CENTRED, WITH NO SPACE RESERVED FOR A DOCK
+ * THAT WAS NOT PASSED. `grid-template-columns` therefore names a single track
+ * here and only the `--docked` modifier splits it, so an absent dock cannot
+ * leave a 22rem hole in the layout.
+ *
+ * Below 1280px a docked page is also one column, and the dock's content renders
+ * *above* the canvas as a horizontal summary strip — on a tablet the readiness
+ * figure is the thing worth seeing first. That is why `<aside>` comes before
+ * `<main>` in the markup: the DOM order is the stacked order, so the reading
+ * order and the visual order agree at the two narrow breakpoints, and the
+ * ≥1280px split moves the dock into the second column by explicit placement
+ * rather than by reordering anything.
+ */
+.page {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--gutter-desktop);
+  width: min(var(--page-max), 100%);
   margin-inline: auto;
   padding: var(--space-lg) var(--gutter-mobile);
 }
 
+/* Undocked: the reading measure, not the full 90rem cap. A single column of
+   90rem-wide prose is not a layout, it is a wall. */
+.page:not(.page--docked) {
+  width: min(56rem, 100%);
+}
+
+/* `min-width: 0` on the canvas: a grid item's automatic minimum is its content,
+   so a long unbreakable string (a route summary, a URL in a note) would push
+   the track wider than its share and put the page into horizontal scroll. */
+.page__canvas {
+  min-width: 0;
+}
+
+/* The strip, below 1280px: laid out in a row that wraps, so a dock of two or
+   three short blocks reads as one summary line rather than a stack of cards. */
+.page__dock {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-md);
+  min-width: 0;
+}
+
 @media (min-width: 768px) {
-  .app-shell > main {
+  .page {
     padding-inline: var(--gutter-desktop);
+  }
+}
+
+@media (min-width: 1280px) {
+  .page--docked {
+    grid-template-columns: minmax(0, 1fr) var(--sidebar-width);
+  }
+
+  /* Explicit placement, both in row 1: the canvas keeps the wide track on the
+     left and the dock takes `--sidebar-width` on the right, where the export
+     puts it. */
+  .page--docked > .page__canvas {
+    grid-row: 1;
+    grid-column: 1;
+  }
+
+  .page--docked > .page__dock {
+    grid-row: 1;
+    grid-column: 2;
+    flex-direction: column;
+    align-items: stretch;
   }
 }
