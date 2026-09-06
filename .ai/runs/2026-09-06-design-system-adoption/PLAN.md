@@ -37,7 +37,7 @@
 | 4 | 4.5 | The timeline rail, day anchors and item cards (spec step 21) | group:D | done | pending |
 | 4 | 4.6 | `/trips/new` — the multi-stop creator (spec step 22) | dispatch | done | pending |
 | 4 | 4.7 | `/trips/:id/days/:date` — the day detail (spec step 23) | dispatch | done | pending |
-| 4 | 4.8 | Phase-4 screenshot set and the before/after pairs (spec step 24) | inline | todo | — |
+| 4 | 4.8 | Phase-4 screenshot set and the before/after pairs (spec step 24) | inline | done | pending |
 | 5 | 5.1 | The preview primitives in `features/preview/` (spec step 25) | dispatch | todo | — |
 | 5 | 5.2 | The share preview and its State A dialog (spec step 26) | dispatch | todo | — |
 | 5 | 5.3 | The chat drawer preview (spec step 27) | dispatch | todo | — |
