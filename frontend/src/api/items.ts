@@ -31,6 +31,19 @@ export type Item = {
   end_date: string | null
   title: string
   notes: string | null
+  /**
+   * How many files are pinned to this item — mirrors `ItemRead.attachment_count`
+   * in `backend/trip_planner/api/schemas.py`. Always present, on every shape an
+   * item is serialised in, aggregated in one query per payload: the paperclip
+   * badge's number.
+   */
+  attachment_count: number
+  /**
+   * The item's own files, mirrors `ItemDetail.attachments`. Present only on the
+   * day-detail payload — the one screen whose item editor renders them — and
+   * `undefined` on the timeline's leaner `ItemRead` shape, which never sends it.
+   */
+  attachments?: Attachment[]
 }
 
 export type DayDetail = {

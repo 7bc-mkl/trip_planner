@@ -28,6 +28,7 @@ function item(overrides: Partial<Item> & { id: string }): Item {
     end_date: null,
     title: overrides.id,
     notes: null,
+    attachment_count: 0,
     ...overrides,
   }
 }

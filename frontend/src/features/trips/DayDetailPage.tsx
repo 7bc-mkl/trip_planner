@@ -23,7 +23,9 @@ import { formatDate, formatDateRange, stageLabel } from './format'
  * tasks panel, the AI day assistant and its optimisation suggestions, the
  * calendar export, and per-item photos, ratings and prices. **Added back by
  * the attachments-and-reservation-data spec**: the day documents panel,
- * `DayAttachments`, below the item list.
+ * `DayAttachments`, below the item list, and the per-item attachment strip,
+ * `ItemAttachments`, hosted inside `ItemDialog` and reflected here as each
+ * row's paperclip count.
  *
  * **The status control is the point of this screen.** Moving an item to *done*
  * here is the action the timeline's counter reacts to.
@@ -238,6 +240,7 @@ export function DayDetailPage() {
               <ItemRow
                 item={item}
                 dayDate={day.date}
+                attachmentCount={item.attachment_count}
                 onOpen={() => setEditing({ mode: 'edit', item })}
               />
             </li>
@@ -254,11 +257,13 @@ export function DayDetailPage() {
 
       {editing.mode !== 'closed' && (
         <ItemDialog
+          tripId={trip}
           item={editing.mode === 'edit' ? editing.item : null}
           onSave={handleSave}
           onDelete={
             editing.mode === 'edit' ? () => handleDelete(editing.item) : undefined
           }
+          onUploaded={() => void load()}
           onClose={() => setEditing({ mode: 'closed' })}
         />
       )}

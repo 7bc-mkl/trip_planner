@@ -46,6 +46,8 @@ const MUSEUM = {
   end_date: null,
   title: 'Batu Caves',
   notes: 'bring water',
+  attachment_count: 0,
+  attachments: [],
 }
 
 const HOTEL = {
@@ -58,6 +60,8 @@ const HOTEL = {
   end_date: '2026-10-13',
   title: 'Nocleg: Memmo Alfama',
   notes: null,
+  attachment_count: 0,
+  attachments: [],
 }
 
 const DAY = {
@@ -691,6 +695,45 @@ describe('items on the timeline', () => {
     const row = screen.getByText('Batu Caves').closest('.item-row')
 
     expect(within(row as HTMLElement).queryByRole('button')).not.toBeInTheDocument()
+  })
+})
+
+describe("the item card's paperclip badge", () => {
+  it('is absent when no count is given — an existing caller unchanged by this Step', () => {
+    const { container } = render(<ItemRow item={MUSEUM} dayDate="2026-10-11" />)
+
+    expect(container.querySelector('.item-row__attachments')).toBeNull()
+  })
+
+  it('is absent when the count is given as zero', () => {
+    const { container } = render(
+      <ItemRow item={MUSEUM} dayDate="2026-10-11" attachmentCount={0} />,
+    )
+
+    expect(container.querySelector('.item-row__attachments')).toBeNull()
+  })
+
+  it('appears with the paperclip and the count when the item has attachments', () => {
+    const { container } = render(
+      <ItemRow item={MUSEUM} dayDate="2026-10-11" attachmentCount={3} />,
+    )
+
+    const badge = container.querySelector('.item-row__attachments')
+    expect(badge).not.toBeNull()
+    expect(screen.getByText(pl.item.attachmentCount.replace('{count, number}', '3'))).toBeInTheDocument()
+
+    const icon = badge?.querySelector('svg')
+    expect(icon).toHaveAttribute('aria-hidden', 'true')
+    expect(icon).toHaveAttribute('focusable', 'false')
+    expect(icon?.querySelector('use')?.getAttribute('href')).toMatch(/icons\.svg.*#paperclip$/u)
+  })
+
+  it('renders the translated count in English too', async () => {
+    await applyLocale('en')
+
+    render(<ItemRow item={MUSEUM} dayDate="2026-10-11" attachmentCount={2} />)
+
+    expect(screen.getByText(en.item.attachmentCount.replace('{count, number}', '2'))).toBeInTheDocument()
   })
 })
 

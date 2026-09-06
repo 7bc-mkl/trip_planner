@@ -107,6 +107,7 @@
     "delete": "Delete",
     "allDay": "All day",
     "spansUntil": "→ {date}",
+    "attachmentCount": "Attachments ({count, number})",
     "kind": {
       "accommodation": "Accommodation",
       "transport": "Transport",
@@ -124,6 +125,12 @@
     "heading": "Day files and documents",
     "empty": "Nothing is attached to this day yet.",
     "list": "This day's attachments"
+  },
+  "itemAttachments": {
+    "heading": "Attachments",
+    "empty": "Nothing is attached to this item yet.",
+    "list": "This item's attachments",
+    "saveFirst": "Save the item first, then come back to attach files to it."
   },
   "attachment": {
     "size": "{value, number} {unit}"

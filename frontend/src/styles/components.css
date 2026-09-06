@@ -623,6 +623,30 @@ textarea:disabled {
   margin-left: auto;
 }
 
+/* The attachment-count badge, right after the chip at the trailing edge — an
+   addition beside the chip, never a replacement for it. Text, not colour,
+   carries the count: the glyph is `aria-hidden` decoration and the number
+   always renders through the translated `item.attachmentCount` key next to
+   it, the same "icon plus a real word" contract every glyph in this file
+   keeps. */
+.item-row__attachments {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2xs);
+  color: var(--text-muted);
+  font: var(--type-label-md);
+  letter-spacing: var(--tracking-label-md);
+}
+
+.item-row__attachments-icon {
+  display: inline-flex;
+}
+
+.item-row__attachments-icon svg {
+  width: 1rem;
+  height: 1rem;
+}
+
 .item-row__notes {
   flex-basis: 100%;
   color: var(--text-muted);
@@ -930,6 +954,34 @@ textarea:disabled {
       border-color 150ms ease,
       color 150ms ease;
   }
+}
+
+/* --- item attachments (`features/trips/ItemAttachments.tsx`) -----------
+ *
+ * The strip inside the item editor, below its fields — the same row recipe
+ * as the day panel (`.attachment-row`, declared with `.day-attachments`
+ * above), via the shared `AttachmentRow`, set off by its own hairline rather
+ * than `.day-attachments`'s `margin-top` alone: it sits inside a form full of
+ * other fields, not at the foot of a whole screen.
+ */
+.item-attachments {
+  margin-top: var(--space-md);
+  padding-top: var(--space-md);
+  border-top: 1px solid var(--hairline);
+}
+
+.item-attachments__heading {
+  margin: 0 0 var(--space-sm);
+  font: var(--type-headline-sm);
+  letter-spacing: var(--tracking-headline-sm);
+}
+
+.item-attachments__list {
+  display: grid;
+  gap: var(--space-xs);
+  margin: 0 0 var(--space-md);
+  padding: 0;
+  list-style: none;
 }
 
 .dialog__actions {

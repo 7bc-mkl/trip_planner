@@ -107,6 +107,7 @@
     "delete": "Usuń",
     "allDay": "Cały dzień",
     "spansUntil": "→ {date}",
+    "attachmentCount": "Załączniki ({count, number})",
     "kind": {
       "accommodation": "Nocleg",
       "transport": "Transport",
@@ -124,6 +125,12 @@
     "heading": "Załączniki i dokumenty dnia",
     "empty": "Do tego dnia nie dodano jeszcze żadnego pliku.",
     "list": "Załączniki tego dnia"
+  },
+  "itemAttachments": {
+    "heading": "Załączniki",
+    "empty": "Do tego elementu nie dodano jeszcze żadnego pliku.",
+    "list": "Załączniki tego elementu",
+    "saveFirst": "Najpierw zapisz element, a potem wróć, aby dołączyć do niego pliki."
   },
   "attachment": {
     "size": "{value, number} {unit}"

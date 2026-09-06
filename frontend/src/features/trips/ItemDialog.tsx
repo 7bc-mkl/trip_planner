@@ -2,10 +2,12 @@ import { useEffect, useId, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 
+import type { Attachment } from '../../api/attachments'
 import { ApiError } from '../../api/client'
 import { ITEM_KINDS, ITEM_STATUSES, fromTimeInput } from '../../api/items'
 import type { Item, ItemInput } from '../../api/items'
 import { clearDraft, readDraft, saveDraft } from '../auth/draftStore'
+import { ItemAttachments } from './ItemAttachments'
 import { draftKey, draftOf } from './itemDraft'
 import type { ItemDraft } from './itemDraft'
 import { STATUS_GLYPH } from './statusGlyph'
@@ -30,21 +32,31 @@ import { STATUS_GLYPH } from './statusGlyph'
  * `<dialog>` is deliberately not used: its `showModal()` focus behaviour is not
  * implemented consistently enough in jsdom to test, and the trap below is the
  * part that actually has to be verified.
+ *
+ * **Hosts `ItemAttachments`**, the strip that lets files be pinned to this
+ * item — see that module's own doc for the new-item case, where `item` is
+ * `null` and there is nothing yet to pin a file to.
  */
 
 const FOCUSABLE =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
 
 export function ItemDialog({
+  tripId,
   item,
   onSave,
   onDelete,
+  onUploaded,
   onClose,
 }: {
+  tripId: string
   /** The item being edited, or `null` when adding a new one. */
   item: Item | null
   onSave: (input: ItemInput) => Promise<void>
   onDelete?: () => Promise<void>
+  /** Called once per successful upload from `ItemAttachments`, so the day
+      list's own paperclip count catches up without waiting for Save. */
+  onUploaded: (attachment: Attachment) => void
   onClose: () => void
 }) {
   const { t } = useTranslation()
@@ -259,6 +271,8 @@ export function ItemDialog({
           />
 
           {error !== null && <p role="alert">{error}</p>}
+
+          <ItemAttachments tripId={tripId} item={item} onUploaded={onUploaded} />
 
           <div className="dialog__actions">
             {onDelete !== undefined && (

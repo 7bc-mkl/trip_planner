@@ -26,7 +26,7 @@
 | 2 | 2.1 | `src/api/attachments.ts` — typed client with upload progress and abort | dispatch | done | `191a252` |
 | 2 | 2.2 | `UploadDropzone` — labelled file input, pre-check, state machine, `aria-live` | dispatch:capable | done | `0ea137f` |
 | 2 | 2.3 | The day documents panel on `/trips/:id/days/:date` | dispatch | done | `68b2025` |
-| 2 | 2.4 | The item attachment strip inside the item editor | dispatch | todo | — |
+| 2 | 2.4 | The item attachment strip inside the item editor | dispatch | done | `ad07639` |
 | 2 | 2.5 | Download and delete, with a confirmation dialog naming the file | dispatch | todo | — |
 | 2 | 2.6 | The attachment-count ICU plural key in both locales | dispatch:cheap | todo | — |
 | 2 | 2.7 | The paperclip badge on the timeline's item cards | dispatch:cheap | todo | — |
