@@ -424,3 +424,38 @@ computed-message-under-the-field pattern `TripCreatePage` uses for a stage outsi
 same string the server's own 422 maps to. A malformed half beside a blank one is *not* marked: it is
 dropped rather than sent, so complaining about it would be a complaint about a value the server
 never sees. That is what replaces "Sprawdź zaznaczone pola" with nothing marked.
+
+## 2026-09-07T01:35:00Z — final gate (ran twice)
+- Every Tasks row is `done`: **35 Steps** — the spec's 28 plus 7 fix Steps appended from browser
+  findings.
+- **First pass FAILED, and it is recorded as a failure.** All eight gate commands were green
+  (635 backend / 0 skips, 293 frontend, clean build) and the UI walk beside them found a
+  **critical** defect that would otherwise have shipped: two concurrent uploads to one trip
+  **permanently hung the whole server** — one `201`, the other never returning, `/api/v1/health`
+  timing out for every client until the database backend was killed.
+- Cause: the upload handlers are `async def` (they must be, to check the rate window and
+  `Content-Length` before reading `request.stream()`), but did **synchronous psycopg work on the
+  event loop**. The request waiting on `pg_advisory_xact_lock` froze the loop, so the request
+  holding the lock could never be served to commit. The lock was never the problem.
+- Fixed by `1.6-review-fix-1` (blocking DB work through `run_in_threadpool`). Its test is worth
+  knowing about: `gather`ing two uploads does **not** reproduce the hang under `ASGITransport`, so
+  the regression test holds the trip's advisory lock on a third connection and asks whether health
+  still answers, with the deadline enforced from another thread — a timeout scheduled on a frozen
+  loop never fires.
+- Two more defects from the same walk: Step 4.3's duplicate hint was **dead code** that never
+  rendered anywhere (`4.3-review-fix-1`), and `249,50` — the Polish decimal separator in the Polish
+  UI — rendered a literal `NaN €` then failed to save with "check the marked fields" while nothing
+  was marked (`3.4-review-fix-2`).
+- **Second pass PASSED:** 637 backend / 0 skipped, 336 frontend across 22 files, build clean, all
+  three script gates green.
+- Re-verified in the browser: 2, 8 and 16 concurrent uploads to one trip all `201`; a 5-file UI drop
+  all stored; `/api/v1/health` polled **18 153 times during** the bursts, **100 % `200`, zero
+  timeouts**; md5 matched source on 10/10 sampled uploads; 0× 5xx in the app log.
+- Integration suite: the repo has **no separate E2E runner** and this run added none. Its
+  integration-level coverage is the full-app vitest tests, run in full at command 7 — recorded as
+  what it is, not dressed up as browser E2E.
+- Design-system pass: `check_css_tokens.py` + `check_contrast.py` are the repo's compliance tooling,
+  both green; no new contrast pair was ever needed. `oxlint` (not a gate command) reports warnings
+  only; the two in this feature's code are deliberate documented patterns, surfaced for the reviewer
+  rather than rewritten at the gate.
+- Seven residual findings recorded for the reviewer in `final-gate-checks.md`.

@@ -1,0 +1,1703 @@
+$ agent-browser open http://127.0.0.1:40737/login
+[agent-browser] launched browser
+✓ Smart Trip Planner
+  http://127.0.0.1:40737/login
+$ agent-browser snapshot
+- generic [ref=e1] clickable [onclick]
+  - main
+    - sectionheader
+      - heading "Smart Trip Planner" [level=1, ref=e2]
+      - LabelText
+        - StaticText "Język"
+        - combobox "Język" [expanded=false, ref=e7]: Polski
+          - MenuListPopup
+            - option "Polski" [selected, ref=e8]
+            - option "English" [ref=e9]
+    - form
+      - heading "Zaloguj się" [level=2, ref=e3]
+      - paragraph
+        - StaticText "Zaloguj się, aby zobaczyć swoje podróże."
+      - LabelText
+        - StaticText "E-mail"
+      - textbox "E-mail" [required, ref=e4]
+      - LabelText
+        - StaticText "Hasło"
+      - textbox "Hasło" [required, ref=e5]
+      - button "Zaloguj się" [ref=e6]
+$ agent-browser fill "#email" <REDACTED>
+$ agent-browser fill "#password" <REDACTED>
+$ agent-browser click @e6
+✓ Done
+$ agent-browser get url
+http://127.0.0.1:40737/trips
+$ agent-browser open http://127.0.0.1:40737/trips/810a7965-37c5-4261-a492-5d3e423a8643
+✓ Smart Trip Planner
+  http://127.0.0.1:40737/trips/810a7965-37c5-4261-a492-5d3e423a8643
+$ agent-browser snapshot
+- generic [ref=e1] clickable [onclick]
+  - banner
+    - link "Smart Trip Planner" [ref=e2]
+    - paragraph
+      - StaticText "QA Final Gate · 1–3 paź 2026"
+    - LabelText
+      - StaticText "Język"
+      - combobox "Język" [expanded=false, ref=e7]: Polski
+        - MenuListPopup
+          - option "Polski" [selected, ref=e16]
+          - option "English" [ref=e17]
+    - button "Wyloguj się" [ref=e3]
+  - complementary
+    - generic
+      - heading "CELE PODRÓŻY" [level=2, ref=e8]
+      - DescriptionList
+        - term "Kraków"
+        - definition
+          - StaticText "1–3 paź 2026"
+    - generic
+      - heading "TRASA" [level=2, ref=e9]
+      - paragraph
+        - StaticText "Warszawa → Kraków → Warszawa"
+  - main
+    - navigation "Ścieżka nawigacji" [ref=e4]
+      - link "Podróże" [ref=e10]
+    - heading "QA Final Gate" [level=1, ref=e5]
+    - button "Usuń podróż" [ref=e6]
+    - sectionheader
+      - StaticText "1–3 paź 2026"
+      - StaticText "3 dni"
+      - StaticText "Warszawa → Kraków → Warszawa"
+      - StaticText "STATUS LOGISTYKI"
+      - StaticText "Nic jeszcze nie załatwione"
+    - generic
+      - group "POKAŻ"
+        - Legend
+          - StaticText "POKAŻ"
+        - radio "Wszystko" [checked=true, ref=e11]
+        - radio "Tylko do zrobienia" [checked=false, ref=e12]
+      - list
+    - paragraph
+      - StaticText "Ta oś czasu jest pusta. Otwórz dzień i dodaj pierwszy element."
+    - list
+      - listitem [level=1]
+        - heading "PAŹ 1" [level=2, ref=e13]
+          - link "PAŹ 1" [ref=e18]
+            - StaticText "PAŹ"
+            - StaticText "1"
+        - paragraph
+          - StaticText "Kraków"
+        - paragraph
+          - StaticText "Nic jeszcze nie zaplanowano"
+      - listitem [level=1]
+        - heading "PAŹ 2" [level=2, ref=e14]
+          - link "PAŹ 2" [ref=e19]
+            - StaticText "PAŹ"
+            - StaticText "2"
+        - paragraph
+          - StaticText "Kraków"
+        - paragraph
+          - StaticText "Nic jeszcze nie zaplanowano"
+      - listitem [level=1]
+        - heading "PAŹ 3" [level=2, ref=e15]
+          - link "PAŹ 3" [ref=e20]
+            - StaticText "PAŹ"
+            - StaticText "3"
+        - paragraph
+          - StaticText "Kraków"
+        - paragraph
+          - StaticText "Nic jeszcze nie zaplanowano"
+$ agent-browser open http://127.0.0.1:40737/trips/810a7965-37c5-4261-a492-5d3e423a8643/days/2026-10-01
+✓ Smart Trip Planner
+  http://127.0.0.1:40737/trips/810a7965-37c5-4261-a492-5d3e423a8643/days/2026-10-01
+$ agent-browser snapshot
+- generic [ref=e1] clickable [onclick]
+  - banner
+    - link "Smart Trip Planner" [ref=e2]
+    - paragraph
+      - StaticText "QA Final Gate · 1–3 paź 2026"
+    - LabelText
+      - StaticText "Język"
+      - combobox "Język" [expanded=false, ref=e8]: Polski
+        - MenuListPopup
+          - option "Polski" [selected, ref=e15]
+          - option "English" [ref=e16]
+    - button "Wyloguj się" [ref=e3]
+  - main
+    - navigation "Ścieżka nawigacji" [ref=e4]
+      - link "Podróże" [ref=e9]
+      - StaticText " / "
+      - link "Oś czasu" [ref=e10]
+    - paragraph
+      - StaticText "KRAKÓW"
+    - heading "1 października 2026" [level=1, ref=e5]
+    - button "Dodaj element" [ref=e6]
+    - navigation "Nawigacja po dniach" [ref=e7]
+      - StaticText "Poprzedni dzień"
+      - link "Następny dzień" [ref=e11]
+        - StaticText "Następny dzień"
+    - paragraph
+      - StaticText "Nic jeszcze nie zaplanowano na ten dzień. Dodaj pierwszy element."
+    - generic
+      - heading "Załączniki i dokumenty dnia" [level=2, ref=e12]
+      - paragraph
+        - StaticText "Do tego dnia nie dodano jeszcze żadnego pliku."
+      - LabelText [ref=e13] clickable [cursor:pointer]
+        - StaticText "Dodaj plik / zdjęcie / bilet"
+        - StaticText "PDF, JPEG lub PNG, do 10 MB"
+        - button "Dodaj plik / zdjęcie / bilet PDF, JPEG lub PNG, do 10 MB" [ref=e14]: Nie wybrano pliku
+      - paragraph
+$ agent-browser eval 
+(() => {
+  const label = document.querySelector('.upload-dropzone__label');
+  if (!label) return 'NO LABEL';
+  const b64 = { 'photo-a.png': ['iVBORw0KGgoAAAANSUhEUgAAAZAAAAEsCAIAAABi1XKVAAAD70lEQVR4nO3UQQkAMAzAwAqrfyZrFvYbgYMTkFfm7AIkzPcCgEeGBWQYFpBhWECGYQEZhgVkGBaQYVhAhmEBGYYFZBgWkGFYQIZhARmGBWQYFpBhWECGYQEZhgVkGBaQYVhAhmEBGYYFZBgWkGFYQIZhARmGBWQYFpBhWECGYQEZhgVkGBaQYVhAhmEBGYYFZBgWkGFYQIZhARmGBWQYFpBhWECGYQEZhgVkGBaQYVhAhmEBGYYFZBgWkGFYQIZhARmGBWQYFpBhWECGYQEZhgVkGBaQYVhAhmEBGYYFZBgWkGFYQIZhARmGBWQYFpBhWECGYQEZhgVkGBaQYVhAhmEBGYYFZBgWkGFYQIZhARmGBWQYFpBhWECGYQEZhgVkGBaQYVhAhmEBGYYFZBgWkGFYQIZhARmGBWQYFpBhWECGYQEZhgVkGBaQYVhAhmEBGYYFZBgWkGFYQIZhARmGBWQYFpBhWECGYQEZhgVkGBaQYVhAhmEBGYYFZBgWkGFYQIZhARmGBWQYFpBhWECGYQEZhgVkGBaQYVhAhmEBGYYFZBgWkGFYQIZhARmGBWQYFpBhWECGYQEZhgVkGBaQYVhAhmEBGYYFZBgWkGFYQIZhARmGBWQYFpBhWECGYQEZhgVkGBaQYVhAhmEBGYYFZBgWkGFYQIZhARmGBWQYFpBhWECGYQEZhgVkGBaQYVhAhmEBGYYFZBgWkGFYQIZhARmGBWQYFpBhWECGYQEZhgVkGBaQYVhAhmEBGYYFZBgWkGFYQIZhARmGBWQYFpBhWECGYQEZhgVkGBaQYVhAhmEBGYYFZBgWkGFYQIZhARmGBWQYFpBhWECGYQEZhgVkGBaQYVhAhmEBGYYFZBgWkGFYQIZhARmGBWQYFpBhWECGYQEZhgVkGBaQYVhAhmEBGYYFZBgWkGFYQIZhARmGBWQYFpBhWECGYQEZhgVkGBaQYVhAhmEBGYYFZBgWkGFYQIZhARmGBWQYFpBhWECGYQEZhgVkGBaQYVhAhmEBGYYFZBgWkGFYQIZhARmGBWQYFpBhWECGYQEZhgVkGBaQYVhAhmEBGYYFZBgWkGFYQIZhARmGBWQYFpBhWECGYQEZhgVkGBaQYVhAhmEBGYYFZBgWkGFYQIZhARmGBWQYFpBhWECGYQEZhgVkGBaQYVhAhmEBGYYFZBgWkGFYQIZhARmGBWQYFpBhWECGYQEZhgVkGBaQYVhAhmEBGYYFZBgWkGFYQIZhARmGBWQYFpBhWECGYQEZhgVkGBaQYVhAhmEBGYYFZBgWkGFYQIZhARmGBWQYFpBhWECGYQEZhgVkGBaQYVhAhmEBGYYFZBgWkHEBDyASV1/hCfMAAAAASUVORK5CYII=','image/png'], 'bilet.pdf': ['JVBERi0xLjQKMSAwIG9iajw8L1R5cGUvQ2F0YWxvZy9QYWdlcyAyIDAgUj4+ZW5kb2JqCjIgMCBvYmo8PC9UeXBlL1BhZ2VzL0tpZHNbMyAwIFJdL0NvdW50IDE+PmVuZG9iagozIDAgb2JqPDwvVHlwZS9QYWdlL1BhcmVudCAyIDAgUi9NZWRpYUJveFswIDAgMjAwIDIwMF0+PmVuZG9iagp0cmFpbGVyPDwvUm9vdCAxIDAgUj4+CiUlRU9GCg==','application/pdf'] };
+  const mk = (name) => { const [d,t]=b64[name]; const bin=atob(d); const u=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i); return new File([u], name, {type:t}); };
+  const dt = new DataTransfer();
+  dt.items.add(mk('photo-a.png'));
+  dt.items.add(mk('bilet.pdf'));
+  window.__qaDT = dt;
+  const ev = (type) => new DragEvent(type, {bubbles:true, cancelable:true, dataTransfer: dt});
+  label.dispatchEvent(ev('dragenter'));
+  label.dispatchEvent(ev('dragover'));
+  return 'dragenter+dragover dispatched; files=' + dt.files.length;
+})()
+"dragenter+dragover dispatched; files=2"
+$ agent-browser eval document.querySelector('.upload-dropzone__label').getAttribute('data-drag-over') + ' | hint=' + document.querySelector('.upload-dropzone__hint').textContent + ' | bg=' + getComputedStyle(document.querySelector('.upload-dropzone__label')).backgroundColor
+"true | hint=Upuść tutaj, aby wysłać | bg=rgb(241, 245, 249)"
+$ agent-browser screenshot /home/mkl/cezar/projects/trip_planner/.ai/cezar/worktrees/2223e7fe-07b0-43b2-962a-a6d3db36f6f0/.ai/runs/2026-09-06-attachments-and-reservation-data/final-gate-artifacts/screenshot-drag-over-state.png
+✓ Screenshot saved to /home/mkl/cezar/projects/trip_planner/.ai/cezar/worktrees/2223e7fe-07b0-43b2-962a-a6d3db36f6f0/.ai/runs/2026-09-06-attachments-and-reservation-data/final-gate-artifacts/screenshot-drag-over-state.png
+$ agent-browser eval (() => {const l=document.querySelector('.upload-dropzone__label'); l.dispatchEvent(new DragEvent('dragleave',{bubbles:true,cancelable:true,dataTransfer:window.__qaDT})); return 'left';})()
+"left"
+$ agent-browser eval document.querySelector('.upload-dropzone__label').getAttribute('data-drag-over') + ' | hint=' + document.querySelector('.upload-dropzone__hint').textContent
+"null | hint=PDF, JPEG lub PNG, do 10 MB"
+$ agent-browser eval (() => {const l=document.querySelector('.upload-dropzone__label'); const c=document.querySelector('.upload-dropzone__title'); const dt=window.__qaDT; const ev=t=>new DragEvent(t,{bubbles:true,cancelable:true,dataTransfer:dt});
+l.dispatchEvent(ev('dragenter')); const s1=l.getAttribute('data-drag-over');
+c.dispatchEvent(ev('dragenter')); l.dispatchEvent(ev('dragleave')); const s2=l.getAttribute('data-drag-over');
+return 'after enter='+s1+' after nested cross='+s2;})()
+"after enter=null after nested cross=null"
+$ agent-browser eval (async () => {const sleep=ms=>new Promise(r=>setTimeout(r,ms)); const l=document.querySelector('.upload-dropzone__label'); const c=document.querySelector('.upload-dropzone__title'); const dt=window.__qaDT; const ev=t=>new DragEvent(t,{bubbles:true,cancelable:true,dataTransfer:dt});
+l.dispatchEvent(ev('dragenter')); await sleep(150); const s1=l.getAttribute('data-drag-over');
+c.dispatchEvent(ev('dragenter')); l.dispatchEvent(ev('dragleave')); await sleep(150); const s2=l.getAttribute('data-drag-over');
+c.dispatchEvent(ev('dragleave')); await sleep(150); const s3=l.getAttribute('data-drag-over');
+return 'enter='+s1+' nestedCross='+s2+' finalLeave='+s3;})()
+"enter=true nestedCross=true finalLeave=true"
+$ agent-browser eval (async () => {const sleep=ms=>new Promise(r=>setTimeout(r,ms)); const l=document.querySelector('.upload-dropzone__label'); const dt=window.__qaDT; const ev=t=>new DragEvent(t,{bubbles:true,cancelable:true,dataTransfer:dt}); const out=[];
+for(let i=0;i<4;i++){ l.dispatchEvent(ev('dragleave')); await sleep(120); out.push(l.getAttribute('data-drag-over')); }
+return out.join(',');})()
+",,,"
+$ agent-browser eval (async () => {const sleep=ms=>new Promise(r=>setTimeout(r,ms)); const l=document.querySelector('.upload-dropzone__label'); const c=document.querySelector('.upload-dropzone__title'); const dt=window.__qaDT; const ev=t=>new DragEvent(t,{bubbles:true,cancelable:true,dataTransfer:dt}); const s=()=>l.getAttribute('data-drag-over')||'off'; const out=[];
+l.dispatchEvent(ev('dragenter')); await sleep(120); out.push('enterL='+s());
+c.dispatchEvent(ev('dragenter')); await sleep(120); out.push('enterC='+s());
+l.dispatchEvent(ev('dragleave')); await sleep(120); out.push('leaveL='+s());
+c.dispatchEvent(ev('dragleave')); await sleep(120); out.push('leaveC='+s());
+return out.join(' | ');})()
+"enterL=true | enterC=true | leaveL=true | leaveC=off"
+$ agent-browser eval (async () => {const sleep=ms=>new Promise(r=>setTimeout(r,ms)); const l=document.querySelector('.upload-dropzone__label'); const dt=window.__qaDT; const ev=t=>new DragEvent(t,{bubbles:true,cancelable:true,dataTransfer:dt});
+l.dispatchEvent(ev('dragenter')); l.dispatchEvent(ev('dragover')); await sleep(100);
+const during=l.getAttribute('data-drag-over');
+l.dispatchEvent(ev('drop')); await sleep(1500);
+return 'during='+during+' after='+(l.getAttribute('data-drag-over')||'off')+' :: '+document.querySelector('.day-attachments, section')?.textContent?.slice(0,0)+document.body.innerText.split('Załączniki i dokumenty dnia')[1]?.slice(0,400);})()
+"during=true after=off :: \nbilet.pdf\n193 B\nPobierz\nUsuń załącznik\nDodaj plik / zdjęcie / bilet\nPDF, JPEG lub PNG, do 10 MB\n\nWysyłanie photo-a.png: 100%\n\nphoto-a.png\n↑\nWysyłanie\nAnuluj"
+$ agent-browser eval document.body.innerText.split('Załączniki i dokumenty dnia')[1]?.slice(0,500)
+"\nbilet.pdf\n193 B\nPobierz\nUsuń załącznik\nDodaj plik / zdjęcie / bilet\nPDF, JPEG lub PNG, do 10 MB\n\nWysyłanie photo-a.png: 100%\n\nphoto-a.png\n↑\nWysyłanie\nAnuluj"
+$ agent-browser network requests --filter attachments
+[241703.40] POST http://127.0.0.1:40737/api/v1/trips/810a7965-37c5-4261-a492-5d3e423a8643/days/2026-10-01/attachments (XHR)
+[241703.41] POST http://127.0.0.1:40737/api/v1/trips/810a7965-37c5-4261-a492-5d3e423a8643/days/2026-10-01/attachments (XHR) 201
+$ agent-browser open http://127.0.0.1:40737/trips/810a7965-37c5-4261-a492-5d3e423a8643/days/2026-10-01
+✓ Smart Trip Planner
+  http://127.0.0.1:40737/trips/810a7965-37c5-4261-a492-5d3e423a8643/days/2026-10-01
+$ agent-browser upload input[type=file] /tmp/qa-files/photo-b.png /tmp/qa-files/bilet.pdf
+✓ Done
+$ agent-browser eval document.body.innerText.split('Załączniki i dokumenty dnia')[1]?.slice(0,500)
+"\nphoto-a.png\n1 KB\nPobierz\nUsuń załącznik\nbilet.pdf\n193 B\nPobierz\nUsuń załącznik\nphoto-b.png\n639 B\nPobierz\nUsuń załącznik\nDodaj plik / zdjęcie / bilet\nPDF, JPEG lub PNG, do 10 MB\n\nDodano photo-b.png"
+$ agent-browser snapshot
+- generic [ref=e1] clickable [onclick]
+  - banner
+    - link "Smart Trip Planner" [ref=e2]
+    - paragraph
+      - StaticText "QA Final Gate · 1–3 paź 2026"
+    - LabelText
+      - StaticText "Język"
+      - combobox "Język" [expanded=false, ref=e8]: Polski
+        - MenuListPopup
+          - option "Polski" [selected, ref=e15]
+          - option "English" [ref=e16]
+    - button "Wyloguj się" [ref=e3]
+  - main
+    - navigation "Ścieżka nawigacji" [ref=e4]
+      - link "Podróże" [ref=e9]
+      - StaticText " / "
+      - link "Oś czasu" [ref=e10]
+    - paragraph
+      - StaticText "KRAKÓW"
+    - heading "1 października 2026" [level=1, ref=e5]
+    - button "Dodaj element" [ref=e6]
+    - navigation "Nawigacja po dniach" [ref=e7]
+      - StaticText "Poprzedni dzień"
+      - link "Następny dzień" [ref=e11]
+        - StaticText "Następny dzień"
+    - paragraph
+      - StaticText "Nic jeszcze nie zaplanowano na ten dzień. Dodaj pierwszy element."
+    - generic
+      - heading "Załączniki i dokumenty dnia" [level=2, ref=e12]
+      - list "Załączniki tego dnia"
+        - listitem [level=1]
+          - button "photo-a.png" [ref=e17]
+            - image "photo-a.png"
+          - StaticText "photo-a.png"
+          - StaticText "1 KB"
+          - link "Pobierz" [ref=e18]
+          - button "Usuń załącznik" [ref=e19]
+        - listitem [level=1]
+          - StaticText "bilet.pdf"
+          - StaticText "193 B"
+          - link "Pobierz" [ref=e20]
+          - button "Usuń załącznik" [ref=e21]
+        - listitem [level=1]
+          - button "photo-b.png" [ref=e22]
+            - image "photo-b.png"
+          - StaticText "photo-b.png"
+          - StaticText "639 B"
+          - link "Pobierz" [ref=e23]
+          - button "Usuń załącznik" [ref=e24]
+      - LabelText [ref=e13] clickable [cursor:pointer]
+        - StaticText "Dodaj plik / zdjęcie / bilet"
+        - StaticText "PDF, JPEG lub PNG, do 10 MB"
+        - button "Dodaj plik / zdjęcie / bilet PDF, JPEG lub PNG, do 10 MB" [ref=e14]: Nie wybrano pliku
+      - paragraph
+        - StaticText "Dodano photo-b.png"
+$ agent-browser click @e17
+✓ Done
+$ agent-browser eval (()=>{const d=document.querySelector('[role=dialog]'); const a=document.activeElement; return JSON.stringify({dialog: !!d, ariaLabel: d&&d.getAttribute('aria-label'), ariaModal: d&&d.getAttribute('aria-modal'), img: d&&d.querySelector('img')?.getAttribute('src'), imgAlt: d&&d.querySelector('img')?.alt, imgNatural: d&&d.querySelector('img')?.naturalWidth, focus: a.tagName+':'+a.textContent, trigger: 'e17'});})()
+"{\"dialog\":true,\"ariaLabel\":\"photo-a.png\",\"ariaModal\":\"true\",\"img\":\"/api/v1/trips/810a7965-37c5-4261-a492-5d3e423a8643/attachments/95ea46ea-c98e-4507-a456-89833ab30ecf/content\",\"imgAlt\":\"photo-a.png\",\"imgNatural\":400,\"focus\":\"BUTTON:Zamknij\",\"trigger\":\"e17\"}"
+$ agent-browser screenshot /home/mkl/cezar/projects/trip_planner/.ai/cezar/worktrees/2223e7fe-07b0-43b2-962a-a6d3db36f6f0/.ai/runs/2026-09-06-attachments-and-reservation-data/final-gate-artifacts/screenshot-lightbox-open.png
+✓ Screenshot saved to /home/mkl/cezar/projects/trip_planner/.ai/cezar/worktrees/2223e7fe-07b0-43b2-962a-a6d3db36f6f0/.ai/runs/2026-09-06-attachments-and-reservation-data/final-gate-artifacts/screenshot-lightbox-open.png
+$ agent-browser press Tab
+✓ Done
+$ agent-browser eval document.activeElement.tagName+':'+document.activeElement.className+':'+document.activeElement.textContent
+"BUTTON:button-quiet dialog--lightbox__close:Zamknij"
+$ agent-browser press Shift+Tab
+✓ Done
+$ agent-browser eval document.activeElement.tagName+':'+document.activeElement.textContent
+"BUTTON:Zamknij"
+$ agent-browser press Escape
+✓ Done
+$ agent-browser eval JSON.stringify({dialogGone: !document.querySelector('[role=dialog]'), focus: document.activeElement.tagName+':'+document.activeElement.className, isTrigger: document.activeElement===document.querySelectorAll('.attachment-row__preview-trigger')[0], alt: document.activeElement.querySelector?.('img')?.alt})
+"{\"dialogGone\":true,\"focus\":\"BUTTON:attachment-row__preview-trigger\",\"isTrigger\":true,\"alt\":\"photo-a.png\"}"
+$ agent-browser eval (()=>{const rows=[...document.querySelectorAll('.attachment-row')]; const pdf=rows.find(r=>r.textContent.includes('bilet.pdf')); const g=pdf.querySelector('.attachment-row__glyph'); g.click(); pdf.querySelector('img')?.click(); return JSON.stringify({glyphTag:g.tagName, glyphIsButton: !!pdf.querySelector('button.attachment-row__preview-trigger'), dialogAfter: !!document.querySelector('[role=dialog]')});})()
+"{\"glyphTag\":\"SPAN\",\"glyphIsButton\":false,\"dialogAfter\":false}"
+$ agent-browser eval !!document.querySelector('[role=dialog]')
+false
+$ agent-browser upload input[type=file] /tmp/qa-files/photo-a-copy.png
+✓ Done
+$ agent-browser eval (()=>{const q=document.querySelector('.upload-dropzone__list'); const h=document.querySelector('.upload-row__duplicate-hint'); return JSON.stringify({t:Date.now()%100000, queue: q?q.innerText.replace(/\n/g,' | '):null, hint: h?h.textContent:null});})()
+"{\"t\":51776,\"queue\":\"photo-a-copy.png | • | Wybrany | Anuluj\",\"hint\":null}"
+$ agent-browser eval (()=>{const q=document.querySelector('.upload-dropzone__list'); const h=document.querySelector('.upload-row__duplicate-hint'); return JSON.stringify({t:Date.now()%100000, queue: q?q.innerText.replace(/\n/g,' | '):null, hint: h?h.textContent:null});})()
+"{\"t\":51783,\"queue\":\"photo-a-copy.png | • | Wybrany | Anuluj\",\"hint\":null}"
+$ agent-browser eval (()=>{const q=document.querySelector('.upload-dropzone__list'); const h=document.querySelector('.upload-row__duplicate-hint'); return JSON.stringify({t:Date.now()%100000, queue: q?q.innerText.replace(/\n/g,' | '):null, hint: h?h.textContent:null});})()
+"{\"t\":51789,\"queue\":\"photo-a-copy.png | • | Wybrany | Anuluj\",\"hint\":null}"
+$ agent-browser eval (()=>{const q=document.querySelector('.upload-dropzone__list'); const h=document.querySelector('.upload-row__duplicate-hint'); return JSON.stringify({t:Date.now()%100000, queue: q?q.innerText.replace(/\n/g,' | '):null, hint: h?h.textContent:null});})()
+"{\"t\":51799,\"queue\":null,\"hint\":null}"
+$ agent-browser eval (()=>{const q=document.querySelector('.upload-dropzone__list'); const h=document.querySelector('.upload-row__duplicate-hint'); return JSON.stringify({t:Date.now()%100000, queue: q?q.innerText.replace(/\n/g,' | '):null, hint: h?h.textContent:null});})()
+"{\"t\":51806,\"queue\":null,\"hint\":null}"
+$ agent-browser eval (()=>{const q=document.querySelector('.upload-dropzone__list'); const h=document.querySelector('.upload-row__duplicate-hint'); return JSON.stringify({t:Date.now()%100000, queue: q?q.innerText.replace(/\n/g,' | '):null, hint: h?h.textContent:null});})()
+"{\"t\":51814,\"queue\":null,\"hint\":null}"
+$ agent-browser eval (()=>{const q=document.querySelector('.upload-dropzone__list'); const h=document.querySelector('.upload-row__duplicate-hint'); return JSON.stringify({t:Date.now()%100000, queue: q?q.innerText.replace(/\n/g,' | '):null, hint: h?h.textContent:null});})()
+"{\"t\":51821,\"queue\":null,\"hint\":null}"
+$ agent-browser eval (()=>{const q=document.querySelector('.upload-dropzone__list'); const h=document.querySelector('.upload-row__duplicate-hint'); return JSON.stringify({t:Date.now()%100000, queue: q?q.innerText.replace(/\n/g,' | '):null, hint: h?h.textContent:null});})()
+"{\"t\":51827,\"queue\":null,\"hint\":null}"
+$ agent-browser eval (()=>{const q=document.querySelector('.upload-dropzone__list'); const h=document.querySelector('.upload-row__duplicate-hint'); return JSON.stringify({t:Date.now()%100000, queue: q?q.innerText.replace(/\n/g,' | '):null, hint: h?h.textContent:null});})()
+"{\"t\":51833,\"queue\":null,\"hint\":null}"
+$ agent-browser eval (()=>{const q=document.querySelector('.upload-dropzone__list'); const h=document.querySelector('.upload-row__duplicate-hint'); return JSON.stringify({t:Date.now()%100000, queue: q?q.innerText.replace(/\n/g,' | '):null, hint: h?h.textContent:null});})()
+"{\"t\":51839,\"queue\":null,\"hint\":null}"
+$ agent-browser eval (()=>{const q=document.querySelector('.upload-dropzone__list'); const h=document.querySelector('.upload-row__duplicate-hint'); return JSON.stringify({t:Date.now()%100000, queue: q?q.innerText.replace(/\n/g,' | '):null, hint: h?h.textContent:null});})()
+"{\"t\":51844,\"queue\":null,\"hint\":null}"
+$ agent-browser eval [...document.querySelectorAll('.attachment-row__name')].map(e=>e.textContent).join(', ')
+"photo-a.png, bilet.pdf, photo-b.png, photo-a-copy.png"
+$ agent-browser eval (()=>{window.__hintSeen=[]; window.__obs&&window.__obs.disconnect(); window.__obs=new MutationObserver(()=>{const h=document.querySelector('.upload-row__duplicate-hint'); const d=document.querySelector('.upload-row[data-state=done]'); if(h) window.__hintSeen.push('HINT:'+h.textContent); if(d) window.__hintSeen.push('DONE-ROW'); }); window.__obs.observe(document.body,{subtree:true,childList:true,characterData:true,attributes:true}); return 'observing';})()
+"observing"
+$ agent-browser upload input[type=file] /tmp/qa-files/photo-b.png
+✓ Done
+$ agent-browser eval JSON.stringify({seen: [...new Set(window.__hintSeen)], count: window.__hintSeen.length})
+"{\"seen\":[],\"count\":0}"
+$ agent-browser find role button Dodaj element click
+✗ Unknown action 'Dodaj element' for find. Valid actions: click, fill, check, hover, text.
+$ agent-browser snapshot
+- generic [ref=e1] clickable [onclick]
+  - banner
+    - link "Smart Trip Planner" [ref=e2]
+    - paragraph
+      - StaticText "QA Final Gate · 1–3 paź 2026"
+    - LabelText
+      - StaticText "Język"
+      - combobox "Język" [expanded=false, ref=e8]: Polski
+        - MenuListPopup
+          - option "Polski" [selected, ref=e15]
+          - option "English" [ref=e16]
+    - button "Wyloguj się" [ref=e3]
+  - main
+    - navigation "Ścieżka nawigacji" [ref=e4]
+      - link "Podróże" [ref=e9]
+      - StaticText " / "
+      - link "Oś czasu" [ref=e10]
+    - paragraph
+      - StaticText "KRAKÓW"
+    - heading "1 października 2026" [level=1, ref=e5]
+    - button "Dodaj element" [ref=e6]
+    - navigation "Nawigacja po dniach" [ref=e7]
+      - StaticText "Poprzedni dzień"
+      - link "Następny dzień" [ref=e11]
+        - StaticText "Następny dzień"
+    - paragraph
+      - StaticText "Nic jeszcze nie zaplanowano na ten dzień. Dodaj pierwszy element."
+    - generic
+      - heading "Załączniki i dokumenty dnia" [level=2, ref=e12]
+      - list "Załączniki tego dnia"
+        - listitem [level=1]
+          - button "photo-a.png" [ref=e17]
+            - image "photo-a.png"
+          - StaticText "photo-a.png"
+          - StaticText "1 KB"
+          - link "Pobierz" [ref=e18]
+          - button "Usuń załącznik" [ref=e19]
+        - listitem [level=1]
+          - StaticText "bilet.pdf"
+          - StaticText "193 B"
+          - link "Pobierz" [ref=e20]
+          - button "Usuń załącznik" [ref=e21]
+        - listitem [level=1]
+          - button "photo-b.png" [ref=e22]
+            - image "photo-b.png"
+          - StaticText "photo-b.png"
+          - StaticText "639 B"
+          - link "Pobierz" [ref=e23]
+          - button "Usuń załącznik" [ref=e24]
+        - listitem [level=1]
+          - button "photo-a-copy.png" [ref=e25]
+            - image "photo-a-copy.png"
+          - StaticText "photo-a-copy.png"
+          - StaticText "1 KB"
+          - link "Pobierz" [ref=e26]
+          - button "Usuń załącznik" [ref=e27]
+        - listitem [level=1]
+          - button "photo-b.png" [ref=e28]
+            - image "photo-b.png"
+          - StaticText "photo-b.png"
+          - StaticText "639 B"
+          - link "Pobierz" [ref=e29]
+          - button "Usuń załącznik" [ref=e30]
+      - LabelText [ref=e13] clickable [cursor:pointer]
+        - StaticText "Dodaj plik / zdjęcie / bilet"
+        - StaticText "PDF, JPEG lub PNG, do 10 MB"
+        - button "Dodaj plik / zdjęcie / bilet PDF, JPEG lub PNG, do 10 MB" [ref=e14]: Nie wybrano pliku
+      - paragraph
+        - StaticText "Dodano photo-b.png"
+$ agent-browser snapshot
+- generic [ref=e1] clickable [onclick]
+  - banner
+    - link "Smart Trip Planner" [ref=e2]
+    - paragraph
+      - StaticText "QA Final Gate · 1–3 paź 2026"
+    - LabelText
+      - StaticText "Język"
+      - combobox "Język" [expanded=false, ref=e8]: Polski
+        - MenuListPopup
+          - option "Polski" [selected, ref=e15]
+          - option "English" [ref=e16]
+    - button "Wyloguj się" [ref=e3]
+  - main
+    - navigation "Ścieżka nawigacji" [ref=e4]
+      - link "Podróże" [ref=e9]
+      - StaticText " / "
+      - link "Oś czasu" [ref=e10]
+    - paragraph
+      - StaticText "KRAKÓW"
+    - heading "1 października 2026" [level=1, ref=e5]
+    - button "Dodaj element" [ref=e6]
+    - navigation "Nawigacja po dniach" [ref=e7]
+      - StaticText "Poprzedni dzień"
+      - link "Następny dzień" [ref=e11]
+        - StaticText "Następny dzień"
+    - paragraph
+      - StaticText "Nic jeszcze nie zaplanowano na ten dzień. Dodaj pierwszy element."
+    - generic
+      - heading "Załączniki i dokumenty dnia" [level=2, ref=e12]
+      - list "Załączniki tego dnia"
+        - listitem [level=1]
+          - button "photo-a.png" [ref=e17]
+            - image "photo-a.png"
+          - StaticText "photo-a.png"
+          - StaticText "1 KB"
+          - link "Pobierz" [ref=e18]
+          - button "Usuń załącznik" [ref=e19]
+        - listitem [level=1]
+          - StaticText "bilet.pdf"
+          - StaticText "193 B"
+          - link "Pobierz" [ref=e20]
+          - button "Usuń załącznik" [ref=e21]
+        - listitem [level=1]
+          - button "photo-b.png" [ref=e22]
+            - image "photo-b.png"
+          - StaticText "photo-b.png"
+          - StaticText "639 B"
+          - link "Pobierz" [ref=e23]
+          - button "Usuń załącznik" [ref=e24]
+        - listitem [level=1]
+          - button "photo-a-copy.png" [ref=e25]
+            - image "photo-a-copy.png"
+          - StaticText "photo-a-copy.png"
+          - StaticText "1 KB"
+          - link "Pobierz" [ref=e26]
+          - button "Usuń załącznik" [ref=e27]
+        - listitem [level=1]
+          - button "photo-b.png" [ref=e28]
+            - image "photo-b.png"
+          - StaticText "photo-b.png"
+          - StaticText "639 B"
+          - link "Pobierz" [ref=e29]
+          - button "Usuń załącznik" [ref=e30]
+      - LabelText [ref=e13] clickable [cursor:pointer]
+        - StaticText "Dodaj plik / zdjęcie / bilet"
+        - StaticText "PDF, JPEG lub PNG, do 10 MB"
+        - button "Dodaj plik / zdjęcie / bilet PDF, JPEG lub PNG, do 10 MB" [ref=e14]: Nie wybrano pliku
+      - paragraph
+        - StaticText "Dodano photo-b.png"
+$ agent-browser click @e6
+✓ Done
+$ agent-browser snapshot
+- generic [ref=e1] clickable [onclick]
+  - banner
+    - link "Smart Trip Planner" [ref=e2]
+    - paragraph
+      - StaticText "QA Final Gate · 1–3 paź 2026"
+    - LabelText
+      - StaticText "Język"
+      - combobox "Język" [expanded=false, ref=e8]: Polski
+        - MenuListPopup
+          - option "Polski" [selected, ref=e16]
+          - option "English" [ref=e17]
+    - button "Wyloguj się" [ref=e3]
+  - main
+    - navigation "Ścieżka nawigacji" [ref=e4]
+      - link "Podróże" [ref=e9]
+      - StaticText " / "
+      - link "Oś czasu" [ref=e10]
+    - paragraph
+      - StaticText "KRAKÓW"
+    - heading "1 października 2026" [level=1, ref=e5]
+    - button "Dodaj element" [ref=e6]
+    - navigation "Nawigacja po dniach" [ref=e7]
+      - StaticText "Poprzedni dzień"
+      - link "Następny dzień" [ref=e11]
+        - StaticText "Następny dzień"
+    - paragraph
+      - StaticText "Nic jeszcze nie zaplanowano na ten dzień. Dodaj pierwszy element."
+    - generic
+      - heading "Załączniki i dokumenty dnia" [level=2, ref=e12]
+      - list "Załączniki tego dnia"
+        - listitem [level=1]
+          - button "photo-a.png" [ref=e18]
+            - image "photo-a.png"
+          - StaticText "photo-a.png"
+          - StaticText "1 KB"
+          - link "Pobierz" [ref=e19]
+          - button "Usuń załącznik" [ref=e20]
+        - listitem [level=1]
+          - StaticText "bilet.pdf"
+          - StaticText "193 B"
+          - link "Pobierz" [ref=e21]
+          - button "Usuń załącznik" [ref=e22]
+        - listitem [level=1]
+          - button "photo-b.png" [ref=e23]
+            - image "photo-b.png"
+          - StaticText "photo-b.png"
+          - StaticText "639 B"
+          - link "Pobierz" [ref=e24]
+          - button "Usuń załącznik" [ref=e25]
+        - listitem [level=1]
+          - button "photo-a-copy.png" [ref=e26]
+            - image "photo-a-copy.png"
+          - StaticText "photo-a-copy.png"
+          - StaticText "1 KB"
+          - link "Pobierz" [ref=e27]
+          - button "Usuń załącznik" [ref=e28]
+        - listitem [level=1]
+          - button "photo-b.png" [ref=e29]
+            - image "photo-b.png"
+          - StaticText "photo-b.png"
+          - StaticText "639 B"
+          - link "Pobierz" [ref=e30]
+          - button "Usuń załącznik" [ref=e31]
+      - LabelText [ref=e13] clickable [cursor:pointer]
+        - StaticText "Dodaj plik / zdjęcie / bilet"
+        - StaticText "PDF, JPEG lub PNG, do 10 MB"
+        - button "Dodaj plik / zdjęcie / bilet PDF, JPEG lub PNG, do 10 MB" [ref=e14]: Nie wybrano pliku
+      - paragraph
+        - StaticText "Dodano photo-b.png"
+    - dialog "Nowy element"
+      - heading "Nowy element" [level=2, ref=e15]
+      - form
+        - LabelText
+          - StaticText "Nazwa"
+        - textbox "Nazwa" [ref=e32]
+        - LabelText
+          - StaticText "Typ"
+        - combobox "Typ" [expanded=false, ref=e33]: Atrakcja
+          - MenuListPopup
+            - option "Nocleg" [ref=e42]
+            - option "Transport" [ref=e43]
+            - option "Atrakcja" [selected, ref=e44]
+            - option "Jedzenie" [ref=e45]
+            - option "Inne" [ref=e46]
+        - generic
+          - LabelText
+            - StaticText "Godzina rozpoczęcia"
+          - InputTime "Godzina rozpoczęcia"
+            - generic
+              - spinbutton "Godziny Godziny" [ref=e55]: 0
+                - StaticText "--"
+              - StaticText ":"
+              - spinbutton "Minuty Minuty" [ref=e56]: 0
+                - StaticText "--"
+            - button "Pokaż selektor godziny" [ref=e47]
+        - generic
+          - LabelText
+            - StaticText "Godzina zakończenia"
+          - InputTime "Godzina zakończenia"
+            - generic
+              - spinbutton "Godziny Godziny" [ref=e57]: 0
+                - StaticText "--"
+              - StaticText ":"
+              - spinbutton "Minuty Minuty" [ref=e58]: 0
+                - StaticText "--"
+            - button "Pokaż selektor godziny" [ref=e48]
+        - LabelText
+          - StaticText "Kończy się"
+        - Date "Kończy się"
+          - generic
+            - spinbutton "Dzień Dzień" [ref=e52]: 0
+              - StaticText "dd"
+            - StaticText "."
+            - spinbutton "Miesiąc Miesiąc" [ref=e53]: 0
+              - StaticText "mm"
+            - StaticText "."
+            - spinbutton "Rok Rok" [ref=e54]: 0
+              - StaticText "rrrr"
+          - button "Pokaż selektor dat" [ref=e37]
+        - paragraph
+          - StaticText "Tylko dla czegoś, co trwa po północy — nocnego lotu albo kilku nocy w jednym miejscu."
+        - group "Status"
+          - Legend
+            - StaticText "Status"
+          - LabelText [ref=e38] clickable [cursor:pointer]
+            - radio "Do zaplanowania" [checked=true, ref=e49]
+            - StaticText "Do zaplanowania"
+          - LabelText [ref=e39] clickable [cursor:pointer]
+            - radio "Do zarezerwowania" [checked=false, ref=e50]
+            - StaticText "Do zarezerwowania"
+          - LabelText [ref=e40] clickable [cursor:pointer]
+            - radio "Gotowe" [checked=false, ref=e51]
+            - StaticText "Gotowe"
+        - LabelText
+          - StaticText "Notatki"
+        - textbox "Notatki" [ref=e34]
+        - generic
+          - heading "Załączniki" [level=3, ref=e41]
+          - paragraph
+            - StaticText "Do tego elementu nie dodano jeszcze żadnego pliku."
+          - paragraph
+            - StaticText "Najpierw zapisz element, a potem wróć, aby dołączyć do niego pliki."
+        - group
+          - DisclosureTriangle "Dane rezerwacji (opcjonalne)" [expanded=false]
+            - StaticText "Dane rezerwacji (opcjonalne)"
+        - button "Anuluj" [ref=e35]
+        - button "Zapisz" [disabled, ref=e36]
+$ agent-browser snapshot
+- generic [ref=e1] clickable [onclick]
+  - banner
+    - link "Smart Trip Planner" [ref=e2]
+    - paragraph
+      - StaticText "QA Final Gate · 1–3 paź 2026"
+    - LabelText
+      - StaticText "Język"
+      - combobox "Język" [expanded=false, ref=e8]: Polski
+        - MenuListPopup
+          - option "Polski" [selected, ref=e16]
+          - option "English" [ref=e17]
+    - button "Wyloguj się" [ref=e3]
+  - main
+    - navigation "Ścieżka nawigacji" [ref=e4]
+      - link "Podróże" [ref=e9]
+      - StaticText " / "
+      - link "Oś czasu" [ref=e10]
+    - paragraph
+      - StaticText "KRAKÓW"
+    - heading "1 października 2026" [level=1, ref=e5]
+    - button "Dodaj element" [ref=e6]
+    - navigation "Nawigacja po dniach" [ref=e7]
+      - StaticText "Poprzedni dzień"
+      - link "Następny dzień" [ref=e11]
+        - StaticText "Następny dzień"
+    - paragraph
+      - StaticText "Nic jeszcze nie zaplanowano na ten dzień. Dodaj pierwszy element."
+    - generic
+      - heading "Załączniki i dokumenty dnia" [level=2, ref=e12]
+      - list "Załączniki tego dnia"
+        - listitem [level=1]
+          - button "photo-a.png" [ref=e18]
+            - image "photo-a.png"
+          - StaticText "photo-a.png"
+          - StaticText "1 KB"
+          - link "Pobierz" [ref=e19]
+          - button "Usuń załącznik" [ref=e20]
+        - listitem [level=1]
+          - StaticText "bilet.pdf"
+          - StaticText "193 B"
+          - link "Pobierz" [ref=e21]
+          - button "Usuń załącznik" [ref=e22]
+        - listitem [level=1]
+          - button "photo-b.png" [ref=e23]
+            - image "photo-b.png"
+          - StaticText "photo-b.png"
+          - StaticText "639 B"
+          - link "Pobierz" [ref=e24]
+          - button "Usuń załącznik" [ref=e25]
+        - listitem [level=1]
+          - button "photo-a-copy.png" [ref=e26]
+            - image "photo-a-copy.png"
+          - StaticText "photo-a-copy.png"
+          - StaticText "1 KB"
+          - link "Pobierz" [ref=e27]
+          - button "Usuń załącznik" [ref=e28]
+        - listitem [level=1]
+          - button "photo-b.png" [ref=e29]
+            - image "photo-b.png"
+          - StaticText "photo-b.png"
+          - StaticText "639 B"
+          - link "Pobierz" [ref=e30]
+          - button "Usuń załącznik" [ref=e31]
+      - LabelText [ref=e13] clickable [cursor:pointer]
+        - StaticText "Dodaj plik / zdjęcie / bilet"
+        - StaticText "PDF, JPEG lub PNG, do 10 MB"
+        - button "Dodaj plik / zdjęcie / bilet PDF, JPEG lub PNG, do 10 MB" [ref=e14]: Nie wybrano pliku
+      - paragraph
+        - StaticText "Dodano photo-b.png"
+    - dialog "Nowy element"
+      - heading "Nowy element" [level=2, ref=e15]
+      - form
+        - LabelText
+          - StaticText "Nazwa"
+        - textbox "Nazwa" [ref=e32]
+        - LabelText
+          - StaticText "Typ"
+        - combobox "Typ" [expanded=false, ref=e33]: Atrakcja
+          - MenuListPopup
+            - option "Nocleg" [ref=e42]
+            - option "Transport" [ref=e43]
+            - option "Atrakcja" [selected, ref=e44]
+            - option "Jedzenie" [ref=e45]
+            - option "Inne" [ref=e46]
+        - generic
+          - LabelText
+            - StaticText "Godzina rozpoczęcia"
+          - InputTime "Godzina rozpoczęcia"
+            - generic
+              - spinbutton "Godziny Godziny" [ref=e55]: 0
+                - StaticText "--"
+              - StaticText ":"
+              - spinbutton "Minuty Minuty" [ref=e56]: 0
+                - StaticText "--"
+            - button "Pokaż selektor godziny" [ref=e47]
+        - generic
+          - LabelText
+            - StaticText "Godzina zakończenia"
+          - InputTime "Godzina zakończenia"
+            - generic
+              - spinbutton "Godziny Godziny" [ref=e57]: 0
+                - StaticText "--"
+              - StaticText ":"
+              - spinbutton "Minuty Minuty" [ref=e58]: 0
+                - StaticText "--"
+            - button "Pokaż selektor godziny" [ref=e48]
+        - LabelText
+          - StaticText "Kończy się"
+        - Date "Kończy się"
+          - generic
+            - spinbutton "Dzień Dzień" [ref=e52]: 0
+              - StaticText "dd"
+            - StaticText "."
+            - spinbutton "Miesiąc Miesiąc" [ref=e53]: 0
+              - StaticText "mm"
+            - StaticText "."
+            - spinbutton "Rok Rok" [ref=e54]: 0
+              - StaticText "rrrr"
+          - button "Pokaż selektor dat" [ref=e37]
+        - paragraph
+          - StaticText "Tylko dla czegoś, co trwa po północy — nocnego lotu albo kilku nocy w jednym miejscu."
+        - group "Status"
+          - Legend
+            - StaticText "Status"
+          - LabelText [ref=e38] clickable [cursor:pointer]
+            - radio "Do zaplanowania" [checked=true, ref=e49]
+            - StaticText "Do zaplanowania"
+          - LabelText [ref=e39] clickable [cursor:pointer]
+            - radio "Do zarezerwowania" [checked=false, ref=e50]
+            - StaticText "Do zarezerwowania"
+          - LabelText [ref=e40] clickable [cursor:pointer]
+            - radio "Gotowe" [checked=false, ref=e51]
+            - StaticText "Gotowe"
+        - LabelText
+          - StaticText "Notatki"
+        - textbox "Notatki" [ref=e34]
+        - generic
+          - heading "Załączniki" [level=3, ref=e41]
+          - paragraph
+            - StaticText "Do tego elementu nie dodano jeszcze żadnego pliku."
+          - paragraph
+            - StaticText "Najpierw zapisz element, a potem wróć, aby dołączyć do niego pliki."
+        - group
+          - DisclosureTriangle "Dane rezerwacji (opcjonalne)" [expanded=false]
+            - StaticText "Dane rezerwacji (opcjonalne)"
+        - button "Anuluj" [ref=e35]
+        - button "Zapisz" [disabled, ref=e36]
+$ agent-browser fill @e32 Zwiedzanie Wawelu
+✓ Done
+$ agent-browser click button[type=submit]
+✓ Done
+$ agent-browser eval document.body.innerText.slice(0,600)
+"Smart Trip Planner\n\nQA Final Gate · 1–3 paź 2026\n\nJęzyk\nPolski\nEnglish\nWyloguj się\nPodróże / Oś czasu\n\nKRAKÓW\n\n1 października 2026\nDodaj element\nPoprzedni dzień\nNastępny dzień\nCały dzień\nAtrakcja\nZwiedzanie Wawelu\n○\nDo zaplanowania\nZałączniki i dokumenty dnia\nphoto-a.png\n1 KB\nPobierz\nUsuń załącznik\nbilet.pdf\n193 B\nPobierz\nUsuń załącznik\nphoto-b.png\n639 B\nPobierz\nUsuń załącznik\nphoto-a-copy.png\n1 KB\nPobierz\nUsuń załącznik\nphoto-b.png\n639 B\nPobierz\nUsuń załącznik\nDodaj plik / zdjęcie / bilet\nPDF, JPEG lub PNG, do 10 MB\n\nDodano photo-b.png"
+$ agent-browser snapshot
+- generic [ref=e1] clickable [onclick]
+  - banner
+    - link "Smart Trip Planner" [ref=e2]
+    - paragraph
+      - StaticText "QA Final Gate · 1–3 paź 2026"
+    - LabelText
+      - StaticText "Język"
+      - combobox "Język" [expanded=false, ref=e8]: Polski
+        - MenuListPopup
+          - option "Polski" [selected, ref=e16]
+          - option "English" [ref=e17]
+    - button "Wyloguj się" [ref=e3]
+  - main
+    - navigation "Ścieżka nawigacji" [ref=e4]
+      - link "Podróże" [ref=e9]
+      - StaticText " / "
+      - link "Oś czasu" [ref=e10]
+    - paragraph
+      - StaticText "KRAKÓW"
+    - heading "1 października 2026" [level=1, ref=e5]
+    - button "Dodaj element" [ref=e6]
+    - navigation "Nawigacja po dniach" [ref=e7]
+      - StaticText "Poprzedni dzień"
+      - link "Następny dzień" [ref=e11]
+        - StaticText "Następny dzień"
+    - list
+      - listitem [level=1]
+        - button "Cały dzień Atrakcja Zwiedzanie Wawelu Do zaplanowania" [ref=e14]
+          - StaticText "Cały dzień"
+          - StaticText "Atrakcja"
+          - StaticText "Zwiedzanie Wawelu"
+          - StaticText "Do zaplanowania"
+    - generic
+      - heading "Załączniki i dokumenty dnia" [level=2, ref=e12]
+      - list "Załączniki tego dnia"
+        - listitem [level=1]
+          - button "photo-a.png" [ref=e18]
+            - image "photo-a.png"
+          - StaticText "photo-a.png"
+          - StaticText "1 KB"
+          - link "Pobierz" [ref=e19]
+          - button "Usuń załącznik" [ref=e20]
+        - listitem [level=1]
+          - StaticText "bilet.pdf"
+          - StaticText "193 B"
+          - link "Pobierz" [ref=e21]
+          - button "Usuń załącznik" [ref=e22]
+        - listitem [level=1]
+          - button "photo-b.png" [ref=e23]
+            - image "photo-b.png"
+          - StaticText "photo-b.png"
+          - StaticText "639 B"
+          - link "Pobierz" [ref=e24]
+          - button "Usuń załącznik" [ref=e25]
+        - listitem [level=1]
+          - button "photo-a-copy.png" [ref=e26]
+            - image "photo-a-copy.png"
+          - StaticText "photo-a-copy.png"
+          - StaticText "1 KB"
+          - link "Pobierz" [ref=e27]
+          - button "Usuń załącznik" [ref=e28]
+        - listitem [level=1]
+          - button "photo-b.png" [ref=e29]
+            - image "photo-b.png"
+          - StaticText "photo-b.png"
+          - StaticText "639 B"
+          - link "Pobierz" [ref=e30]
+          - button "Usuń załącznik" [ref=e31]
+      - LabelText [ref=e13] clickable [cursor:pointer]
+        - StaticText "Dodaj plik / zdjęcie / bilet"
+        - StaticText "PDF, JPEG lub PNG, do 10 MB"
+        - button "Dodaj plik / zdjęcie / bilet PDF, JPEG lub PNG, do 10 MB" [ref=e15]: Nie wybrano pliku
+      - paragraph
+        - StaticText "Dodano photo-b.png"
+$ agent-browser click @e14
+✓ Done
+$ agent-browser eval (()=>{const d=document.querySelector('.dialog'); return d?d.innerText.slice(0,900):'no dialog';})()
+"Edytuj element\nNazwa\nTyp\nNocleg\nTransport\nAtrakcja\nJedzenie\nInne\nGodzina rozpoczęcia\nGodzina zakończenia\nKończy się\n\nTylko dla czegoś, co trwa po północy — nocnego lotu albo kilku nocy w jednym miejscu.\n\nStatus\n○\nDo zaplanowania\n◐\nDo zarezerwowania\n●\nGotowe\nNotatki\nZałączniki\n\nDo tego elementu nie dodano jeszcze żadnego pliku.\n\nDodaj plik / zdjęcie / bilet\nPDF, JPEG lub PNG, do 10 MB\n\nDane rezerwacji (opcjonalne)\nUsuń\nAnuluj\nZapisz"
+$ agent-browser eval (()=>{window.__hintSeen=[]; window.__obs&&window.__obs.disconnect(); window.__obs=new MutationObserver(()=>{const h=document.querySelector('.upload-row__duplicate-hint'); const d=document.querySelector('.upload-row[data-state=done]'); if(h) window.__hintSeen.push('HINT:'+h.textContent); if(d) window.__hintSeen.push('DONE'); }); window.__obs.observe(document.body,{subtree:true,childList:true,characterData:true,attributes:true}); return 'obs';})()
+"obs"
+$ agent-browser upload .dialog input[type=file] /tmp/qa-files/photo-a.png
+✓ Done
+$ agent-browser eval JSON.stringify({seen:[...new Set(window.__hintSeen)], panel: document.querySelector('.item-attachments, .dialog')?.innerText.split('Załączniki')[1]?.slice(0,300)})
+"{\"seen\":[],\"panel\":\"\\nphoto-a.png\\n1 KB\\nPobierz\\nUsuń załącznik\\nDodaj plik / zdjęcie / bilet\\nPDF, JPEG lub PNG, do 10 MB\\n\\nDodano photo-a.png\\n\\nDane rezerwacji (opcjonalne)\\nUsuń\\nAnuluj\\nZapisz\"}"
+$ agent-browser eval window.__hintSeen=[]; 'reset'
+"reset"
+$ agent-browser upload .dialog input[type=file] /tmp/qa-files/photo-a-copy.png
+✓ Done
+$ agent-browser eval JSON.stringify({q:document.querySelector('.upload-dropzone__list')?.innerText.replace(/\n/g,'|')||null, hint: document.querySelector('.upload-row__duplicate-hint')?.textContent||null})
+"{\"q\":\"photo-a-copy.png|•|Wybrany|Anuluj\",\"hint\":null}"
+$ agent-browser eval JSON.stringify({q:document.querySelector('.upload-dropzone__list')?.innerText.replace(/\n/g,'|')||null, hint: document.querySelector('.upload-row__duplicate-hint')?.textContent||null})
+"{\"q\":\"photo-a-copy.png|•|Wybrany|Anuluj\",\"hint\":null}"
+$ agent-browser eval JSON.stringify({q:document.querySelector('.upload-dropzone__list')?.innerText.replace(/\n/g,'|')||null, hint: document.querySelector('.upload-row__duplicate-hint')?.textContent||null})
+"{\"q\":\"photo-a-copy.png|•|Wybrany|Anuluj\",\"hint\":null}"
+$ agent-browser eval JSON.stringify({q:document.querySelector('.upload-dropzone__list')?.innerText.replace(/\n/g,'|')||null, hint: document.querySelector('.upload-row__duplicate-hint')?.textContent||null})
+"{\"q\":\"photo-a-copy.png|•|Wybrany|Anuluj\",\"hint\":null}"
+$ agent-browser eval JSON.stringify({q:document.querySelector('.upload-dropzone__list')?.innerText.replace(/\n/g,'|')||null, hint: document.querySelector('.upload-row__duplicate-hint')?.textContent||null})
+"{\"q\":null,\"hint\":null}"
+$ agent-browser eval JSON.stringify({q:document.querySelector('.upload-dropzone__list')?.innerText.replace(/\n/g,'|')||null, hint: document.querySelector('.upload-row__duplicate-hint')?.textContent||null})
+"{\"q\":null,\"hint\":null}"
+$ agent-browser eval JSON.stringify({seen:[...new Set(window.__hintSeen)], list:[...document.querySelectorAll('.dialog .attachment-row__name')].map(e=>e.textContent)})
+"{\"seen\":[],\"list\":[\"photo-a.png\",\"photo-a-copy.png\"]}"
+$ agent-browser eval (()=>{const d=document.querySelector('.dialog details, .dialog [class*=reserv]'); return d? d.tagName+' open='+d.open+' :: '+d.innerText.slice(0,200) : 'none';})()
+"DETAILS open=false :: Dane rezerwacji (opcjonalne)"
+$ agent-browser snapshot
+- generic [ref=e1] clickable [onclick]
+  - banner
+    - link "Smart Trip Planner" [ref=e2]
+    - paragraph
+      - StaticText "QA Final Gate · 1–3 paź 2026"
+    - LabelText
+      - StaticText "Język"
+      - combobox "Język" [expanded=false, ref=e8]: Polski
+        - MenuListPopup
+          - option "Polski" [selected, ref=e17]
+          - option "English" [ref=e18]
+    - button "Wyloguj się" [ref=e3]
+  - main
+    - navigation "Ścieżka nawigacji" [ref=e4]
+      - link "Podróże" [ref=e9]
+      - StaticText " / "
+      - link "Oś czasu" [ref=e10]
+    - paragraph
+      - StaticText "KRAKÓW"
+    - heading "1 października 2026" [level=1, ref=e5]
+    - button "Dodaj element" [ref=e6]
+    - navigation "Nawigacja po dniach" [ref=e7]
+      - StaticText "Poprzedni dzień"
+      - link "Następny dzień" [ref=e11]
+        - StaticText "Następny dzień"
+    - list
+      - listitem [level=1]
+        - button "Cały dzień Atrakcja Zwiedzanie Wawelu Do zaplanowania 2 pliki" [ref=e14]
+          - StaticText "Cały dzień"
+          - StaticText "Atrakcja"
+          - StaticText "Zwiedzanie Wawelu"
+          - StaticText "Do zaplanowania"
+          - StaticText "2 pliki"
+    - generic
+      - heading "Załączniki i dokumenty dnia" [level=2, ref=e12]
+      - list "Załączniki tego dnia"
+        - listitem [level=1]
+          - button "photo-a.png" [ref=e19]
+            - image "photo-a.png"
+          - StaticText "photo-a.png"
+          - StaticText "1 KB"
+          - link "Pobierz" [ref=e20]
+          - button "Usuń załącznik" [ref=e21]
+        - listitem [level=1]
+          - StaticText "bilet.pdf"
+          - StaticText "193 B"
+          - link "Pobierz" [ref=e22]
+          - button "Usuń załącznik" [ref=e23]
+        - listitem [level=1]
+          - button "photo-b.png" [ref=e24]
+            - image "photo-b.png"
+          - StaticText "photo-b.png"
+          - StaticText "639 B"
+          - link "Pobierz" [ref=e25]
+          - button "Usuń załącznik" [ref=e26]
+        - listitem [level=1]
+          - button "photo-a-copy.png" [ref=e27]
+            - image "photo-a-copy.png"
+          - StaticText "photo-a-copy.png"
+          - StaticText "1 KB"
+          - link "Pobierz" [ref=e28]
+          - button "Usuń załącznik" [ref=e29]
+        - listitem [level=1]
+          - button "photo-b.png" [ref=e30]
+            - image "photo-b.png"
+          - StaticText "photo-b.png"
+          - StaticText "639 B"
+          - link "Pobierz" [ref=e31]
+          - button "Usuń załącznik" [ref=e32]
+      - LabelText [ref=e13] clickable [cursor:pointer]
+        - StaticText "Dodaj plik / zdjęcie / bilet"
+        - StaticText "PDF, JPEG lub PNG, do 10 MB"
+        - button "Dodaj plik / zdjęcie / bilet PDF, JPEG lub PNG, do 10 MB" [ref=e15]: Nie wybrano pliku
+      - paragraph
+        - StaticText "Dodano photo-b.png"
+    - dialog "Edytuj element"
+      - heading "Edytuj element" [level=2, ref=e16]
+      - form
+        - LabelText
+          - StaticText "Nazwa"
+        - textbox "Nazwa" [ref=e33]: Zwiedzanie Wawelu
+          - StaticText "Zwiedzanie Wawelu"
+        - LabelText
+          - StaticText "Typ"
+        - combobox "Typ" [expanded=false, ref=e34]: Atrakcja
+          - MenuListPopup
+            - option "Nocleg" [ref=e45]
+            - option "Transport" [ref=e46]
+            - option "Atrakcja" [selected, ref=e47]
+            - option "Jedzenie" [ref=e48]
+            - option "Inne" [ref=e49]
+        - generic
+          - LabelText
+            - StaticText "Godzina rozpoczęcia"
+          - InputTime "Godzina rozpoczęcia"
+            - generic
+              - spinbutton "Godziny Godziny" [ref=e65]: 0
+                - StaticText "--"
+              - StaticText ":"
+              - spinbutton "Minuty Minuty" [ref=e66]: 0
+                - StaticText "--"
+            - button "Pokaż selektor godziny" [ref=e50]
+        - generic
+          - LabelText
+            - StaticText "Godzina zakończenia"
+          - InputTime "Godzina zakończenia"
+            - generic
+              - spinbutton "Godziny Godziny" [ref=e67]: 0
+                - StaticText "--"
+              - StaticText ":"
+              - spinbutton "Minuty Minuty" [ref=e68]: 0
+                - StaticText "--"
+            - button "Pokaż selektor godziny" [ref=e51]
+        - LabelText
+          - StaticText "Kończy się"
+        - Date "Kończy się"
+          - generic
+            - spinbutton "Dzień Dzień" [ref=e56]: 0
+              - StaticText "dd"
+            - StaticText "."
+            - spinbutton "Miesiąc Miesiąc" [ref=e57]: 0
+              - StaticText "mm"
+            - StaticText "."
+            - spinbutton "Rok Rok" [ref=e58]: 0
+              - StaticText "rrrr"
+          - button "Pokaż selektor dat" [ref=e39]
+        - paragraph
+          - StaticText "Tylko dla czegoś, co trwa po północy — nocnego lotu albo kilku nocy w jednym miejscu."
+        - group "Status"
+          - Legend
+            - StaticText "Status"
+          - LabelText [ref=e40] clickable [cursor:pointer]
+            - radio "Do zaplanowania" [checked=true, ref=e52]
+            - StaticText "Do zaplanowania"
+          - LabelText [ref=e41] clickable [cursor:pointer]
+            - radio "Do zarezerwowania" [checked=false, ref=e53]
+            - StaticText "Do zarezerwowania"
+          - LabelText [ref=e42] clickable [cursor:pointer]
+            - radio "Gotowe" [checked=false, ref=e54]
+            - StaticText "Gotowe"
+        - LabelText
+          - StaticText "Notatki"
+        - textbox "Notatki" [ref=e35]
+        - generic
+          - heading "Załączniki" [level=3, ref=e43]
+          - list "Załączniki tego elementu"
+            - listitem [level=1]
+              - button "photo-a.png" [ref=e59]
+                - image "photo-a.png"
+              - StaticText "photo-a.png"
+              - StaticText "1 KB"
+              - link "Pobierz" [ref=e60]
+              - button "Usuń załącznik" [ref=e61]
+            - listitem [level=1]
+              - button "photo-a-copy.png" [ref=e62]
+                - image "photo-a-copy.png"
+              - StaticText "photo-a-copy.png"
+              - StaticText "1 KB"
+              - link "Pobierz" [ref=e63]
+              - button "Usuń załącznik" [ref=e64]
+          - LabelText [ref=e44] clickable [cursor:pointer]
+            - StaticText "Dodaj plik / zdjęcie / bilet"
+            - StaticText "PDF, JPEG lub PNG, do 10 MB"
+            - button "Dodaj plik / zdjęcie / bilet PDF, JPEG lub PNG, do 10 MB" [ref=e55]: Nie wybrano pliku
+          - paragraph
+            - StaticText "Dodano photo-a-copy.png"
+        - group
+          - DisclosureTriangle "Dane rezerwacji (opcjonalne)" [expanded=false]
+            - StaticText "Dane rezerwacji (opcjonalne)"
+        - button "Usuń" [ref=e36]
+        - button "Anuluj" [ref=e37]
+        - button "Zapisz" [ref=e38]
+$ agent-browser click .dialog details summary
+✓ Done
+$ agent-browser snapshot
+- generic [ref=e1] clickable [onclick]
+  - banner
+    - link "Smart Trip Planner" [ref=e2]
+    - paragraph
+      - StaticText "QA Final Gate · 1–3 paź 2026"
+    - LabelText
+      - StaticText "Język"
+      - combobox "Język" [expanded=false, ref=e8]: Polski
+        - MenuListPopup
+          - option "Polski" [selected, ref=e17]
+          - option "English" [ref=e18]
+    - button "Wyloguj się" [ref=e3]
+  - main
+    - navigation "Ścieżka nawigacji" [ref=e4]
+      - link "Podróże" [ref=e9]
+      - StaticText " / "
+      - link "Oś czasu" [ref=e10]
+    - paragraph
+      - StaticText "KRAKÓW"
+    - heading "1 października 2026" [level=1, ref=e5]
+    - button "Dodaj element" [ref=e6]
+    - navigation "Nawigacja po dniach" [ref=e7]
+      - StaticText "Poprzedni dzień"
+      - link "Następny dzień" [ref=e11]
+        - StaticText "Następny dzień"
+    - list
+      - listitem [level=1]
+        - button "Cały dzień Atrakcja Zwiedzanie Wawelu Do zaplanowania 2 pliki" [ref=e14]
+          - StaticText "Cały dzień"
+          - StaticText "Atrakcja"
+          - StaticText "Zwiedzanie Wawelu"
+          - StaticText "Do zaplanowania"
+          - StaticText "2 pliki"
+    - generic
+      - heading "Załączniki i dokumenty dnia" [level=2, ref=e12]
+      - list "Załączniki tego dnia"
+        - listitem [level=1]
+          - button "photo-a.png" [ref=e19]
+            - image "photo-a.png"
+          - StaticText "photo-a.png"
+          - StaticText "1 KB"
+          - link "Pobierz" [ref=e20]
+          - button "Usuń załącznik" [ref=e21]
+        - listitem [level=1]
+          - StaticText "bilet.pdf"
+          - StaticText "193 B"
+          - link "Pobierz" [ref=e22]
+          - button "Usuń załącznik" [ref=e23]
+        - listitem [level=1]
+          - button "photo-b.png" [ref=e24]
+            - image "photo-b.png"
+          - StaticText "photo-b.png"
+          - StaticText "639 B"
+          - link "Pobierz" [ref=e25]
+          - button "Usuń załącznik" [ref=e26]
+        - listitem [level=1]
+          - button "photo-a-copy.png" [ref=e27]
+            - image "photo-a-copy.png"
+          - StaticText "photo-a-copy.png"
+          - StaticText "1 KB"
+          - link "Pobierz" [ref=e28]
+          - button "Usuń załącznik" [ref=e29]
+        - listitem [level=1]
+          - button "photo-b.png" [ref=e30]
+            - image "photo-b.png"
+          - StaticText "photo-b.png"
+          - StaticText "639 B"
+          - link "Pobierz" [ref=e31]
+          - button "Usuń załącznik" [ref=e32]
+      - LabelText [ref=e13] clickable [cursor:pointer]
+        - StaticText "Dodaj plik / zdjęcie / bilet"
+        - StaticText "PDF, JPEG lub PNG, do 10 MB"
+        - button "Dodaj plik / zdjęcie / bilet PDF, JPEG lub PNG, do 10 MB" [ref=e15]: Nie wybrano pliku
+      - paragraph
+        - StaticText "Dodano photo-b.png"
+    - dialog "Edytuj element"
+      - heading "Edytuj element" [level=2, ref=e16]
+      - form
+        - LabelText
+          - StaticText "Nazwa"
+        - textbox "Nazwa" [ref=e33]: Zwiedzanie Wawelu
+          - StaticText "Zwiedzanie Wawelu"
+        - LabelText
+          - StaticText "Typ"
+        - combobox "Typ" [expanded=false, ref=e34]: Atrakcja
+          - MenuListPopup
+            - option "Nocleg" [ref=e46]
+            - option "Transport" [ref=e47]
+            - option "Atrakcja" [selected, ref=e48]
+            - option "Jedzenie" [ref=e49]
+            - option "Inne" [ref=e50]
+        - generic
+          - LabelText
+            - StaticText "Godzina rozpoczęcia"
+          - InputTime "Godzina rozpoczęcia"
+            - generic
+              - spinbutton "Godziny Godziny" [ref=e68]: 0
+                - StaticText "--"
+              - StaticText ":"
+              - spinbutton "Minuty Minuty" [ref=e69]: 0
+                - StaticText "--"
+            - button "Pokaż selektor godziny" [ref=e51]
+        - generic
+          - LabelText
+            - StaticText "Godzina zakończenia"
+          - InputTime "Godzina zakończenia"
+            - generic
+              - spinbutton "Godziny Godziny" [ref=e70]: 0
+                - StaticText "--"
+              - StaticText ":"
+              - spinbutton "Minuty Minuty" [ref=e71]: 0
+                - StaticText "--"
+            - button "Pokaż selektor godziny" [ref=e52]
+        - LabelText
+          - StaticText "Kończy się"
+        - Date "Kończy się"
+          - generic
+            - spinbutton "Dzień Dzień" [ref=e59]: 0
+              - StaticText "dd"
+            - StaticText "."
+            - spinbutton "Miesiąc Miesiąc" [ref=e60]: 0
+              - StaticText "mm"
+            - StaticText "."
+            - spinbutton "Rok Rok" [ref=e61]: 0
+              - StaticText "rrrr"
+          - button "Pokaż selektor dat" [ref=e39]
+        - paragraph
+          - StaticText "Tylko dla czegoś, co trwa po północy — nocnego lotu albo kilku nocy w jednym miejscu."
+        - group "Status"
+          - Legend
+            - StaticText "Status"
+          - LabelText [ref=e40] clickable [cursor:pointer]
+            - radio "Do zaplanowania" [checked=true, ref=e53]
+            - StaticText "Do zaplanowania"
+          - LabelText [ref=e41] clickable [cursor:pointer]
+            - radio "Do zarezerwowania" [checked=false, ref=e54]
+            - StaticText "Do zarezerwowania"
+          - LabelText [ref=e42] clickable [cursor:pointer]
+            - radio "Gotowe" [checked=false, ref=e55]
+            - StaticText "Gotowe"
+        - LabelText
+          - StaticText "Notatki"
+        - textbox "Notatki" [ref=e35]
+        - generic
+          - heading "Załączniki" [level=3, ref=e43]
+          - list "Załączniki tego elementu"
+            - listitem [level=1]
+              - button "photo-a.png" [ref=e62]
+                - image "photo-a.png"
+              - StaticText "photo-a.png"
+              - StaticText "1 KB"
+              - link "Pobierz" [ref=e63]
+              - button "Usuń załącznik" [ref=e64]
+            - listitem [level=1]
+              - button "photo-a-copy.png" [ref=e65]
+                - image "photo-a-copy.png"
+              - StaticText "photo-a-copy.png"
+              - StaticText "1 KB"
+              - link "Pobierz" [ref=e66]
+              - button "Usuń załącznik" [ref=e67]
+          - LabelText [ref=e44] clickable [cursor:pointer]
+            - StaticText "Dodaj plik / zdjęcie / bilet"
+            - StaticText "PDF, JPEG lub PNG, do 10 MB"
+            - button "Dodaj plik / zdjęcie / bilet PDF, JPEG lub PNG, do 10 MB" [ref=e56]: Nie wybrano pliku
+          - paragraph
+            - StaticText "Dodano photo-a-copy.png"
+        - group
+          - DisclosureTriangle "Dane rezerwacji (opcjonalne)" [expanded=true]
+            - StaticText "Dane rezerwacji (opcjonalne)"
+          - LabelText
+            - StaticText "Numer potwierdzenia"
+          - textbox "Numer potwierdzenia" [ref=e45]
+          - generic
+            - LabelText
+              - StaticText "Koszt"
+            - textbox "Koszt" [ref=e57]
+          - generic
+            - LabelText
+              - StaticText "Waluta"
+            - textbox "Waluta" [ref=e58]: PLN
+              - StaticText "PLN"
+        - button "Usuń" [ref=e36]
+        - button "Anuluj" [ref=e37]
+        - button "Zapisz" [ref=e38]
+$ agent-browser fill @e45 ABC-99123
+✓ Done
+$ agent-browser fill @e57 249,50
+✓ Done
+$ agent-browser fill @e58 EUR
+✓ Done
+$ agent-browser click button[type=submit]
+✓ Done
+$ agent-browser eval document.querySelector('.dialog')?'dialog still open':'closed'
+"dialog still open"
+$ agent-browser eval document.body.innerText.split('Dodaj element')[1]?.slice(0,300)
+"\nPoprzedni dzień\nNastępny dzień\nCały dzień\nAtrakcja\nZwiedzanie Wawelu\n○\nDo zaplanowania\n2 pliki\nZałączniki i dokumenty dnia\nphoto-a.png\n1 KB\nPobierz\nUsuń załącznik\nbilet.pdf\n193 B\nPobierz\nUsuń załącznik\nphoto-b.png\n639 B\nPobierz\nUsuń załącznik\nphoto-a-copy.png\n1 KB\nPobierz\nUsuń załącznik\nphoto-b.png"
+$ agent-browser eval (()=>{const d=document.querySelector('.dialog'); return d? d.innerText.slice(-600):'closed';})()
+"Edytuj element\nNazwa\nTyp\nNocleg\nTransport\nAtrakcja\nJedzenie\nInne\nGodzina rozpoczęcia\nGodzina zakończenia\nKończy się\n\nTylko dla czegoś, co trwa po północy — nocnego lotu albo kilku nocy w jednym miejscu.\n\nStatus\n○\nDo zaplanowania\n◐\nDo zarezerwowania\n●\nGotowe\nNotatki\n\nCzęść danych jest nieprawidłowa. Sprawdź zaznaczone pola.\n\nZałączniki\nphoto-a.png\n1 KB\nPobierz\nUsuń załącznik\nphoto-a-copy.png\n1 KB\nPobierz\nUsuń załącznik\nDodaj plik / zdjęcie / bilet\nPDF, JPEG lub PNG, do 10 MB\n\nDodano photo-a-copy.png\n\nDane rezerwacji (opcjonalne)NaN €\nNumer potwierdzenia\nKoszt\nWaluta\nUsuń\nAnuluj\nZapisz"
+$ agent-browser snapshot
+- generic [ref=e1] clickable [onclick]
+  - banner
+    - link "Smart Trip Planner" [ref=e2]
+    - paragraph
+      - StaticText "QA Final Gate · 1–3 paź 2026"
+    - LabelText
+      - StaticText "Język"
+      - combobox "Język" [expanded=false, ref=e8]: Polski
+        - MenuListPopup
+          - option "Polski" [selected, ref=e17]
+          - option "English" [ref=e18]
+    - button "Wyloguj się" [ref=e3]
+  - main
+    - navigation "Ścieżka nawigacji" [ref=e4]
+      - link "Podróże" [ref=e9]
+      - StaticText " / "
+      - link "Oś czasu" [ref=e10]
+    - paragraph
+      - StaticText "KRAKÓW"
+    - heading "1 października 2026" [level=1, ref=e5]
+    - button "Dodaj element" [ref=e6]
+    - navigation "Nawigacja po dniach" [ref=e7]
+      - StaticText "Poprzedni dzień"
+      - link "Następny dzień" [ref=e11]
+        - StaticText "Następny dzień"
+    - list
+      - listitem [level=1]
+        - button "Cały dzień Atrakcja Zwiedzanie Wawelu Do zaplanowania 2 pliki" [ref=e14]
+          - StaticText "Cały dzień"
+          - StaticText "Atrakcja"
+          - StaticText "Zwiedzanie Wawelu"
+          - StaticText "Do zaplanowania"
+          - StaticText "2 pliki"
+    - generic
+      - heading "Załączniki i dokumenty dnia" [level=2, ref=e12]
+      - list "Załączniki tego dnia"
+        - listitem [level=1]
+          - button "photo-a.png" [ref=e19]
+            - image "photo-a.png"
+          - StaticText "photo-a.png"
+          - StaticText "1 KB"
+          - link "Pobierz" [ref=e20]
+          - button "Usuń załącznik" [ref=e21]
+        - listitem [level=1]
+          - StaticText "bilet.pdf"
+          - StaticText "193 B"
+          - link "Pobierz" [ref=e22]
+          - button "Usuń załącznik" [ref=e23]
+        - listitem [level=1]
+          - button "photo-b.png" [ref=e24]
+            - image "photo-b.png"
+          - StaticText "photo-b.png"
+          - StaticText "639 B"
+          - link "Pobierz" [ref=e25]
+          - button "Usuń załącznik" [ref=e26]
+        - listitem [level=1]
+          - button "photo-a-copy.png" [ref=e27]
+            - image "photo-a-copy.png"
+          - StaticText "photo-a-copy.png"
+          - StaticText "1 KB"
+          - link "Pobierz" [ref=e28]
+          - button "Usuń załącznik" [ref=e29]
+        - listitem [level=1]
+          - button "photo-b.png" [ref=e30]
+            - image "photo-b.png"
+          - StaticText "photo-b.png"
+          - StaticText "639 B"
+          - link "Pobierz" [ref=e31]
+          - button "Usuń załącznik" [ref=e32]
+      - LabelText [ref=e13] clickable [cursor:pointer]
+        - StaticText "Dodaj plik / zdjęcie / bilet"
+        - StaticText "PDF, JPEG lub PNG, do 10 MB"
+        - button "Dodaj plik / zdjęcie / bilet PDF, JPEG lub PNG, do 10 MB" [ref=e15]: Nie wybrano pliku
+      - paragraph
+        - StaticText "Dodano photo-b.png"
+    - dialog "Edytuj element"
+      - heading "Edytuj element" [level=2, ref=e16]
+      - form
+        - LabelText
+          - StaticText "Nazwa"
+        - textbox "Nazwa" [ref=e33]: Zwiedzanie Wawelu
+          - StaticText "Zwiedzanie Wawelu"
+        - LabelText
+          - StaticText "Typ"
+        - combobox "Typ" [expanded=false, ref=e34]: Atrakcja
+          - MenuListPopup
+            - option "Nocleg" [ref=e46]
+            - option "Transport" [ref=e47]
+            - option "Atrakcja" [selected, ref=e48]
+            - option "Jedzenie" [ref=e49]
+            - option "Inne" [ref=e50]
+        - generic
+          - LabelText
+            - StaticText "Godzina rozpoczęcia"
+          - InputTime "Godzina rozpoczęcia"
+            - generic
+              - spinbutton "Godziny Godziny" [ref=e68]: 0
+                - StaticText "--"
+              - StaticText ":"
+              - spinbutton "Minuty Minuty" [ref=e69]: 0
+                - StaticText "--"
+            - button "Pokaż selektor godziny" [ref=e51]
+        - generic
+          - LabelText
+            - StaticText "Godzina zakończenia"
+          - InputTime "Godzina zakończenia"
+            - generic
+              - spinbutton "Godziny Godziny" [ref=e70]: 0
+                - StaticText "--"
+              - StaticText ":"
+              - spinbutton "Minuty Minuty" [ref=e71]: 0
+                - StaticText "--"
+            - button "Pokaż selektor godziny" [ref=e52]
+        - LabelText
+          - StaticText "Kończy się"
+        - Date "Kończy się"
+          - generic
+            - spinbutton "Dzień Dzień" [ref=e59]: 0
+              - StaticText "dd"
+            - StaticText "."
+            - spinbutton "Miesiąc Miesiąc" [ref=e60]: 0
+              - StaticText "mm"
+            - StaticText "."
+            - spinbutton "Rok Rok" [ref=e61]: 0
+              - StaticText "rrrr"
+          - button "Pokaż selektor dat" [ref=e39]
+        - paragraph
+          - StaticText "Tylko dla czegoś, co trwa po północy — nocnego lotu albo kilku nocy w jednym miejscu."
+        - group "Status"
+          - Legend
+            - StaticText "Status"
+          - LabelText [ref=e40] clickable [cursor:pointer]
+            - radio "Do zaplanowania" [checked=true, ref=e53]
+            - StaticText "Do zaplanowania"
+          - LabelText [ref=e41] clickable [cursor:pointer]
+            - radio "Do zarezerwowania" [checked=false, ref=e54]
+            - StaticText "Do zarezerwowania"
+          - LabelText [ref=e42] clickable [cursor:pointer]
+            - radio "Gotowe" [checked=false, ref=e55]
+            - StaticText "Gotowe"
+        - LabelText
+          - StaticText "Notatki"
+        - textbox "Notatki" [ref=e35]
+        - alert
+          - StaticText "Część danych jest nieprawidłowa. Sprawdź zaznaczone pola."
+        - generic
+          - heading "Załączniki" [level=3, ref=e43]
+          - list "Załączniki tego elementu"
+            - listitem [level=1]
+              - button "photo-a.png" [ref=e62]
+                - image "photo-a.png"
+              - StaticText "photo-a.png"
+              - StaticText "1 KB"
+              - link "Pobierz" [ref=e63]
+              - button "Usuń załącznik" [ref=e64]
+            - listitem [level=1]
+              - button "photo-a-copy.png" [ref=e65]
+                - image "photo-a-copy.png"
+              - StaticText "photo-a-copy.png"
+              - StaticText "1 KB"
+              - link "Pobierz" [ref=e66]
+              - button "Usuń załącznik" [ref=e67]
+          - LabelText [ref=e44] clickable [cursor:pointer]
+            - StaticText "Dodaj plik / zdjęcie / bilet"
+            - StaticText "PDF, JPEG lub PNG, do 10 MB"
+            - button "Dodaj plik / zdjęcie / bilet PDF, JPEG lub PNG, do 10 MB" [ref=e56]: Nie wybrano pliku
+          - paragraph
+            - StaticText "Dodano photo-a-copy.png"
+        - group
+          - DisclosureTriangle "Dane rezerwacji (opcjonalne)NaN€" [expanded=true]
+            - StaticText "Dane rezerwacji (opcjonalne)NaN€"
+          - LabelText
+            - StaticText "Numer potwierdzenia"
+          - textbox "Numer potwierdzenia" [ref=e45]: ABC-99123
+            - StaticText "ABC-99123"
+          - generic
+            - LabelText
+              - StaticText "Koszt"
+            - textbox "Koszt" [ref=e57]: 249,50
+              - StaticText "249,50"
+          - generic
+            - LabelText
+              - StaticText "Waluta"
+            - textbox "Waluta" [ref=e58]: EUR
+              - StaticText "EUR"
+        - button "Usuń" [ref=e36]
+        - button "Anuluj" [ref=e37]
+        - button "Zapisz" [ref=e38]
+$ agent-browser eval (()=>{const f=[...document.querySelectorAll('.dialog input,.dialog textarea,.dialog select')].map(e=>({n:e.name||e.id||e.type, invalid:e.getAttribute('aria-invalid'), desc:e.getAttribute('aria-describedby')})); return JSON.stringify(f);})()
+"[{\"n\":\"item-title\",\"invalid\":null,\"desc\":null},{\"n\":\"item-kind\",\"invalid\":null,\"desc\":null},{\"n\":\"item-start-time\",\"invalid\":null,\"desc\":null},{\"n\":\"item-end-time\",\"invalid\":null,\"desc\":null},{\"n\":\"item-end-date\",\"invalid\":null,\"desc\":null},{\"n\":\"item-status\",\"invalid\":null,\"desc\":null},{\"n\":\"item-status\",\"invalid\":null,\"desc\":null},{\"n\":\"item-status\",\"invalid\":null,\"desc\":null},{\"n\":\"item-notes\",\"invalid\":null,\"desc\":null},{\"n\":\"_r_3_\",\"invalid\":null,\"desc\":null},{\"n\":\"item-confirmation-number\",\"invalid\":null,\"desc\":null},{\"n\":\"item-cost-amount\",\"invalid\":null,\"desc\":null},{\"n\":\"item-cost-currency\",\"invalid\":null,\"desc\":null}]"
+$ agent-browser screenshot /home/mkl/cezar/projects/trip_planner/.ai/cezar/worktrees/2223e7fe-07b0-43b2-962a-a6d3db36f6f0/.ai/runs/2026-09-06-attachments-and-reservation-data/final-gate-artifacts/screenshot-reservation-nan-cost.png
+✓ Screenshot saved to /home/mkl/cezar/projects/trip_planner/.ai/cezar/worktrees/2223e7fe-07b0-43b2-962a-a6d3db36f6f0/.ai/runs/2026-09-06-attachments-and-reservation-data/final-gate-artifacts/screenshot-reservation-nan-cost.png
+$ agent-browser fill @e57 249.50
+✓ Done
+$ agent-browser eval document.querySelector('.reservation-panel__cost')?.textContent
+"249,50 €"
+$ agent-browser click button[type=submit]
+✓ Done
+$ agent-browser eval document.querySelector('.dialog')?'still open':'closed'
+"closed"
+$ agent-browser reload
+http://127.0.0.1:40737/trips/810a7965-37c5-4261-a492-5d3e423a8643/days/2026-10-01
+$ agent-browser snapshot
+- generic [ref=e1] clickable [onclick]
+  - banner
+    - link "Smart Trip Planner" [ref=e2]
+    - paragraph
+      - StaticText "QA Final Gate · 1–3 paź 2026"
+    - LabelText
+      - StaticText "Język"
+      - combobox "Język" [expanded=false, ref=e8]: Polski
+        - MenuListPopup
+          - option "Polski" [selected, ref=e16]
+          - option "English" [ref=e17]
+    - button "Wyloguj się" [ref=e3]
+  - main
+    - navigation "Ścieżka nawigacji" [ref=e4]
+      - link "Podróże" [ref=e9]
+      - StaticText " / "
+      - link "Oś czasu" [ref=e10]
+    - paragraph
+      - StaticText "KRAKÓW"
+    - heading "1 października 2026" [level=1, ref=e5]
+    - button "Dodaj element" [ref=e6]
+    - navigation "Nawigacja po dniach" [ref=e7]
+      - StaticText "Poprzedni dzień"
+      - link "Następny dzień" [ref=e11]
+        - StaticText "Następny dzień"
+    - list
+      - listitem [level=1]
+        - button "Cały dzień Atrakcja Zwiedzanie Wawelu Do zaplanowania 2 pliki" [ref=e14]
+          - StaticText "Cały dzień"
+          - StaticText "Atrakcja"
+          - StaticText "Zwiedzanie Wawelu"
+          - StaticText "Do zaplanowania"
+          - StaticText "2 pliki"
+    - generic
+      - heading "Załączniki i dokumenty dnia" [level=2, ref=e12]
+      - list "Załączniki tego dnia"
+        - listitem [level=1]
+          - button "photo-a.png" [ref=e18]
+            - image "photo-a.png"
+          - StaticText "photo-a.png"
+          - StaticText "1 KB"
+          - link "Pobierz" [ref=e19]
+          - button "Usuń załącznik" [ref=e20]
+        - listitem [level=1]
+          - StaticText "bilet.pdf"
+          - StaticText "193 B"
+          - link "Pobierz" [ref=e21]
+          - button "Usuń załącznik" [ref=e22]
+        - listitem [level=1]
+          - button "photo-b.png" [ref=e23]
+            - image "photo-b.png"
+          - StaticText "photo-b.png"
+          - StaticText "639 B"
+          - link "Pobierz" [ref=e24]
+          - button "Usuń załącznik" [ref=e25]
+        - listitem [level=1]
+          - button "photo-a-copy.png" [ref=e26]
+            - image "photo-a-copy.png"
+          - StaticText "photo-a-copy.png"
+          - StaticText "1 KB"
+          - link "Pobierz" [ref=e27]
+          - button "Usuń załącznik" [ref=e28]
+        - listitem [level=1]
+          - button "photo-b.png" [ref=e29]
+            - image "photo-b.png"
+          - StaticText "photo-b.png"
+          - StaticText "639 B"
+          - link "Pobierz" [ref=e30]
+          - button "Usuń załącznik" [ref=e31]
+      - LabelText [ref=e13] clickable [cursor:pointer]
+        - StaticText "Dodaj plik / zdjęcie / bilet"
+        - StaticText "PDF, JPEG lub PNG, do 10 MB"
+        - button "Dodaj plik / zdjęcie / bilet PDF, JPEG lub PNG, do 10 MB" [ref=e15]: Nie wybrano pliku
+      - paragraph
+$ agent-browser click @e14
+✓ Done
+$ agent-browser eval (()=>{const d=document.querySelector('.dialog'); const det=d.querySelector('details'); return JSON.stringify({detailsOpen:det.open, summary:det.querySelector('summary').innerText, conf:d.querySelector('#item-confirmation-number').value, amt:d.querySelector('#item-cost-amount').value, cur:d.querySelector('#item-cost-currency').value});})()
+"{\"detailsOpen\":false,\"summary\":\"Dane rezerwacji (opcjonalne)249,50 €\",\"conf\":\"ABC-99123\",\"amt\":\"249.50\",\"cur\":\"EUR\"}"
+$ agent-browser find role button Anuluj click
+✗ Unknown action 'Anuluj' for find. Valid actions: click, fill, check, hover, text.
+$ agent-browser eval document.querySelector('.dialog')?'open':'closed'
+"open"
+$ agent-browser press Escape
+✓ Done
+$ agent-browser eval document.querySelector('.dialog')?'open':'closed'
+"closed"
+$ agent-browser upload .upload-dropzone__input /tmp/qa-files/video.mp4
+✓ Done
+$ agent-browser eval document.querySelector('.upload-dropzone__list')?.innerText.replace(/\n/g,' | ')
+"video.mp4 | ! | Nie dodano |  | Można załączać tylko pliki PDF, JPEG i PNG. |  | Usuń z listy"
+$ agent-browser select select en
+✓ Done
+$ agent-browser eval JSON.stringify({row:document.querySelector('.upload-dropzone__list')?.innerText.replace(/\n/g,' | '), heading:document.querySelector('.day-attachments__heading')?.textContent, hint:document.querySelector('.upload-dropzone__hint')?.textContent})
+"{\"row\":\"video.mp4 | ! | Not added |  | Only PDF, JPEG and PNG files can be attached. |  | Remove from the list\",\"heading\":\"Day files and documents\",\"hint\":\"PDF, JPEG or PNG, up to 10 MB\"}"
+$ agent-browser snapshot
+- generic [ref=e1] clickable [onclick]
+  - banner
+    - link "Smart Trip Planner" [ref=e2]
+    - paragraph
+      - StaticText "QA Final Gate · Oct 1 – 3, 2026"
+    - LabelText
+      - StaticText "Language"
+      - combobox "Language" [expanded=false, ref=e8]: English
+        - MenuListPopup
+          - option "Polski" [ref=e16]
+          - option "English" [selected, ref=e17]
+    - button "Sign out" [ref=e3]
+  - main
+    - navigation "Breadcrumb" [ref=e4]
+      - link "Trips" [ref=e9]
+      - StaticText " / "
+      - link "Timeline" [ref=e10]
+    - paragraph
+      - StaticText "KRAKÓW"
+    - heading "October 1, 2026" [level=1, ref=e5]
+    - button "Add item" [ref=e6]
+    - navigation "Day navigation" [ref=e7]
+      - StaticText "Previous day"
+      - link "Next day" [ref=e11]
+        - StaticText "Next day"
+    - list
+      - listitem [level=1]
+        - button "All day Activity Zwiedzanie Wawelu To plan 2 files" [ref=e14]
+          - StaticText "All day"
+          - StaticText "Activity"
+          - StaticText "Zwiedzanie Wawelu"
+          - StaticText "To plan"
+          - StaticText "2 files"
+    - generic
+      - heading "Day files and documents" [level=2, ref=e12]
+      - list "This day's attachments"
+        - listitem [level=1]
+          - button "photo-a.png" [ref=e18]
+            - image "photo-a.png"
+          - StaticText "photo-a.png"
+          - StaticText "1 KB"
+          - link "Download" [ref=e19]
+          - button "Delete attachment" [ref=e20]
+        - listitem [level=1]
+          - StaticText "bilet.pdf"
+          - StaticText "193 B"
+          - link "Download" [ref=e21]
+          - button "Delete attachment" [ref=e22]
+        - listitem [level=1]
+          - button "photo-b.png" [ref=e23]
+            - image "photo-b.png"
+          - StaticText "photo-b.png"
+          - StaticText "639 B"
+          - link "Download" [ref=e24]
+          - button "Delete attachment" [ref=e25]
+        - listitem [level=1]
+          - button "photo-a-copy.png" [ref=e26]
+            - image "photo-a-copy.png"
+          - StaticText "photo-a-copy.png"
+          - StaticText "1 KB"
+          - link "Download" [ref=e27]
+          - button "Delete attachment" [ref=e28]
+        - listitem [level=1]
+          - button "photo-b.png" [ref=e29]
+            - image "photo-b.png"
+          - StaticText "photo-b.png"
+          - StaticText "639 B"
+          - link "Download" [ref=e30]
+          - button "Delete attachment" [ref=e31]
+      - LabelText [ref=e13] clickable [cursor:pointer]
+        - StaticText "Add file, photo or ticket"
+        - StaticText "PDF, JPEG or PNG, up to 10 MB"
+        - button "Add file, photo or ticket PDF, JPEG or PNG, up to 10 MB" [ref=e15]: Nie wybrano pliku
+      - paragraph
+      - list "Selected files"
+        - listitem [level=1]
+          - StaticText "video.mp4"
+          - StaticText "Not added"
+          - alert
+            - StaticText "Only PDF, JPEG and PNG files can be attached."
+          - button "Remove from the list" [ref=e32]
+$ agent-browser click @e22
+✓ Done
+$ agent-browser eval document.querySelector('.dialog')?.innerText.replace(/\n/g,' | ')
+"Delete this attachment? |  | “bilet.pdf” will be deleted. This cannot be undone. |  | Cancel | Delete attachment"
+$ agent-browser screenshot /home/mkl/cezar/projects/trip_planner/.ai/cezar/worktrees/2223e7fe-07b0-43b2-962a-a6d3db36f6f0/.ai/runs/2026-09-06-attachments-and-reservation-data/final-gate-artifacts/screenshot-delete-confirm-names-file.png
+✓ Screenshot saved to /home/mkl/cezar/projects/trip_planner/.ai/cezar/worktrees/2223e7fe-07b0-43b2-962a-a6d3db36f6f0/.ai/runs/2026-09-06-attachments-and-reservation-data/final-gate-artifacts/screenshot-delete-confirm-names-file.png
+$ agent-browser find role button Cancel click
+✗ Unknown action 'Cancel' for find. Valid actions: click, fill, check, hover, text.
+$ agent-browser press Escape
+✓ Done
+$ agent-browser eval document.querySelector('.dialog')?'open':'closed'
+"closed"
+$ agent-browser open http://127.0.0.1:40737/trips/810a7965-37c5-4261-a492-5d3e423a8643
+✓ Smart Trip Planner
+  http://127.0.0.1:40737/trips/810a7965-37c5-4261-a492-5d3e423a8643
+$ agent-browser eval document.body.innerText.split('SHOW')[1]?.slice(0,400)
+"\nAll\nOnly outstanding\nActivity (1)\nOCT\n1\n\nKraków\n\nAll day\nActivity\nZwiedzanie Wawelu\n○\nTo plan\n2 files\nOCT\n2\n\nKraków\n\nNothing planned yet\n\nOCT\n3\n\nKraków\n\nNothing planned yet"
+$ agent-browser screenshot /home/mkl/cezar/projects/trip_planner/.ai/cezar/worktrees/2223e7fe-07b0-43b2-962a-a6d3db36f6f0/.ai/runs/2026-09-06-attachments-and-reservation-data/final-gate-artifacts/screenshot-timeline-paperclip-badge.png
+✓ Screenshot saved to /home/mkl/cezar/projects/trip_planner/.ai/cezar/worktrees/2223e7fe-07b0-43b2-962a-a6d3db36f6f0/.ai/runs/2026-09-06-attachments-and-reservation-data/final-gate-artifacts/screenshot-timeline-paperclip-badge.png
+$ agent-browser eval (()=>{const b=document.querySelector('[class*=attachment-count],[class*=paperclip],[class*=badge]'); return b? b.className+' :: '+b.innerHTML.slice(0,200):'not found';})()
+"not found"
+$ agent-browser eval (()=>{const el=[...document.querySelectorAll('*')].find(e=>e.children.length<=2 && /^\s*2 files\s*$/.test(e.textContent)); return el? el.className+' :: '+el.outerHTML.slice(0,300):'nf';})()
+"item-row__attachments :: <span class=\"item-row__attachments\"><span class=\"item-row__attachments-icon\" aria-hidden=\"true\"><svg class=\"icon\" aria-hidden=\"true\" focusable=\"false\"><use href=\"/assets/icons-BuWjNmj-.svg#paperclip\"></use></svg></span>2 files</span>"
+$ agent-browser open http://127.0.0.1:40737/trips/810a7965-37c5-4261-a492-5d3e423a8643/days/2026-10-02
+✓ Smart Trip Planner
+  http://127.0.0.1:40737/trips/810a7965-37c5-4261-a492-5d3e423a8643/days/2026-10-02
+$ agent-browser eval 
+(async () => {
+  const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+  const l = document.querySelector('.upload-dropzone__label');
+  const bin=atob('iVBORw0KGgoAAAANSUhEUgAAASwAAADICAIAAADdvUsCAAACRklEQVR4nO3TMQ0AMAzAsAIbsEEsrMHIMUsGkCdz7gKhyQvgcyaEmAkhZkKImRBiJoSYCSFmQoiZEGImhJgJIWZCiJkQYiaEmAkhZkKImRBiJoSYCSFmQoiZEGImhJgJIWZCiJkQYiaEmAkhZkKImRBiJoSYCSFmQoiZEGImhJgJIWZCiJkQYiaEmAkhZkKImRBiJoSYCSFmQoiZEGImhJgJIWZCiJkQYiaEmAkhZkKImRBiJoSYCSFmQoiZEGImhJgJIWZCiJkQYiaEmAkhZkKImRBiJoSYCSFmQoiZEGImhJgJIWZCiJkQYiaEmAkhZkKImRBiJoSYCSFmQoiZEGImhJgJIWZCiJkQYiaEmAkhZkKImRBiJoSYCSFmQoiZEGImhJgJIWZCiJkQYiaEmAkhZkKImRBiJoSYCSFmQoiZEGImhJgJIWZCiJkQYiaEmAkhZkKImRBiJoSYCSFmQoiZEGImhJgJIWZCiJkQYiaEmAkhZkKImRBiJoSYCSFmQoiZEGImhJgJIWZCiJkQYiaEmAkhZkKImRBiJoSYCSFmQoiZEGImhJgJIWZCiJkQYiaEmAkhZkKImRBiJoSYCSFmQoiZEGImhJgJIWZCiJkQYiaEmAkhZkKImRBiJoSYCSFmQoiZEGImhJgJIWZCiJkQYiaEmAkhZkKImRBiJoSYCSFmQoiZEGImhJgJIWZCiJkQYiaEmAkhZkKImRBiJoSYCSFmQoiZEGImhJgJIWZCiJkQYiaEmAkhZkKImRBiJoSYCSH2AN/t+taNi1cDAAAAAElFTkSuQmCC'); const u=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);
+  const dt=new DataTransfer(); dt.items.add(new File([u],'dropped-single.png',{type:'image/png'}));
+  const ev=t=>new DragEvent(t,{bubbles:true,cancelable:true,dataTransfer:dt});
+  l.dispatchEvent(ev('dragenter')); l.dispatchEvent(ev('dragover')); await sleep(150);
+  const during = l.getAttribute('data-drag-over');
+  l.dispatchEvent(ev('drop')); await sleep(2500);
+  return 'during='+during+' after='+(l.getAttribute('data-drag-over')||'off')+' list='+[...document.querySelectorAll('.attachment-row__name')].map(e=>e.textContent).join(',');
+})()
+"during=true after=off list=photo-b.png,dropped-single.png"
+$ agent-browser open http://127.0.0.1:40737/trips/810a7965-37c5-4261-a492-5d3e423a8643/days/2026-10-03
+✓ Smart Trip Planner
+  http://127.0.0.1:40737/trips/810a7965-37c5-4261-a492-5d3e423a8643/days/2026-10-03
+$ agent-browser eval 
+(async () => {
+  const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+  const l = document.querySelector('.upload-dropzone__label');
+  const mk=(d,n,t)=>{const bin=atob(d);const u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);return new File([u],n,{type:t});};
+  const dt=new DataTransfer(); dt.items.add(mk('iVBORw0KGgoAAAANSUhEUgAAASwAAADICAIAAADdvUsCAAACRklEQVR4nO3TMQ0AMAzAsAIbsEEsrMHIMUsGkCdz7gKhyQvgcyaEmAkhZkKImRBiJoSYCSFmQoiZEGImhJgJIWZCiJkQYiaEmAkhZkKImRBiJoSYCSFmQoiZEGImhJgJIWZCiJkQYiaEmAkhZkKImRBiJoSYCSFmQoiZEGImhJgJIWZCiJkQYiaEmAkhZkKImRBiJoSYCSFmQoiZEGImhJgJIWZCiJkQYiaEmAkhZkKImRBiJoSYCSFmQoiZEGImhJgJIWZCiJkQYiaEmAkhZkKImRBiJoSYCSFmQoiZEGImhJgJIWZCiJkQYiaEmAkhZkKImRBiJoSYCSFmQoiZEGImhJgJIWZCiJkQYiaEmAkhZkKImRBiJoSYCSFmQoiZEGImhJgJIWZCiJkQYiaEmAkhZkKImRBiJoSYCSFmQoiZEGImhJgJIWZCiJkQYiaEmAkhZkKImRBiJoSYCSFmQoiZEGImhJgJIWZCiJkQYiaEmAkhZkKImRBiJoSYCSFmQoiZEGImhJgJIWZCiJkQYiaEmAkhZkKImRBiJoSYCSFmQoiZEGImhJgJIWZCiJkQYiaEmAkhZkKImRBiJoSYCSFmQoiZEGImhJgJIWZCiJkQYiaEmAkhZkKImRBiJoSYCSFmQoiZEGImhJgJIWZCiJkQYiaEmAkhZkKImRBiJoSYCSFmQoiZEGImhJgJIWZCiJkQYiaEmAkhZkKImRBiJoSYCSFmQoiZEGImhJgJIWZCiJkQYiaEmAkhZkKImRBiJoSYCSH2AN/t+taNi1cDAAAAAElFTkSuQmCC','multi-1.png','image/png')); dt.items.add(mk('JVBERi0xLjQKMSAwIG9iajw8L1R5cGUvQ2F0YWxvZy9QYWdlcyAyIDAgUj4+ZW5kb2JqCjIgMCBvYmo8PC9UeXBlL1BhZ2VzL0tpZHNbMyAwIFJdL0NvdW50IDE+PmVuZG9iagozIDAgb2JqPDwvVHlwZS9QYWdlL1BhcmVudCAyIDAgUi9NZWRpYUJveFswIDAgMjAwIDIwMF0+PmVuZG9iagp0cmFpbGVyPDwvUm9vdCAxIDAgUj4+CiUlRU9GCg==','multi-2.pdf','application/pdf'));
+  const ev=t=>new DragEvent(t,{bubbles:true,cancelable:true,dataTransfer:dt});
+  l.dispatchEvent(ev('dragenter')); l.dispatchEvent(ev('dragover')); await sleep(120);
+  l.dispatchEvent(ev('drop')); await sleep(4000);
+  return 'queue='+(document.querySelector('.upload-dropzone__list')?.innerText.replace(/\n/g,'|')||'none')+' :: list='+[...document.querySelectorAll('.attachment-row__name')].map(e=>e.textContent).join(',');
+})()
+"queue=multi-2.pdf|↑|Uploading|Cancel :: list=multi-1.png"
+$ agent-browser screenshot /home/mkl/cezar/projects/trip_planner/.ai/cezar/worktrees/2223e7fe-07b0-43b2-962a-a6d3db36f6f0/.ai/runs/2026-09-06-attachments-and-reservation-data/final-gate-artifacts/screenshot-multifile-drop-server-deadlock.png
+✓ Screenshot saved to /home/mkl/cezar/projects/trip_planner/.ai/cezar/worktrees/2223e7fe-07b0-43b2-962a-a6d3db36f6f0/.ai/runs/2026-09-06-attachments-and-reservation-data/final-gate-artifacts/screenshot-multifile-drop-server-deadlock.png
+$ agent-browser find text Cancel click
+✓ Done
+$ agent-browser open http://127.0.0.1:40737/trips/810a7965-37c5-4261-a492-5d3e423a8643/days/2026-10-02
+✓ Smart Trip Planner
+  http://127.0.0.1:40737/trips/810a7965-37c5-4261-a492-5d3e423a8643/days/2026-10-02
+$ agent-browser select header select, select pl
+✓ Done
+$ agent-browser eval (()=>{const b=[...document.querySelectorAll('.attachment-row .button-danger')]; b[b.length-1].click(); return 'clicked';})()
+"clicked"
+$ agent-browser eval document.querySelector('.dialog')?.innerText.replace(/\n/g,' | ')
+"Usunąć ten załącznik? |  | „dropped-single.png” zostanie usunięty. Tej operacji nie można cofnąć. |  | Anuluj | Usuń załącznik"
+$ agent-browser eval (()=>{const b=[...document.querySelectorAll('.dialog button')].find(x=>x.className.includes('danger')||x.textContent.includes('Usuń załącznik')); b.click(); return b.textContent;})()
+"Usuń załącznik"
+$ agent-browser eval JSON.stringify({dialog: !!document.querySelector('.dialog'), list:[...document.querySelectorAll('.attachment-row__name')].map(e=>e.textContent)})
+"{\"dialog\":false,\"list\":[\"photo-b.png\"]}"
+$ agent-browser upload .upload-dropzone__input /tmp/qa-files/photo-b.png
+✓ Done
+$ agent-browser screenshot /home/mkl/cezar/projects/trip_planner/.ai/cezar/worktrees/2223e7fe-07b0-43b2-962a-a6d3db36f6f0/.ai/runs/2026-09-06-attachments-and-reservation-data/final-gate-artifacts/screenshot-duplicate-second-copy-no-hint.png
+✓ Screenshot saved to /home/mkl/cezar/projects/trip_planner/.ai/cezar/worktrees/2223e7fe-07b0-43b2-962a-a6d3db36f6f0/.ai/runs/2026-09-06-attachments-and-reservation-data/final-gate-artifacts/screenshot-duplicate-second-copy-no-hint.png
+$ agent-browser eval JSON.stringify({rows:[...document.querySelectorAll('.attachment-row__name')].map(e=>e.textContent), hint: !!document.querySelector('.upload-row__duplicate-hint'), announce: document.querySelector('.upload-dropzone__announcement')?.textContent})
+"{\"rows\":[\"photo-b.png\",\"photo-b.png\"],\"hint\":false,\"announce\":\"Dodano photo-b.png\"}"
