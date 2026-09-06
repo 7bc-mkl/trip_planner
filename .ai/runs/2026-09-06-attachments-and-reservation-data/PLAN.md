@@ -39,7 +39,7 @@
 | 3 | 3.3 | The disclosure's placement and its never-auto-expanded guarantee | dispatch | done | `e7ec7e2` |
 | 3 | 3.4 | Currency defaulting to `PLN` and `Intl.NumberFormat` rendering | dispatch:cheap | done | `d790e81` |
 | 3 | 3.5 | The status control's path to *done* left untouched and unconditioned | dispatch:cheap | done | `ed65394` |
-| 3 | 3.6 | Assert the absence of nagging | dispatch:cheap | todo | — |
+| 3 | 3.6 | Assert the absence of nagging | dispatch:cheap | done | `6e5141e` |
 | 3 | 3.7 | End-to-end verification of the brief's own flow | inline | todo | — |
 | 4 | 4.1 | Drag-and-drop layered on the existing input | dispatch | todo | — |
 | 4 | 4.2 | The image lightbox — focus-trapped, `Escape` to close | dispatch | todo | — |
