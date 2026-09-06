@@ -1,0 +1,228 @@
+/**
+ * tokens.css — the design contract, transcribed.
+ *
+ * Source: `.ai/specs/research/design/stitch_inteligentny_planer_podr_y/
+ *          modern_premium_travel_companion/DESIGN.md`
+ *
+ * Custom properties only. This file declares no selector other than `:root`
+ * (plus one `:root` block inside a mobile media query for the two `-mobile`
+ * type roles). Rules that consume these tokens live in the other style files.
+ *
+ * Values absent from `DESIGN.md` — the layout metrics at the end — each carry a
+ * comment naming their derivation. Nothing here is invented silently.
+ */
+
+:root {
+  /* --- colour: primary ------------------------------------------------- */
+
+  /* CONFLICT RESOLVED: `DESIGN.md`'s frontmatter sets `primary: #00294d`, while
+     its prose ("Functional Roles") assigns the Primary role to `#0F3F6D` — the
+     frontmatter's `primary-container`. The prose wins: it is the part that maps
+     values onto roles, and the rendered screens match it. The frontmatter's
+     `#00294d` survives below as `--primary-deep`. */
+  --primary: #0f3f6d;
+  --primary-hover: #0c3257; /* DESIGN.md, Buttons: primary hover */
+  --primary-deep: #00294d; /* the frontmatter's `primary`; the trip banner fill */
+  --primary-fixed: #d3e4ff; /* frontmatter `primary-fixed` — legible on --primary-deep */
+  --on-primary: #ffffff;
+
+  /* Terracotta coral. Defined because the design names it, but it is NEVER
+     used behind text: white on #EA580C is 3.56:1, below the 4.5:1 body-text
+     floor and below 3:1 for small text. Decorative and boundary use only. */
+  --secondary: #ea580c;
+
+  /* --- colour: surfaces ------------------------------------------------ */
+
+  /* CONFLICT RESOLVED: the frontmatter's `surface`/`background` is `#faf8ff`,
+     while the prose's "Neutral Canvas" is `#F8FAFC`. The prose wins, for the
+     same reason as above — it is the role assignment, and the export's screens
+     render the cool slate canvas, not the violet-tinted one. */
+  --canvas: #f8fafc;
+  --surface: #ffffff; /* elevated card containers */
+  --surface-sunken: #f1f5f9; /* ghost-button hover, drag-over dropzone */
+
+  --hairline: #e2e8f0; /* structural hairlines */
+
+  /* Decorative only — the elevation-2 hover border shift and the dashed
+     dropzone border. WCAG 1.4.11 (non-text contrast) governs boundaries
+     required to identify a component; a hover-state border tint and a
+     dropzone's dashed outline are not that, so this token is not in
+     `scripts/check_contrast.py`'s pair table. Value is DESIGN.md's own,
+     unchanged. */
+  --hairline-strong: #cbd5e1;
+
+  /* The resting 1px boundary of inputs, selects, textareas and date inputs
+     (consumed by the field recipe in Step 2.2) — this IS required to
+     identify the control, so WCAG 1.4.11's 3:1 floor applies. Corrects
+     DESIGN.md's `#CBD5E1` here (1.48:1 on `--surface`, below the floor) the
+     same way the spec corrects its three chip foregrounds: the design's own
+     contrast failures are corrected, not shipped (spec `## 📝 Scope`,
+     workstream A, last bullet). 3.21:1 on `--surface`, per
+     `scripts/check_contrast.py`. */
+  --field-border: #84919f;
+
+  /* --- colour: text ---------------------------------------------------- */
+
+  --text: #0f172a; /* headlines and primary reading — 17.85:1 on --surface */
+  --text-muted: #334155; /* subheads and metadata labels — 10.35:1 on --surface */
+  --text-subtle: #64748b; /* secondary captions, disabled — 4.76:1 on --surface,
+                             so not permitted below 13px */
+
+  /* --- colour: semantic ------------------------------------------------ */
+
+  --success: #10b981; /* Tertiary / Success — confirmed reservations */
+  --warning: #f59e0b; /* Warning / Pending */
+  --draft: #64748b; /* Draft / Inactive */
+
+  --danger: #ba1a1a; /* frontmatter `error` */
+  --danger-surface: #ffdad6; /* frontmatter `error-container` */
+  --on-danger-surface: #93000a; /* frontmatter `on-error-container` */
+  --on-danger: #ffffff; /* frontmatter `on-error` */
+
+  /* --- colour: status chips -------------------------------------------- */
+
+  /* Foregrounds are the spec's CORRECTED values, not DESIGN.md's. Every ratio
+     below is against the chip's own background. */
+
+  --status-confirmed-bg: #ecfdf5;
+  --status-confirmed-text: #047857; /* 5.21:1 — DESIGN.md's #059669 fails at 3.58:1 */
+  --status-confirmed-border: #a7f3d0;
+  --status-confirmed-dot: #10b981;
+
+  --status-progress-bg: #fffbeb;
+  --status-progress-text: #b45309; /* 4.84:1 — DESIGN.md's #D97706 fails at 3.07:1 */
+  --status-progress-border: #fde68a;
+  --status-progress-dot: #f59e0b;
+
+  --status-draft-bg: #f1f5f9;
+  --status-draft-text: #475569; /* 6.92:1 — DESIGN.md's value, unchanged */
+  --status-draft-border: #e2e8f0;
+  --status-draft-dot: #64748b;
+
+  /* --- typography ------------------------------------------------------ */
+
+  /* `@fontsource-variable/plus-jakarta-sans` registers the family as
+     'Plus Jakarta Sans Variable'; the non-variable name is kept as the second
+     fallback so a locally installed static copy still wins over system-ui. */
+  --font-sans: 'Plus Jakarta Sans Variable', 'Plus Jakarta Sans', ui-sans-serif, system-ui,
+    -apple-system, 'Segoe UI', Roboto, sans-serif;
+
+  /* One `font` shorthand plus one tracking role per DESIGN.md type style.
+     Apply as: `font: var(--type-headline-md); letter-spacing: var(--tracking-headline-md);` */
+
+  --type-display-lg: 700 48px/56px var(--font-sans);
+  --tracking-display-lg: -0.03em;
+
+  --type-display-lg-mobile: 700 34px/42px var(--font-sans);
+  --tracking-display-lg-mobile: -0.02em;
+
+  --type-headline-xl: 600 36px/44px var(--font-sans);
+  --tracking-headline-xl: -0.02em;
+
+  --type-headline-xl-mobile: 600 28px/36px var(--font-sans);
+  --tracking-headline-xl-mobile: -0.01em;
+
+  --type-headline-lg: 600 24px/32px var(--font-sans);
+  --tracking-headline-lg: -0.015em;
+
+  --type-headline-md: 600 20px/28px var(--font-sans);
+  --tracking-headline-md: -0.01em;
+
+  --type-headline-sm: 600 16px/24px var(--font-sans);
+  --tracking-headline-sm: -0.005em;
+
+  --type-body-lg: 400 18px/28px var(--font-sans);
+  --tracking-body-lg: -0.005em;
+
+  --type-body-md: 400 15px/22px var(--font-sans);
+  --tracking-body-md: normal; /* DESIGN.md declares no letterSpacing */
+
+  --type-body-sm: 400 13px/18px var(--font-sans);
+  --tracking-body-sm: normal; /* DESIGN.md declares no letterSpacing */
+
+  --type-label-lg: 600 14px/20px var(--font-sans);
+  --tracking-label-lg: 0.01em;
+
+  --type-label-md: 500 12px/16px var(--font-sans);
+  --tracking-label-md: 0.015em;
+
+  --type-label-sm: 600 11px/14px var(--font-sans);
+  --tracking-label-sm: 0.025em;
+
+  /* --- radii (DESIGN.md `rounded`) ------------------------------------- */
+
+  --radius-sm: 0.25rem; /* 4px  */
+  --radius: 0.5rem; /* 8px  — form fields, buttons, timeline nodes */
+  --radius-md: 0.75rem; /* 12px */
+  --radius-lg: 1rem; /* 16px — cards, day modules, dropzones */
+  --radius-xl: 1.5rem; /* 24px — drawers and floating sheets */
+  --radius-full: 9999px; /* pills */
+
+  /* --- spacing (DESIGN.md `spacing`) ----------------------------------- */
+
+  --space-2xs: 0.25rem; /* 4px  */
+  --space-xs: 0.5rem; /* 8px  */
+  --space-sm: 0.75rem; /* 12px — related group clusters */
+  --space-md: 1rem; /* 16px */
+  --space-lg: 1.5rem; /* 24px — outer card padding */
+  --space-xl: 2rem; /* 32px */
+  --space-2xl: 3rem; /* 48px */
+  --space-3xl: 4rem; /* 64px */
+
+  --gutter-desktop: 1.5rem;
+  --gutter-mobile: 1rem;
+  --sidebar-width: 22rem; /* 352px — the assistant drawer / dock column */
+  --timeline-track-offset: 2.5rem; /* 40px — the rail's x-offset */
+
+  /* --- elevation (DESIGN.md "Elevation & Depth") ----------------------- */
+
+  /* elevation-0 is the flat canvas: `--canvas`, no shadow. */
+  --elevation-1: 0 1px 3px 0 rgba(15, 63, 109, 0.04), 0 1px 2px -1px rgba(15, 63, 109, 0.02);
+  --elevation-2: 0 10px 15px -3px rgba(15, 63, 109, 0.06), 0 4px 6px -4px rgba(15, 63, 109, 0.03);
+  --elevation-3: 0 20px 25px -5px rgba(15, 23, 42, 0.08), 0 8px 10px -6px rgba(15, 23, 42, 0.04);
+
+  /* Floating operational overlays: sticky headers and date anchors. */
+  --frost-bg: rgba(255, 255, 255, 0.85);
+  --frost-blur: 8px;
+
+  /* The scrim behind elevation-3 surfaces: #0F172A at 20%, 12px backdrop blur. */
+  --scrim: rgba(15, 23, 42, 0.2);
+  --scrim-blur: 12px;
+
+  /* --- layout metrics — NOT in DESIGN.md ------------------------------- */
+
+  /* Derived: the design's standard control height is 40px (Buttons: "40px
+     height for standard actions"), and the header pads it by --space-sm above
+     and below. 12px + 40px + 12px = 64px = 4rem. Sticky layers beneath the
+     header offset by this. */
+  --header-height: 4rem;
+
+  /* Derived: the filter bar is a row of `rounded-full` pills on the label-lg
+     role — 20px line box plus --space-xs (8px) padding above and below, plus
+     the pill's own 1px hairline top and bottom = 38px — and the bar pads those
+     pills by --space-xs on each side and carries a hairline of its own.
+     1px + 8px + 38px + 8px + 1px = 56px = 3.5rem.
+
+     THE BORDERS ARE PART OF THE DERIVATION, not a rounding error: everything
+     here is `border-box`, so the day anchors offsetting by this token clear the
+     bar's outer edge only if the two hairlines are counted. They were not, and
+     the anchors sat 4px under the bar at every width. */
+  --filter-bar-height: 3.5rem;
+
+  /* The spec's desktop cap: the page grid is capped at 90rem and centred, so
+     the dock is 22/90 of the width at the cap. Not a DESIGN.md token. */
+  --page-max: 90rem;
+}
+
+/* The two `-mobile` type roles exist because DESIGN.md declares them; below the
+   768px breakpoint the base roles resolve to the mobile sizes so a consumer
+   writes `var(--type-display-lg)` once. Nothing else changes here. */
+@media (max-width: 767px) {
+  :root {
+    --type-display-lg: var(--type-display-lg-mobile);
+    --tracking-display-lg: var(--tracking-display-lg-mobile);
+
+    --type-headline-xl: var(--type-headline-xl-mobile);
+    --tracking-headline-xl: var(--tracking-headline-xl-mobile);
+  }
+}

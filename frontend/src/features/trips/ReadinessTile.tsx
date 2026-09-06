@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import type { Readiness } from '../../api/trips'
@@ -20,9 +21,20 @@ import type { Readiness } from '../../api/trips'
 export function ReadinessTile({
   readiness,
   compact = false,
+  ring = false,
 }: {
   readiness: Readiness
   compact?: boolean
+  /**
+   * The progress ring beside the value (Q8). The trip banner asks for it; the
+   * compact list row does not, and neither does anything else.
+   *
+   * It is **decoration on top of the text, never instead of it**: the disc is
+   * `aria-hidden`, it renders no percentage, and it is suppressed entirely at a
+   * zero denominator — a 0% ring reads as failure where the percentage is
+   * undefined, which is the whole reason the zero state exists.
+   */
+  ring?: boolean
 }) {
   const { t } = useTranslation()
   const nothingTracked = readiness.tracked === 0
@@ -33,6 +45,17 @@ export function ReadinessTile({
       data-nothing-tracked={nothingTracked ? 'true' : 'false'}
     >
       {!compact && <span className="readiness__label">{t('readiness.label')}</span>}
+      {ring && !nothingTracked && (
+        <span
+          className="readiness__ring"
+          aria-hidden="true"
+          // The arc, as a fraction of a turn, handed to a two-stop
+          // `conic-gradient` in `components.css`. The arithmetic is the
+          // counter's own — `arranged / tracked` — and it is never rendered as
+          // a number anywhere.
+          style={{ '--readiness-arc': `${readiness.arranged / readiness.tracked}turn` } as CSSProperties}
+        />
+      )}
       <span className="readiness__value">
         {nothingTracked
           ? t('readiness.nothingArranged')

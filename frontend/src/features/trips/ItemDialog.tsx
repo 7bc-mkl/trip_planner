@@ -8,6 +8,7 @@ import type { Item, ItemInput } from '../../api/items'
 import { clearDraft, readDraft, saveDraft } from '../auth/draftStore'
 import { draftKey, draftOf } from './itemDraft'
 import type { ItemDraft } from './itemDraft'
+import { STATUS_GLYPH } from './statusGlyph'
 
 /**
  * The item editor.
@@ -215,21 +216,39 @@ export function ItemDialog({
           <p className="hint">{t('item.endDateHint')}</p>
 
           {/* The control this screen exists for: moving an item to `done` is what
-              the timeline's counter reacts to. */}
-          <label htmlFor="item-status">{t('item.statusLabel')}</label>
-          <select
-            id="item-status"
-            value={draft.status}
-            onChange={(event) =>
-              setDraft({ ...draft, status: event.target.value as ItemDraft['status'] })
-            }
-          >
-            {ITEM_STATUSES.map((status) => (
-              <option key={status} value={status}>
-                {t(`item.status.${status}`)}
-              </option>
-            ))}
-          </select>
+              the timeline's counter reacts to — so it is the one control that
+              takes a single click rather than a drop-down's two.
+
+              A REAL RADIO GROUP, painted as a segmented row of pills in the
+              chip colours, exactly as the creator's route-mode control and the
+              timeline's filter bar are painted: the `<fieldset>` keeps the
+              group's name, the three radios keep their translated labels and
+              their glyphs, and deleting every style rule would leave a working,
+              announced, arrow-navigable control behind. The glyph is the same
+              shape the chip shows afterwards, so picking a status and reading
+              it back are the same vocabulary. */}
+          <fieldset className="status-choice">
+            <legend>{t('item.statusLabel')}</legend>
+            <div className="status-choice__options">
+              {ITEM_STATUSES.map((status) => (
+                <label key={status} data-status={status}>
+                  <input
+                    type="radio"
+                    name="item-status"
+                    value={status}
+                    checked={draft.status === status}
+                    onChange={() => setDraft({ ...draft, status })}
+                  />
+                  <span className="status-choice__pill">
+                    <span aria-hidden="true" className="status-choice__glyph">
+                      {STATUS_GLYPH[status]}
+                    </span>
+                    {t(`item.status.${status}`)}
+                  </span>
+                </label>
+              ))}
+            </div>
+          </fieldset>
 
           <label htmlFor="item-notes">{t('item.notesLabel')}</label>
           <textarea

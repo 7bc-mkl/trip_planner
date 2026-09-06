@@ -1,0 +1,20 @@
+foreground               background             class     ratio     min  result
+-------------------------------------------------------------------------------
+--text                   --canvas               body     17.06:1   4.5:1  PASS
+--text                   --surface              body     17.85:1   4.5:1  PASS
+--text-muted             --surface              body     10.35:1   4.5:1  PASS
+--text-subtle            --surface              body      4.76:1   4.5:1  PASS
+--on-primary             --primary              body     10.76:1   4.5:1  PASS
+--on-primary             --primary-deep         body     14.74:1   4.5:1  PASS
+--primary                --surface              body     10.76:1   4.5:1  PASS
+--status-confirmed-text  --status-confirmed-bg  body      5.21:1   4.5:1  PASS
+--status-progress-text   --status-progress-bg   body      4.84:1   4.5:1  PASS
+--status-draft-text      --status-draft-bg      body      6.92:1   4.5:1  PASS
+--on-danger              --danger               body      6.46:1   4.5:1  PASS
+--on-danger-surface      --danger-surface       body      7.24:1   4.5:1  PASS
+--danger-surface         --primary-deep         body     11.41:1   4.5:1  PASS
+--field-border           --surface              large     3.21:1   3.0:1  PASS
+--primary                --canvas               large    10.28:1   3.0:1  PASS
+--primary-fixed          --primary-deep         large    11.45:1   3.0:1  PASS
+
+check_contrast: OK — 16 pair(s) all meet WCAG AA against frontend/src/styles/tokens.css

@@ -3,13 +3,17 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { readFileSync } from 'node:fs'
+
 import App from '../../App'
 import en from '../../locales/en.json'
 import pl from '../../locales/pl.json'
-import { ITEM_STATUSES } from '../../api/items'
+import { ITEM_KINDS, ITEM_STATUSES } from '../../api/items'
 import { applyLocale, initI18n } from '../../i18n'
 import { clearAllDrafts, readDraft } from '../auth/draftStore'
 import { SessionProvider } from '../auth/SessionContext'
+import { ItemRow } from './ItemRow'
+import { StatusChip } from './StatusChip'
 import { draftKey } from './itemDraft'
 import type { ItemDraft } from './itemDraft'
 
@@ -264,7 +268,11 @@ describe('the item editor', () => {
     expect(screen.getByLabelText('Nazwa')).toHaveValue('Batu Caves')
     expect(screen.getByLabelText('Godzina rozpoczęcia')).toHaveValue('10:30')
 
-    await user.selectOptions(screen.getByLabelText('Status'), 'done')
+    // The status control is a segmented row of pills and still a real radio
+    // group: the pills are paint, so this queries the group and the option by
+    // role rather than by the class that colours them.
+    expect(screen.getByRole('group', { name: 'Status' })).toBeInTheDocument()
+    await user.click(screen.getByRole('radio', { name: /Gotowe/u }))
     await user.click(screen.getByRole('button', { name: 'Zapisz' }))
 
     await waitFor(() => expect(patched()).not.toBeUndefined())
@@ -307,6 +315,46 @@ describe('the item editor', () => {
       expect(screen.getByRole('dialog').contains(document.activeElement)).toBe(true),
     )
     expect(user).toBeDefined()
+  })
+
+  /**
+   * The layering contract, asserted against the stylesheets themselves.
+   *
+   * jsdom does no layout and the suite runs with `css: false`, so nothing here
+   * can render the overlay and ask which element is on top —
+   * `getComputedStyle` would answer `auto` for both. A test built on that would
+   * pass whatever the numbers were, and a test that cannot fail is worse than
+   * none. So the assertion is made where the bug actually lived: the two
+   * declarations. The header shipped at 20 and the overlay at 10, nothing
+   * between either and the root establishes a stacking context, and the header
+   * therefore painted over an `aria-modal` dialog with its Sign out button
+   * still hit-testable behind it.
+   *
+   * The manual check this stands in for: open the item editor and confirm
+   * `document.elementFromPoint` at the header's right edge is inside the
+   * overlay, not the header's buttons.
+   */
+  it('declares the dialog overlay above the sticky header', () => {
+    // Vitest runs from `frontend/`, and the suite has `css: false`, so the
+    // stylesheets are read rather than imported — a `?raw` import resolves to
+    // an empty string under that setting.
+    const read = (file: string) => readFileSync(`src/styles/${file}`, 'utf8')
+
+    const zIndexOf = (css: string, selector: string) => {
+      const rule = new RegExp(`\\${selector}\\s*\\{[^}]*?z-index:\\s*(\\d+)`, 'u').exec(css)
+      expect(rule, `no z-index found for ${selector}`).not.toBeNull()
+      return Number(rule![1])
+    }
+
+    const components = read('components.css')
+    const header = zIndexOf(read('chrome.css'), '.app-header')
+    const overlay = zIndexOf(components, '.dialog-overlay')
+    const filterBar = zIndexOf(components, '.filter-bar')
+    const anchor = zIndexOf(read('screens.css'), '.timeline__anchor')
+
+    expect(overlay).toBeGreaterThan(header)
+    expect(header).toBeGreaterThan(filterBar)
+    expect(filterBar).toBeGreaterThan(anchor)
   })
 
   it('closes on Escape', async () => {
@@ -412,6 +460,44 @@ describe('status chips', () => {
     expect(screen.getByText('Done')).toBeInTheDocument()
   })
 
+  it.each(ITEM_STATUSES)(
+    'exposes both a glyph and the translated label for %s — the colour-blind contract',
+    (status) => {
+      // The design adds a 6px dot to each chip. A dot is paint, and paint is
+      // exactly what a colour-blind reader, a screen reader and a stylesheet
+      // failure all lose. So the assertion is that the two things that survive
+      // all three are still there and still distinct: a glyph that differs per
+      // status, and the status as a translated word.
+      //
+      // jsdom cannot see colour, and that is the point — this is a test about
+      // text nodes and attributes, which is all the contract has ever been.
+      render(<StatusChip status={status} />)
+
+      const chip = screen.getByText(pl.item.status[status]).closest('.status-chip')
+
+      expect(chip).toHaveAttribute('data-status', status)
+
+      const glyph = chip?.querySelector('.status-chip__glyph')
+      expect(glyph?.textContent?.trim()).toBeTruthy()
+      expect(glyph).toHaveAttribute('aria-hidden', 'true')
+
+      // The dot is decoration: hidden from assistive technology, and carrying
+      // no text of its own, so it can neither replace nor displace the glyph.
+      const dot = chip?.querySelector('.status-chip__dot')
+      expect(dot).toHaveAttribute('aria-hidden', 'true')
+      expect(dot?.textContent).toBe('')
+    },
+  )
+
+  it('gives every status a distinct glyph, so the shapes alone tell them apart', () => {
+    const glyphs = ITEM_STATUSES.map((status) => {
+      const { container } = render(<StatusChip status={status} />)
+      return container.querySelector('.status-chip__glyph')?.textContent
+    })
+
+    expect(new Set(glyphs).size).toBe(ITEM_STATUSES.length)
+  })
+
   it.each(ITEM_STATUSES)('has a non-empty label in both locales for %s', (status) => {
     // The check `scripts/check_locales.py` structurally cannot make: it compares
     // the two files with each other, not against the statuses the code renders.
@@ -491,6 +577,52 @@ describe('the readiness counter', () => {
 
     expect(await screen.findByText('1 z 2 załatwionych')).toBeInTheDocument()
   })
+
+  /**
+   * The R02 regression guard for the readiness ring (spec step 19).
+   *
+   * The ring is the one thing on this tile that could quietly re-introduce the
+   * failure the zero state exists to prevent: a disc drawn at a zero
+   * denominator is a 0% reading of an undefined percentage, and it says "you
+   * are failing" where the truth is "you have not decided anything yet".
+   */
+  it('draws the ring above a zero denominator, beside the untouched text', async () => {
+    mockApi(backend())
+
+    const { container } = renderApp('/trips/trip-1')
+    await screen.findByText('1 z 2 załatwionych')
+
+    const ring = container.querySelector('.readiness__ring')
+
+    expect(ring).not.toBeNull()
+    // Decoration only: no text node, and hidden from the accessibility tree.
+    expect(ring).toHaveAttribute('aria-hidden', 'true')
+    expect(ring?.textContent).toBe('')
+  })
+
+  it('renders no ring and no percentage at a zero denominator', async () => {
+    mockApi(backend({ trip: { ...TRIP, readiness: { arranged: 0, tracked: 0 } } }))
+
+    const { container } = renderApp('/trips/trip-1')
+    await screen.findByText('Nic jeszcze nie załatwione')
+
+    expect(container.querySelector('.readiness__ring')).toBeNull()
+    expect(screen.queryByText(/%/u)).not.toBeInTheDocument()
+
+    // The state hook and the text node are exactly what they were before the
+    // ring existed — the tile still says it in words, and says only that.
+    const tile = container.querySelector('.readiness[data-nothing-tracked="true"]')
+    expect(tile?.querySelector('.readiness__value')?.textContent).toBe('Nic jeszcze nie załatwione')
+  })
+
+  it('keeps the compact list row ringless — only the banner asks for one', async () => {
+    mockApi(backend())
+
+    const { container } = renderApp('/trips')
+    await screen.findByText('1 z 2 załatwionych')
+
+    expect(container.querySelector('.readiness__ring')).toBeNull()
+  })
 })
 
 describe('items on the timeline', () => {
@@ -558,6 +690,90 @@ describe('items on the timeline', () => {
     const row = screen.getByText('Batu Caves').closest('.item-row')
 
     expect(within(row as HTMLElement).queryByRole('button')).not.toBeInTheDocument()
+  })
+})
+
+describe('the item card’s rail dot', () => {
+  it('is absent unless the timeline asks for one — the day detail case', () => {
+    // Rendered without `railDot`, exactly as `DayDetailPage` renders it. The
+    // card is whole without the dot: the screen it is on has no rail to hang
+    // one on, and the status is carried by the chip either way.
+    const { container } = render(<ItemRow item={MUSEUM} dayDate="2026-10-11" />)
+
+    expect(container.querySelector('.item-row__dot')).toBeNull()
+    expect(screen.getByText('Batu Caves')).toBeInTheDocument()
+    expect(screen.getByText('Do zaplanowania')).toBeInTheDocument()
+  })
+
+  it('is decoration beside the chip, never instead of it, when the timeline does', () => {
+    const { container } = render(<ItemRow item={MUSEUM} dayDate="2026-10-11" railDot />)
+    const dot = container.querySelector('.item-row__dot')
+
+    expect(dot).toHaveAttribute('aria-hidden', 'true')
+    expect(dot).toHaveAttribute('data-status', 'to_plan')
+    expect(dot?.textContent).toBe('')
+    // The colour-blindness contract: the glyph and the translated label are
+    // still there, and the dot is an addition to them.
+    expect(screen.getByText('Do zaplanowania')).toBeInTheDocument()
+  })
+})
+
+describe('the icon sprite', () => {
+  /**
+   * The contract, asserted per call site: every glyph is `aria-hidden`,
+   * `focusable="false"`, and an ADDITION to a translated text label that is
+   * still there. An icon that replaced its label would pass a rendering check
+   * and fail a reader.
+   */
+
+  it.each(ITEM_KINDS)('gives the %s tile its glyph without touching the label', (kind) => {
+    const { container } = render(<ItemRow item={{ ...MUSEUM, kind }} dayDate="2026-10-11" />)
+    const icon = container.querySelector('.item-row__icon svg')
+
+    expect(icon).toHaveAttribute('aria-hidden', 'true')
+    expect(icon).toHaveAttribute('focusable', 'false')
+    expect(icon?.querySelector('use')?.getAttribute('href')).toMatch(
+      new RegExp(`icons\\.svg.*#${kind}$`, 'u'),
+    )
+    // The label the sighted reader and the screen reader both get.
+    expect(screen.getByText(pl.item.kind[kind])).toBeInTheDocument()
+  })
+
+  it('points the day navigation at the two chevrons, and its links keep their names', async () => {
+    mockApi(backend())
+
+    renderApp(DAY_PATH)
+
+    const previous = await screen.findByRole('link', { name: pl.day.previous })
+    const next = screen.getByRole('link', { name: pl.day.next })
+
+    // The accessible name is the translated word alone — proof the chevron is
+    // hidden rather than merely decorative-looking.
+    for (const [link, symbol] of [
+      [previous, 'chevron-left'],
+      [next, 'chevron-right'],
+    ] as const) {
+      const icon = link.querySelector('svg')
+      expect(icon).toHaveAttribute('aria-hidden', 'true')
+      expect(icon).toHaveAttribute('focusable', 'false')
+      expect(icon?.querySelector('use')?.getAttribute('href')).toMatch(
+        new RegExp(`icons\\.svg.*#${symbol}$`, 'u'),
+      )
+    }
+
+    expect(previous).toHaveTextContent(pl.day.previous)
+    expect(next).toHaveTextContent(pl.day.next)
+  })
+
+  it('leaves the disabled boundary control readable without a chevron of its own', async () => {
+    // No previous day: the control is a span, not a link, and the word is what
+    // says so. Nothing here depends on a glyph.
+    mockApi(backend({ day: { ...DAY, previous_date: null, next_date: null } }))
+
+    renderApp(DAY_PATH)
+
+    expect(await screen.findByText(pl.day.previous)).toBeInTheDocument()
+    expect(screen.getByText(pl.day.next)).toBeInTheDocument()
   })
 })
 

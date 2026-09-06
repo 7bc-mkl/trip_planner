@@ -62,6 +62,8 @@ frontend/                React SPA
   src/locales/           en.json / pl.json — kept in sync by the gate
 deploy/                  Dockerfile, entrypoint, compose files
 scripts/check_locales.py Locale parity gate (plain python3, no deps)
+scripts/check_css_tokens.py  CSS token completeness gate (plain python3, no deps)
+scripts/check_contrast.py    WCAG contrast gate over tokens.css (plain python3, no deps)
 .ai/                     Specs, agent pipeline config, generated run artifacts
 ```
 
@@ -219,12 +221,14 @@ single instance; the day a second replica appears, every replica would race to m
 
 ## Validation gate
 
-Run these six commands, in this order, before opening or updating a PR. Any non-zero
+Run these eight commands, in this order, before opening or updating a PR. Any non-zero
 exit blocks the PR. The authoritative list is `validation.commands` in
-`.ai/agentic.config.json`; `.github/workflows/validation-gate.yml` runs the same six.
+`.ai/agentic.config.json`; `.github/workflows/validation-gate.yml` runs the same eight.
 
 ```bash
 python3 scripts/check_locales.py
+python3 scripts/check_css_tokens.py
+python3 scripts/check_contrast.py
 (cd backend && uv run ruff check .)
 (cd backend && uv run pytest)
 (cd frontend && npm run typecheck)

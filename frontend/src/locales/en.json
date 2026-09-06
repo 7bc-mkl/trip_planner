@@ -28,7 +28,14 @@
     "delete": "Delete trip",
     "deleteTitle": "Delete this trip?",
     "deleteMessage": "“{title}” and everything planned in it — every destination, every day and every item — will be deleted. This cannot be undone.",
-    "deleteConfirm": "Delete trip"
+    "deleteConfirm": "Delete trip",
+    "headerContext": "{title} · {dates}",
+    "dayCount": "{count, plural, one {# day} other {# days}}",
+    "dockStages": "Destinations",
+    "dockUndated": "Dates not decided",
+    "dockTypes": "What is planned",
+    "dockCount": "{count, number}",
+    "dockRoute": "Route"
   },
   "trips": {
     "title": "Trips",
@@ -37,7 +44,10 @@
     "emptyBody": "Create your first trip and its empty timeline, then fill it in day by day."
   },
   "tripCreate": {
+    "eyebrow": "Trip planning",
     "title": "New trip",
+    "subtitle": "Set the dates, the route and the destinations. The days are filled in afterwards, item by item.",
+    "dockTitle": "Trip at a glance",
     "titleLabel": "Trip name",
     "titlePlaceholder": "Malaysia, October 2026",
     "startDate": "Start date",

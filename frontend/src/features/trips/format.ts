@@ -56,13 +56,20 @@ export function formatShortDate(iso: string, locale: string): string {
   )
 }
 
-/** The weekday and date on a timeline day chip. */
-export function formatDayChip(iso: string, locale: string): string {
-  return new Intl.DateTimeFormat(locale, {
-    weekday: 'short',
-    day: 'numeric',
-    month: 'short',
-  }).format(parseIsoDate(iso))
+/**
+ * The two halves of a timeline day anchor: `PAŹ` above `10`.
+ *
+ * Two calls rather than one string split in the component, because a locale's
+ * abbreviated month and its day number do not join in a fixed order anywhere —
+ * and the anchor stacks them, so it needs them apart. Both go through `Intl`
+ * with the active locale; the uppercasing of the month is CSS, not data.
+ */
+export function formatAnchorMonth(iso: string, locale: string): string {
+  return new Intl.DateTimeFormat(locale, { month: 'short' }).format(parseIsoDate(iso))
+}
+
+export function formatAnchorDay(iso: string, locale: string): string {
+  return new Intl.DateTimeFormat(locale, { day: 'numeric' }).format(parseIsoDate(iso))
 }
 
 /** Inclusive day count — the same arithmetic as the server's `generate_days`. */

@@ -259,6 +259,20 @@ describe('the multi-stop creator', () => {
     expect(screen.queryByLabelText('Cel 2')).not.toBeInTheDocument()
   })
 
+  // The remove control is an icon button, and an icon button whose name lives
+  // only in a tooltip is exactly what this screen does not ship: the word is
+  // rendered beside the glyph, the glyph slot is `aria-hidden`, and the
+  // accessible name is that visible word and nothing else.
+  it('names the remove control with its own visible text', async () => {
+    mockApi(backend())
+
+    renderApp('/trips/new')
+
+    const remove = await screen.findByRole('button', { name: 'Usuń' })
+    expect(remove).toHaveAccessibleName('Usuń')
+    expect(remove).toHaveTextContent('Usuń')
+  })
+
   it('shows the live summary in the active locale', async () => {
     const user = userEvent.setup()
     mockApi(backend())

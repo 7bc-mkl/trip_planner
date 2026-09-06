@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 
 import { ApiError } from '../../api/client'
+import { ITEM_KINDS } from '../../api/items'
 import { deleteTrip, fetchTrip } from '../../api/trips'
 import type { Stage, TripDetail } from '../../api/trips'
 import { AppShell } from './AppShell'
@@ -10,8 +11,15 @@ import { ConfirmDialog } from './ConfirmDialog'
 import { FilterBar } from './FilterBar'
 import { ItemRow } from './ItemRow'
 import { ReadinessTile } from './ReadinessTile'
-import { DEFAULT_FILTER, applyFilter, isFilter } from './filter'
-import { formatDateRange, formatDayChip, routeSummary, stageLabel } from './format'
+import { DEFAULT_FILTER, applyFilter, countByKind, isFilter } from './filter'
+import {
+  dayCount,
+  formatAnchorDay,
+  formatAnchorMonth,
+  formatDateRange,
+  routeSummary,
+  stageLabel,
+} from './format'
 
 /**
  * `/trips/:id` — the vertical day-by-day timeline.
@@ -88,10 +96,19 @@ export function TimelinePage() {
   const stagesById = new Map(trip.stages.map((stage) => [stage.id, stage]))
   const everyItem = trip.days.flatMap((day) => day.items)
   const hasItems = everyItem.length > 0
+  const counts = countByKind(everyItem)
+  const route = routeSummary(trip, trip.stages)
 
   return (
     <AppShell
       title={trip.title}
+      // The header's trip context line. Both halves go through the locale — the
+      // dates through `Intl`, the join through ICU — rather than being glued
+      // together here with a separator this file invented.
+      context={t('trip.headerContext', {
+        title: trip.title,
+        dates: formatDateRange(trip.start_date, trip.end_date, i18n.language),
+      })}
       breadcrumb={
         <nav aria-label={t('nav.breadcrumb')} className="breadcrumb">
           <Link to="/trips">{t('trips.title')}</Link>
@@ -106,16 +123,91 @@ export function TimelinePage() {
           {t('trip.delete')}
         </button>
       }
+      /*
+       * The dock (Q9): trip metadata promoted out of the main column. Every
+       * value here is already on the loaded trip — nothing new is computed and
+       * nothing is fetched.
+       *
+       * The readiness figure is deliberately NOT repeated here: it is rendered
+       * once, in the banner, where the export puts it. Two identical "x of y"
+       * text nodes on one screen would be noise, and the suite asserts the
+       * counter appears exactly once.
+       *
+       * The stage and type blocks are `<dl>`s rather than `<ul>`s: the days on
+       * the rail are the screen's list, and a second list of `<li>`s in the
+       * dock would make "the timeline has N days" unanswerable by role.
+       */
+      dock={
+        <div className="trip-dock">
+          {trip.stages.length > 0 && (
+            <section className="trip-dock__block">
+              <h2>{t('trip.dockStages')}</h2>
+              <dl className="trip-dock__list">
+                {trip.stages.map((stage) => (
+                  <div className="trip-dock__entry" key={stage.id}>
+                    <dt>{stage.place}</dt>
+                    <dd>
+                      {stage.start_date !== null && stage.end_date !== null
+                        ? formatDateRange(stage.start_date, stage.end_date, i18n.language)
+                        : /* Stage dates are optional in the creator, so a stage
+                             without them says so rather than rendering a gap. */
+                          t('trip.dockUndated')}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            </section>
+          )}
+
+          {hasItems && (
+            <section className="trip-dock__block">
+              <h2>{t('trip.dockTypes')}</h2>
+              <dl className="trip-dock__list">
+                {ITEM_KINDS.filter((kind) => counts[kind] > 0).map((kind) => (
+                  <div className="trip-dock__entry" key={kind}>
+                    <dt>{t(`item.kind.${kind}`)}</dt>
+                    <dd>{t('trip.dockCount', { count: counts[kind] })}</dd>
+                  </div>
+                ))}
+              </dl>
+            </section>
+          )}
+
+          <section className="trip-dock__block">
+            <h2>{t('trip.dockRoute')}</h2>
+            <p className="trip-dock__route">{route}</p>
+          </section>
+        </div>
+      }
     >
-      <header className="trip-header">
-        <p className="trip-header__dates">
-          {formatDateRange(trip.start_date, trip.end_date, i18n.language)}
+      {/*
+       * The banner. The export's dark header block, and it is painted across
+       * two elements: the shell's own `.page-heading` — the `<h1>` and the
+       * trip's actions — and this one, joined into a single `--primary-deep`
+       * block by `screens.css`. The title is NOT repeated here: a second copy
+       * would be a second heading with the same accessible name, and the trip
+       * is named once on the page.
+       *
+       * `.on-dark` is the focus-ring override from `base.css`: a #0f3f6d ring
+       * on a #00294d fill is invisible.
+       */}
+      <header className="trip-banner on-dark">
+        {/* The icon-led meta row. Each fact is its own element so step 6.1 can
+            put its glyph in front of the text without moving anything; no
+            sprite is invented here. */}
+        <p className="trip-banner__meta">
+          <span className="trip-banner__meta-item">
+            {formatDateRange(trip.start_date, trip.end_date, i18n.language)}
+          </span>
+          <span className="trip-banner__meta-item">
+            {t('trip.dayCount', { count: dayCount(trip.start_date, trip.end_date) })}
+          </span>
+          <span className="trip-banner__meta-item trip-banner__meta-item--route">{route}</span>
         </p>
-        <p className="trip-header__route">{routeSummary(trip, trip.stages)}</p>
         {/* The export's "STATUS LOGISTYKI" tile. Its layout is adopted; its
             arithmetic is not — the export's denominator is the all-items count,
             which includes do zaplanowania and contradicts R02. */}
-        <ReadinessTile readiness={trip.readiness} />
+        <ReadinessTile readiness={trip.readiness} ring />
       </header>
 
       <FilterBar
@@ -152,34 +244,50 @@ export function TimelinePage() {
 
           return (
             <li className="timeline__day" key={day.id}>
-              <h2>
-                <Link to={`/trips/${trip.id}/days/${day.date}`}>
-                  <span className="timeline__chip">{formatDayChip(day.date, i18n.language)}</span>
-                  {/* A day in no stage renders without a label rather than with
-                      placeholder copy — it is a day in transit, not missing data. */}
-                  {label !== '' && <span className="timeline__stages">{label}</span>}
+              {/* The date anchor: two lines, `PAŹ` over `10`, sticky beneath the
+                  header and the filter bar. It is the day's heading and its link
+                  to the day detail — the stage label moved out of the link and
+                  onto the day's own column, where there is room for it. */}
+              <h2 className="timeline__anchor">
+                <Link className="timeline__anchor-link" to={`/trips/${trip.id}/days/${day.date}`}>
+                  <span className="timeline__anchor-month">
+                    {formatAnchorMonth(day.date, i18n.language)}
+                  </span>
+                  <span className="timeline__anchor-day">
+                    {formatAnchorDay(day.date, i18n.language)}
+                  </span>
                 </Link>
               </h2>
 
-              {day.items.length === 0 && (
-                <p className="timeline__empty-day">{t('timeline.emptyDay')}</p>
-              )}
+              <div className="timeline__day-body">
+                {/* A day in no stage renders without a label rather than with
+                    placeholder copy — it is a day in transit, not missing data. */}
+                {label !== '' && <p className="timeline__stages">{label}</p>}
 
-              {/* A day whose items are all filtered out says so, rather than
-                  looking like a day with nothing planned. */}
-              {day.items.length > 0 && visible.length === 0 && (
-                <p className="timeline__empty-day">{t('timeline.allFilteredOut')}</p>
-              )}
+                {/* The invitation keeps its place on the rail rather than
+                    becoming a gap: an empty day is a day, not an absence. */}
+                {day.items.length === 0 && (
+                  <p className="timeline__empty-day">{t('timeline.emptyDay')}</p>
+                )}
 
-              {visible.length > 0 && (
-                <ul className="timeline__items">
-                  {visible.map((item) => (
-                    <li key={item.id}>
-                      <ItemRow item={item} dayDate={day.date} />
-                    </li>
-                  ))}
-                </ul>
-              )}
+                {/* A day whose items are all filtered out says so, rather than
+                    looking like a day with nothing planned. */}
+                {day.items.length > 0 && visible.length === 0 && (
+                  <p className="timeline__empty-day">{t('timeline.allFilteredOut')}</p>
+                )}
+
+                {visible.length > 0 && (
+                  <ul className="timeline__items">
+                    {visible.map((item) => (
+                      <li key={item.id}>
+                        {/* The dot on the rail is the timeline's alone; the day
+                            detail renders the same card without one. */}
+                        <ItemRow item={item} dayDate={day.date} railDot />
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
             </li>
           )
         })}

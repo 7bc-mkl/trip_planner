@@ -88,7 +88,7 @@ export function LoginPage() {
         {/* role="alert" so the failure is announced, not only shown. */}
         {error !== null && <p role="alert">{error}</p>}
 
-        <button type="submit" disabled={submitting}>
+        <button type="submit" className="button-primary" disabled={submitting}>
           {submitting ? t('login.submitting') : t('login.submit')}
         </button>
       </form>
