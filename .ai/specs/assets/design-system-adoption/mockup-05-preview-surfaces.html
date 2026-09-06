@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<title>Mockup 05 — powierzchnie podglądowe V1</title>
+<link rel="stylesheet" href="_mockup.css">
+<style>
+  html, body { height: 100%; overflow: hidden; }
+  .stage-wrap { position: relative; height: calc(100% - 30px); overflow: hidden; }
+  .stage-wrap .drawer, .stage-wrap .drawer-backdrop { position: absolute; }
+  .behind { padding: var(--space-xl) var(--gutter); width: min(60rem, 100%); }
+  .share-dialog {
+    position: absolute;
+    top: 12%;
+    left: 8%;
+    z-index: 22;
+    width: min(30rem, 60%);
+    padding: var(--space-lg);
+    border-radius: var(--radius-xl);
+    background: var(--surface);
+    box-shadow: var(--elevation-3);
+  }
+</style>
+</head>
+<body>
+<p class="mockup-note">Illustrative mockup — Smart Trip Planner · V1 preview surfaces · not application code</p>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <symbol id="i-chat" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8 8 0 0 1-8 8H8l-4.5 3v-4.4A8 8 0 0 1 13 3.5h.5a8 8 0 0 1 7.5 8Z"/></symbol>
+  <symbol id="i-share" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a3.5 3.5 0 0 0 5.3.4l3-3A3.5 3.5 0 0 0 13.4 5.5l-1.7 1.7M14 11a3.5 3.5 0 0 0-5.3-.4l-3 3A3.5 3.5 0 0 0 10.6 18.5l1.7-1.7"/></symbol>
+</defs></svg>
+
+<div class="stage-wrap">
+  <header class="chrome" style="position:static">
+    <span class="wordmark">Smart Trip Planner</span>
+    <span class="chrome__context"><b>Malezja: Kuala Lumpur, Penang i Langkawi</b>10–24 paź 2026</span>
+    <span class="chrome__right">
+      <button class="btn btn--ghost btn--sm" data-preview="true" aria-disabled="true">
+        <svg width="16" height="16" aria-hidden="true"><use href="#i-chat"/></svg>
+        Asystent <span class="preview-badge">Wkrótce</span>
+      </button>
+      <span class="body-sm subtle">Język</span>
+      <span class="segmented"><span data-selected>PL</span><span>EN</span></span>
+      <button class="btn btn--ghost btn--sm">Wyloguj się</button>
+    </span>
+  </header>
+
+  <div class="behind">
+    <p class="eyebrow" style="margin:0 0 var(--space-2xs)">Dwie powierzchnie podglądowe naraz</p>
+    <h1 class="headline-lg">Dialog udostępniania i szuflada asystenta</h1>
+    <p class="body-sm muted" style="max-width:34rem">
+      Obie renderują się z prawdziwym obramowaniem, prawdziwą pułapką focusu i prawdziwą obsługą
+      klawiatury. Pustka w środku jest szczera: nie ma udawanego linku ani udawanej rozmowy.
+    </p>
+  </div>
+
+  <div class="drawer-backdrop"></div>
+
+  <div class="share-dialog" role="dialog" aria-modal="true" aria-labelledby="sh-title">
+    <div class="row" style="align-items:flex-start;margin-bottom:var(--space-md)">
+      <span class="item-card__icon" style="flex:none"><svg width="18" height="18" aria-hidden="true"><use href="#i-share"/></svg></span>
+      <h2 class="headline-md" id="sh-title" style="flex:1">Udostępnij plan</h2>
+      <button class="btn btn--ghost btn--icon" aria-label="Zamknij">×</button>
+    </div>
+    <p class="body-sm muted" style="margin:0 0 var(--space-md)">
+      Każdy, kto ma ten link, zobaczy ten plan — bez konta i bez logowania. Nie zobaczy Twoich
+      notatek, załączników, numerów rezerwacji ani kosztów.
+    </p>
+    <p class="preview-notice" style="margin-bottom:var(--space-md)">
+      <b>Ta część powstaje.</b>
+      Plan jest już napisany — zobacz <code>.ai/specs/2026-09-05-trip-sharing-magic-link.md</code>.
+    </p>
+    <div class="row" style="justify-content:flex-end">
+      <button class="btn btn--ghost">Anuluj</button>
+      <button class="btn btn--primary" data-preview="true" aria-disabled="true">
+        Utwórz link <span class="preview-badge">Wkrótce</span>
+      </button>
+    </div>
+  </div>
+
+  <aside class="drawer" role="dialog" aria-modal="true" aria-labelledby="drw-title">
+    <div class="drawer__head">
+      <span class="item-card__icon" style="flex:none"><svg width="18" height="18" aria-hidden="true"><use href="#i-chat"/></svg></span>
+      <div style="flex:1;min-width:0">
+        <h2 id="drw-title">Asystent</h2>
+        <p class="body-sm subtle" style="margin:0">Zna Twój plan: Malezja, 15 dni</p>
+      </div>
+      <button class="btn btn--ghost btn--icon" aria-label="Zamknij asystenta">×</button>
+    </div>
+    <div class="drawer__body">
+      <p class="preview-notice">
+        <b>Ta część powstaje.</b>
+        Asystent będzie dodawał i zmieniał pozycje w planie oraz odpowiadał na pytania o niego.
+        Specyfikacja jeszcze nie powstała — to następny dokument w kolejce.
+      </p>
+    </div>
+    <div class="drawer__composer">
+      <textarea class="input" rows="2" disabled placeholder="Napisz, co zmienić w planie…"></textarea>
+      <button class="btn btn--primary btn--sm" data-preview="true" aria-disabled="true" style="justify-self:end">
+        Wyślij <span class="preview-badge">Wkrótce</span>
+      </button>
+    </div>
+  </aside>
+</div>
+</body>
+</html>

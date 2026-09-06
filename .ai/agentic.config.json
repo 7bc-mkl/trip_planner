@@ -6,6 +6,8 @@
   "validation": {
     "commands": [
       "python3 scripts/check_locales.py",
+      "python3 scripts/check_css_tokens.py",
+      "python3 scripts/check_contrast.py",
       "(cd backend && uv run ruff check .)",
       "(cd backend && uv run pytest)",
       "(cd frontend && npm run typecheck)",

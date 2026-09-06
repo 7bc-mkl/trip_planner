@@ -1,0 +1,215 @@
+/**
+ * chrome.css — the frame around every authenticated screen.
+ *
+ * The header, the page grid and the dock: the things that are not a screen and
+ * not a component, but the shell both live inside. There is no drawer — the
+ * assistant drawer was Phase 5's, and the owner cut Phase 5 (`PLAN.md`, "Scope
+ * change").
+ *
+ * Its `@import` sits between `base.css` and `components.css` in `index.css`, and
+ * that position is the contract: the chrome frames the page, so a component
+ * recipe must be able to override it and a screen must be able to override both.
+ *
+ * Only tokens from `tokens.css` are referenced. `--header-height` in particular
+ * is consumed, not restated: the sticky layers beneath the header (the filter
+ * bar in step 4.4, the day anchors in step 4.5) offset by that same custom
+ * property, so a magic number here would silently misalign all of them.
+ */
+
+/* --- the shell ------------------------------------------------------- */
+
+/* No padding here any more. The header is full-bleed so its frosted band and
+   its hairline run the whole width of the viewport, and the canvas below pays
+   for its own gutters. */
+.app-shell {
+  min-height: 100dvh;
+}
+
+/* --- the header ------------------------------------------------------ */
+
+/*
+ * Sticky, frosted, hairline-bottomed, exactly `--header-height` tall.
+ *
+ * THE OPAQUE FALLBACK IS DECLARED FIRST AND THE FROST IS THE PROGRESSIVE
+ * ENHANCEMENT, per DESIGN.md's "Elevation & Depth" rule for floating
+ * operational overlays: without `backdrop-filter` a 0.85-alpha white band lets
+ * the scrolling page show through the wordmark, which is a legibility failure
+ * rather than a missing flourish. So the base rule paints `--surface` and only
+ * the `@supports` block below opts into `--frost-bg`.
+ */
+.app-header {
+  position: sticky;
+  top: 0;
+  /* THE APP'S WHOLE LAYER SCALE, because nothing else establishes a stacking
+     context and every one of these values is therefore compared against every
+     other:
+
+       4   the day anchors      (`screens.css`, `.timeline__anchor`)
+       5   the filter bar       (`components.css`, `.filter-bar`)
+       20  this header
+       30  the dialog overlay   (`components.css`, `.dialog-overlay`)
+
+     THE OVERLAY MUST OUTRANK THE HEADER. When it did not, the sticky header
+     painted over an `aria-modal="true"` dialog and — worse than the paint — its
+     controls stayed hit-testable, so a reader could reach Sign out from behind
+     an open modal. Anything added above 20 has to stay below 30 for the same
+     reason. */
+  z-index: 20;
+  background: var(--surface);
+  border-bottom: 1px solid var(--hairline);
+}
+
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .app-header {
+    background: var(--frost-bg);
+    -webkit-backdrop-filter: blur(var(--frost-blur));
+    backdrop-filter: blur(var(--frost-blur));
+  }
+}
+
+/* The band is full-bleed; its contents are not. They sit on the page grid's own
+   cap (`--page-max`) and its own gutters, so the wordmark lines up with the
+   canvas on a docked screen at full width. */
+.app-header__inner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  height: var(--header-height);
+  width: min(var(--page-max), 100%);
+  margin-inline: auto;
+  padding-inline: var(--gutter-mobile);
+}
+
+@media (min-width: 768px) {
+  .app-header__inner {
+    padding-inline: var(--gutter-desktop);
+  }
+}
+
+/* D01: the export's "VoyageAI" lockup supplies the layout, never the name. */
+.app-header__brand {
+  flex: none;
+  color: var(--text);
+  font: var(--type-headline-sm);
+  letter-spacing: var(--tracking-headline-sm);
+  text-decoration: none;
+}
+
+/*
+ * The trip context line: the trip title and its date range, on trip-scoped
+ * routes only.
+ *
+ * ONE LINE, ALWAYS. `min-width: 0` is the load-bearing declaration — without it
+ * a flex item refuses to shrink below its content and a long title pushes the
+ * controls off the band instead of ellipsing. A 120-character title therefore
+ * truncates; it never wraps and never grows the header past
+ * `--header-height`.
+ *
+ * Hidden below 768px rather than truncated to nothing: on a 360px band the
+ * wordmark, the locale switch and sign-out already own every pixel, and on both
+ * trip-scoped routes the same trip is named in the page's own `<h1>` a few
+ * hundred pixels below.
+ */
+.app-header__context {
+  display: none;
+  margin: 0;
+}
+
+@media (min-width: 768px) {
+  .app-header__context {
+    display: block;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    color: var(--text-muted);
+    font: var(--type-body-sm);
+    letter-spacing: var(--tracking-body-sm);
+  }
+}
+
+/* Controls grouped right: the locale switch (R01) and sign-out. The export's
+   four-tab nav is not adopted (Q4), so there is nothing between them. */
+.app-header__controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-left: auto;
+}
+
+/* --- the page grid --------------------------------------------------- */
+
+/*
+ * The canvas and the optional dock, in three states.
+ *
+ * The base state is the one every screen is in until Phase 4 fills a dock: ONE
+ * COLUMN AT THE READING MEASURE, CENTRED, WITH NO SPACE RESERVED FOR A DOCK
+ * THAT WAS NOT PASSED. `grid-template-columns` therefore names a single track
+ * here and only the `--docked` modifier splits it, so an absent dock cannot
+ * leave a 22rem hole in the layout.
+ *
+ * Below 1280px a docked page is also one column, and the dock's content renders
+ * *above* the canvas as a horizontal summary strip — on a tablet the readiness
+ * figure is the thing worth seeing first. That is why `<aside>` comes before
+ * `<main>` in the markup: the DOM order is the stacked order, so the reading
+ * order and the visual order agree at the two narrow breakpoints, and the
+ * ≥1280px split moves the dock into the second column by explicit placement
+ * rather than by reordering anything.
+ */
+.page {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--gutter-desktop);
+  width: min(var(--page-max), 100%);
+  margin-inline: auto;
+  padding: var(--space-lg) var(--gutter-mobile);
+}
+
+/* Undocked: the reading measure, not the full 90rem cap. A single column of
+   90rem-wide prose is not a layout, it is a wall. */
+.page:not(.page--docked) {
+  width: min(56rem, 100%);
+}
+
+/* `min-width: 0` on the canvas: a grid item's automatic minimum is its content,
+   so a long unbreakable string (a route summary, a URL in a note) would push
+   the track wider than its share and put the page into horizontal scroll. */
+.page__canvas {
+  min-width: 0;
+}
+
+/* The strip, below 1280px: laid out in a row that wraps, so a dock of two or
+   three short blocks reads as one summary line rather than a stack of cards. */
+.page__dock {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-md);
+  min-width: 0;
+}
+
+@media (min-width: 768px) {
+  .page {
+    padding-inline: var(--gutter-desktop);
+  }
+}
+
+@media (min-width: 1280px) {
+  .page--docked {
+    grid-template-columns: minmax(0, 1fr) var(--sidebar-width);
+  }
+
+  /* Explicit placement, both in row 1: the canvas keeps the wide track on the
+     left and the dock takes `--sidebar-width` on the right, where the export
+     puts it. */
+  .page--docked > .page__canvas {
+    grid-row: 1;
+    grid-column: 1;
+  }
+
+  .page--docked > .page__dock {
+    grid-row: 1;
+    grid-column: 2;
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

@@ -1,0 +1,1093 @@
+/**
+ * components.css — the component layer.
+ *
+ * Everything here is a recipe for a thing that can appear on more than one
+ * screen: buttons, fields, chips, cards, rows, dialogs, empty states, the
+ * locale switch, the shared authenticated chrome. Rules that only ever exist on
+ * one screen live in `screens.css`, which is imported after this file.
+ *
+ * Rule order inside this file is the skeleton's original order from
+ * `index.css`, unchanged — the split must not move anything in the cascade.
+ * Recipes were rewritten in place, phase by phase, and the compatibility bridge
+ * they were migrated off is gone: every name here is a token in `tokens.css`.
+ */
+
+/* --- elevation (DESIGN.md, "Elevation & Depth") -----------------------
+ *
+ * Three levels, and the surfaces that wear them. The design's levels are not
+ * shadows on their own: each is a *pairing* of a surface, a 1px boundary and a
+ * shadow, which is why each recipe carries all three plus the radius tier the
+ * design pairs with it. `elevation-0` needs no rule — it is the bare `--canvas`
+ * that `base.css` already paints on `body`.
+ *
+ * THERE ARE NO `.elevation-N` UTILITY CLASSES. They were carried here for the
+ * Phase 5 surfaces, which the owner cut (`PLAN.md`, "Scope change"); no element
+ * in the app ever applied one, and a class nothing wears is a claim about a
+ * surface that does not exist. Each level is instead written once as the
+ * selector list of the surfaces at that level. The screen-scoped cards say the
+ * same thing at the top of `screens.css` rather than dragging screen names into
+ * the component layer.
+ */
+
+.filter-bar,
+.item-row {
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--elevation-1);
+}
+
+/* The lift. A HOVER-ONLY LIFT IS INVISIBLE TO A KEYBOARD, so `:focus-visible`
+   is not an afterthought here — it is half the rule, and the two selectors are
+   written together so neither can be removed without the other. Only the
+   surfaces that actually do something on activation lift: a static card that
+   rises under the pointer promises an interaction it does not have. */
+.item-row--button:hover,
+.item-row--button:focus-visible {
+  border-color: var(--hairline-strong);
+  box-shadow: var(--elevation-2);
+}
+
+/* Elevation 3. The item editor is the app's only surface at this level — the
+   drawer and the floating sheets DESIGN.md pairs with it belong to Phase 5,
+   which the owner cut (`PLAN.md`, "Scope change"). The radius steps up a tier
+   with the elevation, as DESIGN.md's "Shapes" pairs them. */
+.dialog {
+  border-radius: var(--radius-xl);
+  background: var(--surface);
+  box-shadow: var(--elevation-3);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .filter-bar,
+  .item-row {
+    transition:
+      border-color 150ms ease,
+      box-shadow 150ms ease;
+  }
+}
+
+/* --- the field recipe (DESIGN.md, "Input Fields & Date Pickers") ------
+ *
+ * One recipe for every text-entry control in the app — text, email, date, time,
+ * number, `<select>` and `<textarea>` — instead of the four near-identical
+ * per-screen copies the skeleton carried. The screens no longer declare a field
+ * at all; they declare where it sits.
+ *
+ * The selector is an element list wrapped in `:where()`, so the whole thing
+ * weighs (0,0,1) and any class rule in this file or in `screens.css` can still
+ * override it without an `!important`. Checkboxes and radios are excluded: the
+ * filter bar's checkboxes and the creator's route-mode radios are native
+ * controls that a text-field border would only disfigure.
+ *
+ * BOUNDARY. DESIGN.md specifies `#CBD5E1` here. That is 1.48:1 on `#FFFFFF` —
+ * and a field's resting border is what identifies the control, so WCAG 1.4.11's
+ * 3:1 floor applies to it. Phase 1 corrected it to `--field-border` (#84919F,
+ * 3.21:1) the same way it corrected the three chip foregrounds; read that
+ * token's comment in `tokens.css`. Everything else here is the design's own:
+ * `--surface` fill, `--radius`, a 2px `--primary` active outline.
+ */
+
+input:where(:not([type='checkbox'], [type='radio'])),
+select,
+textarea {
+  width: 100%;
+  padding: var(--space-xs) var(--space-sm);
+  border: 1px solid var(--field-border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  font: var(--type-body-md);
+  letter-spacing: var(--tracking-body-md);
+}
+
+/* The design's active outline hugs the field rather than floating off it, so
+   the 2px ring sits directly on the 8px corner. The ring itself comes from
+   `base.css`, which no rule here may weaken. */
+input:where(:not([type='checkbox'], [type='radio'])):focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  border-color: var(--primary);
+  outline-offset: 0;
+}
+
+/* INVALID IS AN ADDITION, NEVER A REPLACEMENT. The border colour joins the
+   `role="alert"` message that the forms already render; it does not stand in
+   for it, because a colour-only error is invisible to the readers the whole
+   status-chip contract exists for. Two hooks, both satisfied by markup that
+   exists today: the ARIA attribute when a form declares its own validity, and
+   `:user-invalid` for native constraint validation (`/login`'s required
+   e-mail), which fires only after the reader has actually interacted. */
+input:where([aria-invalid='true'], :user-invalid),
+select:where([aria-invalid='true'], :user-invalid),
+textarea:where([aria-invalid='true'], :user-invalid) {
+  border-color: var(--danger);
+}
+
+/* The disabled field. It was written for Phase 5's preview controls, which the
+   owner cut (`PLAN.md`, "Scope change"), so nothing in the app is a disabled
+   field today. It stays because `:disabled` is a native state of every control
+   the recipe above styles — the first one that uses it must not fall back to
+   the user-agent's grey — and unlike the `.elevation-N` classes it is a state,
+   not a claim that a surface exists. `--text-subtle` rather
+   than `--field-border` on the boundary — #84919F drops to 2.93:1 against the
+   sunken fill, while #64748B holds 4.34:1, so the disabled field is the one
+   place the subtle tone is the *stronger* choice. */
+input:where(:not([type='checkbox'], [type='radio'])):disabled,
+select:disabled,
+textarea:disabled {
+  border-color: var(--text-subtle);
+  background: var(--surface-sunken);
+  color: var(--text-subtle);
+  cursor: not-allowed;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  input:where(:not([type='checkbox'], [type='radio'])),
+  select,
+  textarea {
+    transition: border-color 150ms ease;
+  }
+}
+
+/* --- the locale switch, present on every screen (R01) --- */
+
+.locale-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+
+.locale-switch select {
+  padding: var(--space-2xs) var(--space-xs);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: inherit;
+  font: inherit;
+  font-size: 0.875rem;
+}
+
+/* --- the authenticated shell ---
+ *
+ * The shell, the header and the canvas moved to `chrome.css` in step 13, which
+ * is also where the last unclassed button in the app went: sign-out now wears
+ * the `.button-quiet` recipe below, so the `.app-shell button:not([class])`
+ * catch-all that used to live here has no subject left and is gone. Only the
+ * page heading — a block a screen composes rather than a frame around it —
+ * stays in the component layer. */
+
+.page-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  margin-bottom: var(--space-lg);
+}
+
+.page-heading h1 {
+  font-size: 1.75rem;
+  letter-spacing: -0.02em;
+}
+
+/* The breadcrumb: the design's `label-md` role in `--text-subtle`, the quietest
+   line on the page. It sits above the heading rather than beside it, so it is
+   read before the title and never competes with it. */
+.breadcrumb {
+  margin-bottom: var(--space-2xs);
+  color: var(--text-subtle);
+  font: var(--type-label-md);
+  letter-spacing: var(--tracking-label-md);
+}
+
+.breadcrumb a {
+  color: var(--text-subtle);
+}
+
+.breadcrumb a:hover {
+  color: var(--primary);
+}
+
+/* --- the button recipes (DESIGN.md, "Components" → Buttons) -----------
+ *
+ * Five recipes: primary, deep, ghost, danger and danger-solid. The class names
+ * are the ones the existing markup already carries — this is a rewrite of
+ * declarations, not of selectors — plus one new modifier, `.button-primary--deep`,
+ * for the recipe that had no home yet.
+ *
+ * Shape is shared by all five: 40px minimum height (DESIGN.md's "40px height
+ * for standard actions", the same figure `--header-height` is derived from),
+ * `--radius`, and a 1px boundary so a solid and a ghost button are the same
+ * size. Motion is the design's "subtle scale transition", declared once at the
+ * end of this block inside `prefers-reduced-motion: no-preference`.
+ *
+ * THERE IS DELIBERATELY NO ACCENT BUTTON. DESIGN.md's sixth recipe is the "AI
+ * Action / Accent" button in `--secondary` (#EA580C) — but every one of its
+ * documented uses is AI trip generation, which is in this spec's Cut table, and
+ * white on #EA580C is 3.56:1, under the 4.5:1 floor for its own label. A recipe
+ * for it would be dead CSS that fails contrast the day someone found a use for
+ * it. `--secondary` stays a decorative token with no text on it.
+ */
+
+.button-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: var(--space-xs) var(--space-md);
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  background: var(--primary);
+  color: var(--on-primary);
+  font: var(--type-label-lg);
+  letter-spacing: var(--tracking-label-lg);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.button-primary:hover:not(:disabled) {
+  background: var(--primary-hover);
+}
+
+.button-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* The form-completing action: the deepest tone in the palette, reserved for the
+   one button that ends a flow. Phase 4 (step 22) puts it on the trip creator's
+   full-width submit. Its hover lifts to `--primary` rather than darkening
+   further — #00294d is already the floor of the ramp, and DESIGN.md names no
+   hover for it. */
+.button-primary--deep {
+  background: var(--primary-deep);
+}
+
+.button-primary--deep:hover:not(:disabled) {
+  background: var(--primary);
+}
+
+/* Ghost: DESIGN.md's "Secondary / Ghost". Transparent, primary text, hairline
+   border, sunken fill on hover. */
+.button-quiet {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: var(--space-xs) var(--space-sm);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--primary);
+  font: var(--type-label-lg);
+  letter-spacing: var(--tracking-label-lg);
+  cursor: pointer;
+}
+
+.button-quiet:hover:not(:disabled) {
+  background: var(--surface-sunken);
+}
+
+.button-quiet:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* The design's "subtle scale transition", the whole of it: 150ms is the ceiling
+   the spec sets for every transition in the app, and none of it happens for a
+   reader who asked for less motion. */
+@media (prefers-reduced-motion: no-preference) {
+  .button-primary,
+  .button-quiet,
+  .button-danger {
+    transition:
+      background-color 150ms ease,
+      border-color 150ms ease,
+      transform 150ms ease;
+  }
+
+  .button-primary:hover:not(:disabled) {
+    transform: scale(1.01);
+  }
+}
+
+[role='alert'] {
+  margin: var(--space-xs) 0 0;
+  color: var(--danger);
+  font-size: 0.875rem;
+}
+
+/* An empty state is a designed state, not a blank page. */
+.empty-state {
+  padding: var(--space-xl);
+  border: 1px dashed var(--hairline);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  text-align: center;
+}
+
+.empty-state h2 {
+  margin-bottom: var(--space-xs);
+  font-size: 1.25rem;
+}
+
+.empty-state p {
+  margin: 0 0 var(--space-md);
+  color: var(--text-muted);
+}
+
+.empty-state--inline {
+  margin-bottom: var(--space-lg);
+  padding: var(--space-md);
+  color: var(--text-muted);
+}
+
+/* --- the readiness counter (R02) --- */
+
+.readiness {
+  margin: var(--space-sm) 0 0;
+}
+
+.readiness__label {
+  display: block;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.readiness__value {
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.readiness--compact .readiness__value {
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+/* Nothing tracked yet is a neutral statement, not a failure. There is
+   deliberately no bar and no percentage here: the percentage is undefined at a
+   zero denominator, and "0%" would read as failure. */
+.readiness[data-nothing-tracked='true'] .readiness__value {
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+/* The ring (Q8), rendered only when the tile is asked for one AND the
+ * denominator is above zero — the component decides that, not this file.
+ *
+ * A TWO-STOP CONIC GRADIENT ON A MASKED DISC: no SVG, no library, no element
+ * per segment. The mask punches the middle out, so what is left is an annulus
+ * whose filled arc is `--readiness-arc` — set inline by the component as a
+ * fraction of a turn, and defaulted here so the disc has a defined value even
+ * without it.
+ *
+ * NOTHING HERE TRANSITIONS. The ring paints at its final value on first render,
+ * which is what `prefers-reduced-motion: reduce` asks for and what every other
+ * reader gets too: a counter that animates to its own value tells the owner
+ * nothing he did not already know.
+ *
+ * The colour is an addition to the "x of y" text beside it, never a
+ * replacement: the disc is `aria-hidden` and carries no text node at all.
+ */
+.readiness__ring {
+  --readiness-arc: 0turn;
+
+  flex: none;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: var(--radius-full);
+  background: conic-gradient(
+    var(--success) 0 var(--readiness-arc),
+    var(--hairline) var(--readiness-arc) 1turn
+  );
+  /* The hole. `#0000` and `#000` are alpha stops for the mask, not palette —
+     a mask reads only the alpha channel. */
+  -webkit-mask: radial-gradient(farthest-side, #0000 calc(100% - 6px), #000 calc(100% - 5px));
+  mask: radial-gradient(farthest-side, #0000 calc(100% - 6px), #000 calc(100% - 5px));
+}
+
+/* --- status chips (DESIGN.md, "Status Chips & Badges") ----------------
+ *
+ * Three states, three token triples, and the same three words the skeleton
+ * already rendered. `data-status` is the hinge for all of it — the suite asserts
+ * on it and every recipe below selects on it — so it is never renamed, removed
+ * or repurposed.
+ *
+ * The wire values map onto the design's three chips: `done` is Confirmed,
+ * `to_book` is In Progress, `to_plan` is Draft. The foregrounds are the spec's
+ * CORRECTED values, already carrying their ratio in `tokens.css`: two of the
+ * design's three fail AA against their own chip background. The three
+ * hardcoded hex values the skeleton used here are gone with them.
+ *
+ * `label-sm` is 11px, which is why the palette above is the only one allowed:
+ * the cross-cutting contrast rule bars `--text-subtle` below 13px.
+ */
+
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2xs);
+  padding: var(--space-2xs) var(--space-xs);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-full);
+  background: var(--surface);
+  color: var(--text-muted);
+  font: var(--type-label-sm);
+  letter-spacing: var(--tracking-label-sm);
+  white-space: nowrap;
+}
+
+/* The design's 6px dot. Decoration: it carries no text, it is `aria-hidden` in
+   the markup, and it sits beside the glyph rather than instead of it. */
+.status-chip__dot {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-full);
+  background: currentcolor;
+}
+
+/* The glyph beside it, held at its own size for the same reason
+   `.status-choice__glyph` is: a flex item's default `flex-shrink: 1` would let
+   a squeezed chip narrow the mark rather than the text around it, and a
+   half-width glyph is not a smaller glyph, it is a distorted one. */
+.status-chip__glyph {
+  flex: none;
+}
+
+/* Colour is an addition to the glyph and the label, never a replacement:
+   removing every rule below must still leave the status readable. */
+.status-chip[data-status='to_plan'] {
+  border-color: var(--status-draft-border);
+  background: var(--status-draft-bg);
+  color: var(--status-draft-text);
+}
+
+.status-chip[data-status='to_plan'] .status-chip__dot {
+  background: var(--status-draft-dot);
+}
+
+.status-chip[data-status='to_book'] {
+  border-color: var(--status-progress-border);
+  background: var(--status-progress-bg);
+  color: var(--status-progress-text);
+}
+
+.status-chip[data-status='to_book'] .status-chip__dot {
+  background: var(--status-progress-dot);
+}
+
+.status-chip[data-status='done'] {
+  border-color: var(--status-confirmed-border);
+  background: var(--status-confirmed-bg);
+  color: var(--status-confirmed-text);
+}
+
+.status-chip[data-status='done'] .status-chip__dot {
+  background: var(--status-confirmed-dot);
+}
+
+/* --- items --- */
+
+.item-list,
+.timeline__items {
+  display: grid;
+  gap: var(--space-xs);
+  margin: var(--space-sm) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* The item card, on the timeline's rail and on the day detail alike: the time
+   in bold tabular figures on the left, the type as an icon tile plus its label,
+   the title, the status chip at the trailing edge and the notes on their own
+   line. `position: relative` is the rail dot's containing block. */
+.item-row {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-xs) var(--space-sm);
+  width: 100%;
+  padding: var(--space-md);
+  color: inherit;
+  font: inherit;
+  text-align: start;
+}
+
+/* The surface, the boundary, the radius and the shadow are elevation-1's, at
+   the top of this file; the lift on hover and focus is elevation-2's. */
+.item-row--button {
+  cursor: pointer;
+}
+
+/* The dot ON the rail — outside the card, centred on the track that runs at
+   `--timeline-track-offset`, one gutter to the card's left. The `--canvas` ring
+   is what stops the track from running through it.
+
+   It is DECORATION: `aria-hidden` in the markup, rendered only when the
+   timeline asks for it, and always beside the status chip that carries the same
+   state in a glyph and a translated word. Deleting every rule below must leave
+   the status readable, which is why the chip is never what moved. */
+.item-row__dot {
+  position: absolute;
+  top: calc(var(--space-md) + var(--space-2xs));
+  left: calc(-1 * var(--space-lg) - 5px);
+  width: 10px;
+  height: 10px;
+  border-radius: var(--radius-full);
+  background: var(--status-draft-dot);
+  box-shadow: 0 0 0 3px var(--canvas);
+}
+
+.item-row__dot[data-status='to_book'] {
+  background: var(--status-progress-dot);
+}
+
+.item-row__dot[data-status='done'] {
+  background: var(--status-confirmed-dot);
+}
+
+.item-row__time {
+  min-width: 5.5rem;
+  color: var(--text);
+  font: var(--type-label-lg);
+  letter-spacing: var(--tracking-label-lg);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The type stops being a grey text pill and becomes icon-plus-label. */
+.item-row__type {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+/* The glyph tile, now holding the item-kind glyph from the sprite. The glyph
+   paints in `currentColor`, so the tile's own colour is the only thing that
+   sets it. */
+.item-row__icon {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 2rem;
+  height: 2rem;
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+  color: var(--text-muted);
+}
+
+.item-row__kind {
+  color: var(--text-muted);
+  font: var(--type-label-md);
+  letter-spacing: var(--tracking-label-md);
+}
+
+.item-row__title {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font: var(--type-headline-sm);
+  letter-spacing: var(--tracking-headline-sm);
+}
+
+/* THE TITLE TAKES ITS OWN LINE ON A PHONE, exactly as the notes already do.
+   On the timeline the card is already inset by the 40px rail column and one
+   `--space-lg` gutter, and inside it the time reserves 5.5rem, the icon tile
+   2rem and the kind label whatever the language needs; at 360px that leaves the
+   title a few pixels and `overflow-wrap: anywhere` then breaks it to roughly one
+   character per line ("Petr / onas / Tow / ers"). Giving it the full width is
+   the smaller of the two fixes the spec allows — the rail stays, and the rail
+   is the structural change this redesign is about — and it costs nothing above
+   768px, where the title never ran out of room. */
+@media (max-width: 767px) {
+  .item-row__title {
+    flex-basis: 100%;
+  }
+}
+
+.item-row__spans {
+  color: var(--text-muted);
+  font: var(--type-label-md);
+  letter-spacing: var(--tracking-label-md);
+}
+
+/* The chip at the trailing edge, on the card's first line. */
+.item-row .status-chip {
+  margin-left: auto;
+}
+
+.item-row__notes {
+  flex-basis: 100%;
+  color: var(--text-muted);
+  font: var(--type-body-sm);
+  letter-spacing: var(--tracking-body-sm);
+}
+
+/* --- the item editor dialog --- */
+
+/* The scrim: `#0F172A` at 20% with a 12px backdrop blur, DESIGN.md's own pair
+   for anything at elevation-3. FALLBACK FIRST — the plain scrim is declared
+   outside the `@supports`, so a browser without `backdrop-filter` still gets a
+   real separating layer rather than nothing at all. */
+.dialog-overlay {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: var(--space-md);
+  background: var(--scrim);
+  /* Above the sticky header's 20 — see the layer scale on `.app-header` in
+     `chrome.css`. Nothing between the overlay and the root establishes a
+     stacking context, so this number is compared directly against the
+     header's; below it the header both painted over the modal and stayed
+     clickable behind it. `frontend/src/features/trips/items.test.tsx` asserts
+     the ordering against these two files. */
+  z-index: 30;
+}
+
+.dialog {
+  width: min(32rem, 100%);
+  max-height: 90dvh;
+  overflow-y: auto;
+  padding: var(--space-lg);
+}
+
+/* The frosted treatment, and only where the browser can actually frost.
+ *
+ * THE OPAQUE SURFACE IS DECLARED FIRST — it is elevation-3's, at the top of
+ * this file — and the translucent one only inside the `@supports`. Where
+ * `backdrop-filter` is unsupported or switched off, the dialog stays a solid
+ * `--surface` and every word in it is legible against it; a browser that got
+ * the translucency without the blur would be showing the page's own text
+ * through the dialog's, which is the failure this ordering exists to prevent.
+ *
+ * 96% rather than DESIGN.md's drawer figure of 95%: `color-mix` derives it from
+ * `--surface` so the frost cannot drift from the opaque fallback, and the extra
+ * percent buys back the contrast the blur does not.
+ */
+/* The condition and the declarations are the prefixed pair `chrome.css` uses on
+   the header, not the unprefixed property alone: Safari still ships
+   `backdrop-filter` only behind `-webkit-`, so an unprefixed-only test failed
+   there and an unprefixed-only declaration would have been dropped even where
+   the test passed. */
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .dialog-overlay {
+    -webkit-backdrop-filter: blur(var(--scrim-blur));
+    backdrop-filter: blur(var(--scrim-blur));
+  }
+
+  .dialog {
+    background: color-mix(in srgb, var(--surface) 96%, transparent);
+    -webkit-backdrop-filter: blur(var(--scrim-blur));
+    backdrop-filter: blur(var(--scrim-blur));
+  }
+}
+
+.dialog h2 {
+  margin-bottom: var(--space-md);
+  font: var(--type-headline-md);
+  letter-spacing: var(--tracking-headline-md);
+}
+
+.dialog form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.dialog label {
+  font: var(--type-label-lg);
+  letter-spacing: var(--tracking-label-lg);
+}
+
+/* The dialog's inputs, selects and textareas declare nothing of their own: they
+   wear the field recipe at the top of this file, like every other field. */
+
+.dialog .field-row {
+  display: flex;
+  gap: var(--space-md);
+}
+
+.dialog .field-row > div {
+  flex: 1;
+}
+
+.dialog .hint {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+}
+
+/* --- the status control, as a segmented group of pills ---------------
+ *
+ * PAINT ON A RADIO GROUP — the pattern the filter bar and the creator's
+ * route-mode control already established, applied to the one control this
+ * screen exists for. The markup is a `<fieldset>` with a `<legend>` and three
+ * radios, each inside its `<label>` with its glyph and its translated word;
+ * every rule below could be deleted and the control would still be an
+ * announced, arrow-navigable group with the same accessible names.
+ *
+ * `label:has(:checked)` rather than `:checked + label`: the input is a child of
+ * the label, so there is no sibling to select.
+ */
+.status-choice {
+  min-width: 0;
+  margin: var(--space-2xs) 0 0;
+  padding: 0;
+  border: 0;
+}
+
+.status-choice legend {
+  padding: 0;
+  margin-bottom: var(--space-2xs);
+  font: var(--type-label-lg);
+  letter-spacing: var(--tracking-label-lg);
+}
+
+.status-choice__options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2xs);
+}
+
+.status-choice__options label {
+  position: relative;
+  flex: 1 1 8rem;
+  cursor: pointer;
+}
+
+/* Out of sight, NEVER out of the accessibility tree: `display: none` would take
+   the radio out of the tab order and out of the group. */
+.status-choice__options input[type='radio'] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* The unselected pill: an outline, so three of them do not read as three
+   selections. Same 40px control height as every other action in the dialog. */
+.status-choice__pill {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2xs);
+  min-height: 40px;
+  padding: var(--space-2xs) var(--space-xs);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--text-muted);
+  font: var(--type-label-sm);
+  letter-spacing: var(--tracking-label-sm);
+  text-align: center;
+}
+
+/* The glyph, the same shape the chip shows afterwards. `aria-hidden` in the
+   markup: the word beside it already says the status. */
+.status-choice__glyph {
+  flex: none;
+}
+
+/* The selected pill, FILLED IN ITS CHIP COLOUR — the exact background, border
+   and foreground trio `.status-chip` wears, so the status a person picks and
+   the status they read back on the card are the same colour and the same
+   shape. Colour is an addition here too: the checked radio is the state a
+   screen reader reads, and the glyph and the word are what a reader who cannot
+   see the fill gets. */
+.status-choice__options label[data-status='to_plan']:has(:checked) .status-choice__pill {
+  border-color: var(--status-draft-border);
+  background: var(--status-draft-bg);
+  color: var(--status-draft-text);
+}
+
+.status-choice__options label[data-status='to_book']:has(:checked) .status-choice__pill {
+  border-color: var(--status-progress-border);
+  background: var(--status-progress-bg);
+  color: var(--status-progress-text);
+}
+
+.status-choice__options label[data-status='done']:has(:checked) .status-choice__pill {
+  border-color: var(--status-confirmed-border);
+  background: var(--status-confirmed-bg);
+  color: var(--status-confirmed-text);
+}
+
+.status-choice__options label:hover:not(:has(:checked)) .status-choice__pill {
+  border-color: var(--hairline-strong);
+  color: var(--text);
+}
+
+/* The ring follows the hidden radio onto the pill, so keyboard focus is visible
+   on the thing that can actually be seen. */
+.status-choice__options label:has(:focus-visible) .status-choice__pill {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* Without `:has()`, undo the hiding rather than ship three unfilled pills with
+   no visible focus at all — the same fallback the filter bar's pills carry, for
+   the same reason. */
+@supports not selector(:has(*)) {
+  .status-choice__options input[type='radio'] {
+    position: static;
+    width: auto;
+    height: auto;
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .status-choice__pill {
+    transition:
+      background-color 150ms ease,
+      border-color 150ms ease,
+      color 150ms ease;
+  }
+}
+
+.dialog__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-xs);
+  margin-top: var(--space-md);
+}
+
+/* Danger: the ghost shape in the danger role. It is a destructive action, so it
+   is never the loudest thing in the dialog — the solid variant below is, and
+   only in the confirmation step. */
+.button-danger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  margin-right: auto;
+  padding: var(--space-xs) var(--space-sm);
+  border: 1px solid var(--danger);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--danger);
+  font: var(--type-label-lg);
+  letter-spacing: var(--tracking-label-lg);
+  cursor: pointer;
+}
+
+.button-danger:hover:not(:disabled) {
+  background: var(--danger-surface);
+  color: var(--on-danger-surface);
+}
+
+/* --- the filter bar (the export's day-selector pills) -----------------
+ *
+ * THE PILLS ARE PAINT ON A RADIO GROUP. The markup is untouched: a `<fieldset>`
+ * with a `<legend>` and two `<input type="radio">`, each inside its `<label>`.
+ * The bar is announced as one control with two options, arrow keys still move
+ * between them, and nothing here would survive as a control if every rule below
+ * were deleted — which is the test that says a pill is styling and not a
+ * rebuild.
+ *
+ * `label:has(:checked)` rather than the spec's shorthand `:checked + label`:
+ * the radio sits *inside* its label in the existing markup, so there is no
+ * sibling to select. Rewriting the pair into `id`/`for` siblings would be a
+ * markup change made for a background colour.
+ *
+ * The bar's own height is `--filter-bar-height`, the token the day anchors
+ * offset by — its hairline, 8px, a 38px pill, 8px and its hairline again,
+ * exactly as that token's comment derives it — so the two sticky layers cannot
+ * drift apart. It is a *minimum*, not a height: in Polish the bar wraps to two
+ * rows below roughly 900px, which is why the anchors only stick above that
+ * width (see `.timeline__anchor` in `screens.css`).
+ */
+
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-xs) var(--space-md);
+  min-height: var(--filter-bar-height);
+  margin-bottom: var(--space-md);
+  padding: var(--space-xs) var(--space-sm);
+}
+
+/* Sticky beneath the header from 768px up. On a fifteen-day trip the filter
+   currently scrolls away exactly when it is most wanted.
+   BELOW 768px IT IS NOT STICKY: three sticky layers on a short phone viewport
+   would leave almost nothing for the plan itself, and a phone gives up the
+   filter before it gives up the plan. `z-index` sits below the header's 20 and
+   above the day anchors' 4, which is the order they overlap in. */
+@media (min-width: 768px) {
+  .filter-bar {
+    position: sticky;
+    top: var(--header-height);
+    z-index: 5;
+  }
+}
+
+.filter-bar__filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-xs);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.filter-bar__filters legend {
+  float: left;
+  margin-right: var(--space-sm);
+  padding: 0;
+  color: var(--text-muted);
+  font: var(--type-label-md);
+  letter-spacing: var(--tracking-label-md);
+  text-transform: uppercase;
+}
+
+/* The ghost pill: a hairline boundary on the surface, the muted tone for its
+   label. */
+.filter-bar__filters label {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2xs);
+  min-height: 36px;
+  padding: var(--space-xs) var(--space-md);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-full);
+  background: var(--surface);
+  color: var(--text-muted);
+  font: var(--type-label-lg);
+  letter-spacing: var(--tracking-label-lg);
+  cursor: pointer;
+}
+
+/* The radio is moved out of sight, NEVER out of the accessibility tree:
+   `display: none` or `visibility: hidden` would take it out of the tab order
+   and out of the radio group, which is the whole contract. */
+.filter-bar__filters input[type='radio'] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.filter-bar__filters label:has(:checked) {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: var(--on-primary);
+}
+
+/* The ring follows the hidden input onto the pill, so keyboard focus is visible
+   on the thing the reader can actually see. */
+.filter-bar__filters label:has(:focus-visible) {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.filter-bar__filters label:hover:not(:has(:checked)) {
+  background: var(--surface-sunken);
+}
+
+/* WITHOUT `:has()` THE PAINT IS NOT A DEGRADED PILL, IT IS AN INVISIBLE
+   CONTROL. The radio above is `opacity: 0`, so the base `:focus-visible` ring
+   never shows on it, and every rule that fills the selected pill or moves the
+   ring onto it is gated behind `:has()`. In a browser without it, nothing is
+   filled *and* keyboard focus has nowhere to land — and the accessibility
+   contract says the focus ring is never removed. So the hiding is undone
+   instead: the reader gets the platform's own radio, checked state and focus
+   ring included, beside its label. Plainer than the pill; still a control. */
+@supports not selector(:has(*)) {
+  .filter-bar__filters input[type='radio'] {
+    position: static;
+    width: auto;
+    height: auto;
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .filter-bar__filters label {
+    transition:
+      background-color 150ms ease,
+      border-color 150ms ease,
+      color 150ms ease;
+  }
+}
+
+/* Counts, not controls — they are not buttons and must not look like them.
+   They wear the draft-badge recipe: the same triple the draft status chip
+   uses, which is the design's own "quiet count" treatment. */
+.filter-bar__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+  margin: 0 0 0 auto;
+  padding: 0;
+  list-style: none;
+}
+
+.kind-chip {
+  padding: var(--space-2xs) var(--space-xs);
+  border: 1px solid var(--status-draft-border);
+  border-radius: var(--radius-full);
+  background: var(--status-draft-bg);
+  color: var(--status-draft-text);
+  font: var(--type-label-sm);
+  letter-spacing: var(--tracking-label-sm);
+  white-space: nowrap;
+}
+
+/* --- the confirmation dialog --- */
+
+.dialog--confirm p {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+/* Solid, so the destructive action is unmistakable — but it is not the one that
+   holds focus when the dialog opens. */
+.button-danger--solid {
+  margin-right: 0;
+  border-color: var(--danger);
+  background: var(--danger);
+  color: var(--on-danger);
+}
+
+.button-danger--solid:hover:not(:disabled) {
+  background: var(--on-danger-surface);
+  border-color: var(--on-danger-surface);
+  color: var(--on-danger);
+}
+
+/* --- the icon primitive (`components/Icon.tsx`) ---------------------------
+ *
+ * Every glyph in the application is one `<use>` into `src/assets/icons.svg`,
+ * drawn in `currentColor` — so the only thing this recipe has to say is how big
+ * it is. The colour comes from whatever rule the icon lands in, which is why
+ * the tile above and the day navigation need no fill of their own.
+ *
+ * A call site that wants another size adds a class and overrides these two
+ * properties; `.day-nav__icon` in `screens.css` is the one that does.
+ */
+.icon {
+  flex: none;
+  width: 1.25rem;
+  height: 1.25rem;
+}

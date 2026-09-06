@@ -137,6 +137,8 @@ The `om-auto-*` skills run this process unattended and are chainable: each accep
 Every PR passes the full validation gate before review sign-off, in this order:
 
 - `python3 scripts/check_locales.py`
+- `python3 scripts/check_css_tokens.py`
+- `python3 scripts/check_contrast.py`
 - `(cd backend && uv run ruff check .)`
 - `(cd backend && uv run pytest)`
 - `(cd frontend && npm run typecheck)`

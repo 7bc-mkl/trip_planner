@@ -1,0 +1,28 @@
+# Everything the image must build for itself rather than inherit from a laptop.
+#
+# Without this, `COPY backend/ ./` copies the host's .venv into the image and
+# `COPY frontend/ ./` copies host node_modules over the ones `npm ci` just
+# installed — shipping artifacts built on someone's machine, for their platform,
+# into production.
+**/.venv
+**/node_modules
+**/__pycache__
+**/*.py[cod]
+**/.pytest_cache
+**/.ruff_cache
+**/.mypy_cache
+frontend/dist
+frontend/build
+
+.git
+.github
+.gitignore
+
+# Agent pipeline artifacts and project docs: not needed at runtime.
+.ai
+*.md
+!backend/README.md
+
+# Never let a local env file into the build context.
+.env
+.env.*

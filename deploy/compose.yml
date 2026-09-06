@@ -1,0 +1,54 @@
+# A complete local stand-up of the deployed shape: the single image serving both
+# the API and the SPA, in front of Postgres.
+#
+# This is NOT the production deployment — production terminates TLS at the
+# platform's proxy and uses a managed Postgres. It exists so the image can be
+# exercised the way it will actually run:
+#
+#   SESSION_SECRET=$(python3 -c 'import secrets; print(secrets.token_urlsafe(48))') \
+#     docker compose -f deploy/compose.yml up --build
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: trip_planner
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-trip_planner}
+      POSTGRES_DB: trip_planner
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U trip_planner"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - trip-planner-db:/var/lib/postgresql/data
+
+  # The release step. Runs to completion before the app starts, which is the
+  # ordering the spec requires: migrations land before the new image takes traffic.
+  migrate:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    command: ["migrate"]
+    environment: &app_environment
+      DATABASE_URL: postgresql+psycopg://trip_planner:${POSTGRES_PASSWORD:-trip_planner}@db:5432/trip_planner
+      SESSION_SECRET: ${SESSION_SECRET:?set SESSION_SECRET — see the header of this file}
+      APP_BASE_URL: ${APP_BASE_URL:-http://localhost:8000}
+      ENVIRONMENT: ${ENVIRONMENT:-development}
+    depends_on:
+      db:
+        condition: service_healthy
+
+  app:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    command: ["serve"]
+    environment: *app_environment
+    ports:
+      - "8000:8000"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+volumes:
+  trip-planner-db:

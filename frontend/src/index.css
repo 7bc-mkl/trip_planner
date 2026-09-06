@@ -1,0 +1,26 @@
+/**
+ * index.css — the ordered import list, and nothing else.
+ *
+ * THE ORDER OF THESE IMPORTS IS THE CONTRACT. Every rule in the app resolves
+ * its conflicts by this order, so all of it lives here, in one place, and none
+ * of it may be reordered:
+ *
+ *   tokens      the vocabulary — custom properties only, no selector but :root
+ *   base        the element layer — reset, body, headings, links, focus ring
+ *   chrome      the header, the page grid, the dock
+ *   components  buttons, fields, chips, cards, rows, the item dialog
+ *   screens     the login card, the trip list, the timeline, the day detail
+ *
+ * `chrome.css` sits between `base` and `components`, exactly there — the chrome
+ * frames the page, so a component recipe must be able to override it, and a
+ * screen must be able to override both.
+ *
+ * Vite inlines `@import` at build time, so the shipped bundle is still one
+ * stylesheet; the imports have to stay the first statements in the file for the
+ * CSS to be valid, which is also why this file holds no rule of its own.
+ */
+@import './styles/tokens.css';
+@import './styles/base.css';
+@import './styles/chrome.css';
+@import './styles/components.css';
+@import './styles/screens.css';

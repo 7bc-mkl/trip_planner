@@ -1,0 +1,911 @@
+/**
+ * screens.css — the screen layer, imported last.
+ *
+ * A rule belongs here when it exists for exactly one screen: the login card,
+ * the trip list, the timeline's day boxes, the trip creator's stage rows, the
+ * day detail. Anything that could appear on a second screen is a component and
+ * lives in `components.css`, which is imported before this file.
+ *
+ * Rule order inside this file is the skeleton's original order from
+ * `index.css`, unchanged. Because every rule here is screen-scoped, moving the
+ * block after the component layer cannot change which declaration wins: the
+ * screen selectors either out-specify their component counterparts already or
+ * do not overlap with them at all.
+ */
+
+/* --- elevation, for the screen-scoped cards ---------------------------
+ *
+ * The same recipe `.elevation-1` carries in `components.css`, said once here
+ * for the cards that belong to exactly one screen: the login card, a trip row,
+ * and the creator's grouped field cards. It is repeated rather than joined onto
+ * the component selector list because a screen name in the component layer
+ * would undo the split this file exists for — and repeated once, not per card.
+ */
+
+.login form,
+.trip-list a,
+.field-card {
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--elevation-1);
+}
+
+/* The lift, on hover AND on focus — a trip row is a link, and a keyboard reader
+   reaches it without a pointer ever touching it. The other three cards are not
+   activatable and so do not move. */
+.trip-list a:hover,
+.trip-list a:focus-visible {
+  border-color: var(--hairline-strong);
+  box-shadow: var(--elevation-2);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .trip-list a {
+    transition:
+      border-color 150ms ease,
+      box-shadow 150ms ease;
+  }
+}
+
+/* --- /login --- */
+
+.login {
+  min-height: 100dvh;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  gap: var(--space-xl);
+  padding: var(--space-lg);
+}
+
+.login > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+}
+
+/* The wordmark, on a bare canvas rather than in the frosted band: one step up
+   from the chrome's `headline-sm` lockup, because here it is the page's own
+   `<h1>` and the only thing above the card. */
+.login > header h1 {
+  font: var(--type-headline-md);
+  letter-spacing: var(--tracking-headline-md);
+}
+
+/* The card. Centred in the second grid row rather than pinned to its top: the
+   design puts one card on the canvas and nothing else, and `1fr` grows with the
+   content, so a card taller than the row still cannot be clipped. */
+.login form {
+  width: min(26rem, 100%);
+  justify-self: center;
+  align-self: center;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  padding: var(--space-lg);
+}
+
+/* The card's `<h2>` declares nothing: `base.css` already binds it to the
+   design's `headline-lg`, which is the size this heading was hard-coding. */
+
+.login form p {
+  margin: 0;
+  color: var(--text-muted);
+  font: var(--type-body-md);
+  letter-spacing: var(--tracking-body-md);
+}
+
+.login label {
+  font: var(--type-label-lg);
+  letter-spacing: var(--tracking-label-lg);
+  margin-bottom: calc(var(--space-2xs) * -1);
+}
+
+/* The card's two inputs declare nothing of their own — they wear the field
+   recipe in `components.css`, `:user-invalid` and all, and the submit now wears
+   `.button-primary` (step 17: the duplicated primary declarations that used to
+   stand in for it here are gone). All this screen says is where it sits. */
+.login form .button-primary {
+  margin-top: var(--space-xs);
+}
+
+/* The failure message carries colour AND a border and its own text, so it is not
+   conveyed by colour alone. */
+.login [role='alert'] {
+  margin: 0;
+  padding: var(--space-sm);
+  border: 1px solid var(--danger);
+  border-radius: var(--radius-sm);
+  background: var(--danger-surface);
+  color: var(--danger);
+  font: var(--type-body-sm);
+  letter-spacing: var(--tracking-body-sm);
+}
+
+/* --- /trips --- */
+
+/* Adopted by analogy (Q10): `/trips` has no counterpart in the export, so each
+   row takes the card recipe the export uses everywhere else — elevation-1 at
+   `--radius-lg` (declared once at the top of this file), lifting to elevation-2
+   on hover AND on `:focus-visible`, because a row is a link a keyboard reaches
+   without a pointer ever touching it.
+   Deliberately NOT here: a `Shared` chip. PR #3 specifies one, but it is only
+   true when a share token exists, none can exist yet, and a chip that is never
+   true is a fabrication rather than a preview. */
+
+.trip-list {
+  display: grid;
+  gap: var(--space-sm);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Two parts: the naming block, and the readiness value pushed to the right
+   edge. It wraps rather than squeezes — at 360px "nothing arranged yet" is
+   longer than the room left beside a trip title, and a readiness value on its
+   own line is better than an ellipsed one. */
+.trip-list a {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-xs) var(--space-md);
+  padding: var(--space-lg);
+  color: inherit;
+  text-decoration: none;
+}
+
+/* `min-width: 0` plus a break opportunity anywhere: a flex item's automatic
+   minimum is its content, so an unbroken 60-character title would otherwise
+   widen the card until the page scrolls sideways. */
+.trip-list__text {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.trip-list h2 {
+  font: var(--type-headline-md);
+  letter-spacing: var(--tracking-headline-md);
+}
+
+.trip-list p {
+  margin: var(--space-2xs) 0 0;
+  color: var(--text-muted);
+  font: var(--type-body-sm);
+  letter-spacing: var(--tracking-body-sm);
+}
+
+/* The compact counter, right-aligned: `margin-left: auto` is what puts it at
+   the far edge whatever the title's length, and the reset of the component's
+   own top margin is what keeps it on the card's centre line. */
+.trip-list .readiness {
+  margin: 0 0 0 auto;
+  color: var(--text);
+  text-align: right;
+}
+
+/* --- /trips/new — the multi-stop creator -----------------------------
+ *
+ * The export's creator layout: an eyebrow / headline-xl title / body-lg
+ * subtitle heading, grouped field cards with hairline separators instead of the
+ * bordered `fieldset` the skeleton drew, a segmented route-mode control painted
+ * on the existing radio group, numbered stage cards, and the form-completing
+ * action full-width in the deepest tone.
+ *
+ * The form itself is no longer a card. Its GROUPS are the cards — that is what
+ * "grouped field cards" means — so `.trip-form` is a column of them and the
+ * elevation recipe at the top of this file names `.field-card`.
+ */
+
+/* The eyebrow. It renders in the shell's above-the-heading slot, so it is
+   scoped by the screen it appears on rather than by that slot's name — the
+   timeline puts a breadcrumb in the same place and must not inherit this. */
+.page__canvas:has(> .trip-form) > .page-eyebrow {
+  margin: 0 0 var(--space-2xs);
+  color: var(--text-muted);
+  font: var(--type-label-md);
+  letter-spacing: var(--tracking-label-md);
+  text-transform: uppercase;
+}
+
+/* The title at its full `headline-xl` size: `base.css` already binds `h1` to
+   that role, and this undoes the component layer's 1.75rem cap for this screen
+   only — the same `:has()` scoping the trip banner uses, and for the same
+   reason: the shell has no screen-specific hook and a paint job does not earn a
+   new prop. */
+.page__canvas:has(> .trip-form) > .page-heading {
+  margin-bottom: var(--space-xs);
+}
+
+.page__canvas:has(> .trip-form) > .page-heading h1 {
+  font: var(--type-headline-xl);
+  letter-spacing: var(--tracking-headline-xl);
+}
+
+.trip-form__subtitle {
+  margin: 0 0 var(--space-lg);
+  max-width: 46rem;
+  color: var(--text-muted);
+  font: var(--type-body-lg);
+  letter-spacing: var(--tracking-body-lg);
+}
+
+.trip-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+/* The group. Its surface, border, radius and shadow are elevation-1's, at the
+   top of this file. */
+.field-card {
+  margin: 0;
+  padding: var(--space-lg);
+}
+
+/* `fieldset` needs its user-agent minimum width defeated, or a long stage
+   field inside one refuses to shrink below its content. */
+fieldset.field-card {
+  min-width: 0;
+}
+
+.field-card legend {
+  padding: 0;
+  margin-bottom: var(--space-sm);
+  color: var(--text-muted);
+  font: var(--type-label-md);
+  letter-spacing: var(--tracking-label-md);
+  text-transform: uppercase;
+}
+
+.trip-form label {
+  display: block;
+  margin-bottom: var(--space-2xs);
+  font: var(--type-label-lg);
+  letter-spacing: var(--tracking-label-lg);
+}
+
+/* The creator's inputs wear the field recipe in `components.css`. */
+
+/* The hairline separator, between one field group and the next INSIDE a card —
+   never above the first, which is what the sibling combinator buys. */
+.field-card__row + .field-card__row {
+  margin-top: var(--space-md);
+  padding-top: var(--space-md);
+  border-top: 1px solid var(--hairline);
+}
+
+.trip-form .field-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-md);
+}
+
+.trip-form .field-row > div {
+  flex: 1 1 10rem;
+  min-width: 0;
+}
+
+/* The segmented control (spec step 22). PAINT ON A RADIO GROUP, exactly as the
+   filter bar's pills are: the markup is still a `<fieldset>` of three radios,
+   each inside its `<label>`, and deleting every rule below would leave a
+   working, announced, arrow-navigable radio group behind. The `<span>` is the
+   only addition — a paintable box for the `:checked` state, because a label
+   with a hidden input inside it has no other element to colour.
+   `label:has(:checked)` rather than `:checked + label`: the input is a child,
+   so there is no sibling to select. */
+.route-mode__options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2xs);
+  padding: var(--space-2xs);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+}
+
+.route-mode__options label {
+  position: relative;
+  flex: 1 1 10rem;
+  margin-bottom: 0;
+  cursor: pointer;
+}
+
+/* The radio is moved out of sight, NEVER out of the accessibility tree:
+   `display: none` would take it out of the tab order and out of the group. */
+.route-mode__options input[type='radio'] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.route-mode__options span {
+  display: block;
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--radius);
+  color: var(--text-muted);
+  font: var(--type-label-lg);
+  letter-spacing: var(--tracking-label-lg);
+  text-align: center;
+}
+
+/* The selected segment: a raised surface out of the sunken track. Colour is an
+   addition — the checked radio is the state a screen reader reads. */
+.route-mode__options label:has(:checked) span {
+  background: var(--surface);
+  color: var(--primary);
+  box-shadow: var(--elevation-1);
+}
+
+.route-mode__options label:hover:not(:has(:checked)) span {
+  color: var(--text);
+}
+
+/* The ring follows the hidden input onto the segment, so keyboard focus is
+   visible on the thing the reader can actually see. */
+.route-mode__options label:has(:focus-visible) span {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* Without `:has()`, undo the hiding rather than ship a segmented control with
+   no selected segment and no visible focus — the same fallback the filter bar
+   and the status choice carry, for the same reason. */
+@supports not selector(:has(*)) {
+  .route-mode__options input[type='radio'] {
+    position: static;
+    width: auto;
+    height: auto;
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .route-mode__options span {
+    transition:
+      background-color 150ms ease,
+      color 150ms ease,
+      box-shadow 150ms ease;
+  }
+}
+
+/* The route card's own fields sit below the segmented control, separated from
+   it by the same hairline every other group uses. */
+.route-mode .route-mode__options + .field-card__row {
+  margin-top: var(--space-md);
+  padding-top: var(--space-md);
+  border-top: 1px solid var(--hairline);
+}
+
+.trip-form .hint {
+  margin: 0 0 var(--space-md);
+  color: var(--text-muted);
+  font: var(--type-body-sm);
+  letter-spacing: var(--tracking-body-sm);
+}
+
+/* The numbered stage card, on the sunken tone so a card inside a card still
+   reads as nested without a second shadow. */
+.stage-card {
+  padding: var(--space-md);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+}
+
+.stage-card + .stage-card {
+  margin-top: var(--space-sm);
+}
+
+.stage-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-sm);
+}
+
+/* The ordinal badge. Decoration: it is `aria-hidden` in the markup because the
+   place field's label already carries the number. */
+.stage-card__number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: var(--radius-full);
+  background: var(--primary);
+  color: var(--on-primary);
+  font: var(--type-label-lg);
+  letter-spacing: var(--tracking-label-lg);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The remove control: the ghost recipe, compacted to an icon-and-word button.
+   Its name stays VISIBLE — the icon is an addition to the word, never a
+   replacement for it. */
+.stage-card__remove {
+  gap: var(--space-2xs);
+  min-height: 32px;
+  padding: var(--space-2xs) var(--space-xs);
+  border-color: transparent;
+  color: var(--danger);
+  font: var(--type-label-md);
+  letter-spacing: var(--tracking-label-md);
+}
+
+.stage-card__remove:hover:not(:disabled) {
+  border-color: var(--hairline);
+  background: var(--danger-surface);
+  color: var(--on-danger-surface);
+}
+
+.stage-card__fields {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: var(--space-sm);
+}
+
+@media (max-width: 767px) {
+  .stage-card__fields {
+    grid-template-columns: 1fr;
+  }
+}
+
+.stage-card__fields > div {
+  min-width: 0;
+}
+
+.stage-card [role='alert'] {
+  margin-bottom: 0;
+}
+
+/* The ghost "add stage", full-width beneath the last card so it reads as the
+   next row rather than as a second action competing with the submit. */
+.stages__add {
+  width: 100%;
+  margin-top: var(--space-sm);
+  border-style: dashed;
+}
+
+/* The form-completing action: full-width at the foot, on the `--primary-deep`
+   recipe from `components.css`. */
+.trip-form__submit {
+  width: 100%;
+}
+
+/* The live summary, now inside the dock's "trip at a glance" card. */
+.trip-form__summary {
+  margin: 0;
+  color: var(--text);
+  font: var(--type-body-md);
+  letter-spacing: var(--tracking-body-md);
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- /trips/:id — the trip banner ------------------------------------
+ *
+ * The export's dark header block, painted across the two elements the shell
+ * renders as siblings: `.page-heading` (the `<h1>` and the trip's own actions,
+ * owned by `AppShell`) and `.trip-banner` (the meta row and the readiness
+ * tile). They are JOINED rather than merged — the heading is not moved into the
+ * banner and the title is not duplicated into it, because a second copy of the
+ * trip name would be a second heading with the same accessible name.
+ *
+ * `:has()` is what scopes the heading half to this screen: the shell has no
+ * screen-specific hook, and a new prop for a background colour would be a
+ * component API change for a paint job. Where `:has()` is unsupported the
+ * heading simply stays on the canvas above a dark banner — degraded, never
+ * broken.
+ */
+
+.page__canvas:has(> .trip-banner) > .page-heading {
+  align-items: flex-start;
+  margin-bottom: 0;
+  padding: var(--space-lg) var(--space-lg) var(--space-sm);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  background: var(--primary-deep);
+  color: var(--on-primary);
+}
+
+/* The title: `display-lg`, which resolves to `display-lg-mobile` below 768px
+   through the token file, so nothing is restated here.
+
+   TWO LINES, THEN AN ELLIPSIS. `min-width: 0` and `overflow-wrap: anywhere`
+   are what stop a 60-character unbroken title from widening the flex row until
+   it pushes the delete action — and, below it, the readiness tile — off the
+   banner. The full title stays in the heading's `title` attribute. */
+.page__canvas:has(> .trip-banner) > .page-heading h1 {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  min-width: 0;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  font: var(--type-display-lg);
+  letter-spacing: var(--tracking-display-lg);
+}
+
+/* The focus ring on the heading half. `.on-dark` in `base.css` carries this for
+   the banner itself; the heading is the shell's element and cannot be given the
+   class from here, so the same override is repeated for its subtree — a
+   #0f3f6d ring on a #00294d fill is invisible. */
+.page__canvas:has(> .trip-banner) > .page-heading :focus-visible {
+  outline-color: var(--primary-fixed);
+}
+
+/* The delete action, on the dark fill. `--danger` (#ba1a1a) is 1.6:1 on
+   `--primary-deep` and unreadable there, so the action wears the design's
+   error-container tone instead: #ffdad6 on #00294d is 11.4:1, and it still
+   reads as danger rather than as chrome. The hover state is the recipe's own
+   pair from `components.css`. */
+.page__canvas:has(> .trip-banner) > .page-heading .button-danger {
+  flex: none;
+  border-color: var(--danger-surface);
+  color: var(--danger-surface);
+}
+
+.page__canvas:has(> .trip-banner) > .page-heading .button-danger:hover:not(:disabled) {
+  background: var(--danger-surface);
+  color: var(--on-danger-surface);
+}
+
+.trip-banner {
+  display: grid;
+  gap: var(--space-md);
+  margin-bottom: var(--space-lg);
+  padding: 0 var(--space-lg) var(--space-lg);
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+  background: var(--primary-deep);
+  color: var(--on-primary);
+}
+
+/* The readiness tile beside the meta row at ≥1280px, as the export's "STATUS
+   LOGISTYKI" tile sits; below that it drops onto its own row under the meta.
+   Explicit placement rather than flex wrapping, so the breakpoint is the
+   spec's and not whatever the title length happens to produce. */
+@media (min-width: 1280px) {
+  .trip-banner {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: end;
+  }
+}
+
+/* The meta row: the date range, the day count and the route summary. Each fact
+   is a `__meta-item` — an inline flex box with a gap, so a glyph can be put in
+   front of its text without moving anything. The slot is deliberately still
+   empty: step 6.1 shipped a sprite of the five item kinds and the two chevrons,
+   and a calendar or a route glyph would have had to be invented to fill it. The
+   box costs nothing and the row reads without one. */
+.trip-banner__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2xs) var(--space-md);
+  min-width: 0;
+  margin: 0;
+  color: var(--primary-fixed);
+  font: var(--type-body-md);
+  letter-spacing: var(--tracking-body-md);
+}
+
+.trip-banner__meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* The route is the fact the owner reads first, so it carries the full-strength
+   tone rather than the muted fixed one. */
+.trip-banner__meta-item--route {
+  color: var(--on-primary);
+  font-weight: 600;
+}
+
+/* The tile inside the banner: a translucent well rather than a second surface
+   colour, so it cannot drift from the fill it sits on. */
+.trip-banner .readiness {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2xs) var(--space-sm);
+  margin: 0;
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--on-primary) 10%, transparent);
+}
+
+.trip-banner .readiness__label {
+  flex-basis: 100%;
+  color: var(--primary-fixed);
+}
+
+.trip-banner .readiness__value,
+.trip-banner .readiness[data-nothing-tracked='true'] .readiness__value {
+  color: var(--on-primary);
+}
+
+/* The ring's unfilled track, on the dark fill: `--hairline` disappears into
+   #00294d, so the track is derived from the fill's own foreground instead. The
+   filled arc keeps the success tone it carries everywhere. */
+.trip-banner .readiness__ring {
+  /* The same initial value `.readiness__ring` declares in `components.css`, on
+     the same element. It is restated because the token check is scope-aware —
+     a `var()` resolves against `tokens.css` or against its own file, and
+     nothing else — and because a default that lives only in the other file is a
+     dependency this rule cannot see. The component sets the real arc inline. */
+  --readiness-arc: 0turn;
+
+  background: conic-gradient(
+    var(--success) 0 var(--readiness-arc),
+    color-mix(in srgb, var(--on-primary) 25%, transparent) var(--readiness-arc) 1turn
+  );
+}
+
+/* --- /trips/:id — the dock ------------------------------------------- */
+
+.trip-dock {
+  display: contents;
+}
+
+/* Below 1280px the dock is a horizontal strip above the canvas (`chrome.css`),
+   so each block is a card that can sit beside its neighbours; at the split it
+   stacks in the column. */
+.trip-dock__block {
+  flex: 1 1 14rem;
+  min-width: 0;
+  padding: var(--space-md);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--elevation-1);
+}
+
+.trip-dock__block h2 {
+  margin-bottom: var(--space-xs);
+  color: var(--text-muted);
+  font: var(--type-label-md);
+  letter-spacing: var(--tracking-label-md);
+  text-transform: uppercase;
+}
+
+.trip-dock__list {
+  margin: 0;
+}
+
+.trip-dock__entry {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2xs) var(--space-sm);
+  padding: var(--space-2xs) 0;
+}
+
+.trip-dock__entry + .trip-dock__entry {
+  border-top: 1px solid var(--hairline);
+}
+
+.trip-dock__entry dt {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font: var(--type-label-lg);
+  letter-spacing: var(--tracking-label-lg);
+}
+
+.trip-dock__entry dd {
+  margin: 0;
+  color: var(--text-muted);
+  font: var(--type-body-sm);
+  letter-spacing: var(--tracking-body-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.trip-dock__route {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font: var(--type-body-sm);
+  letter-spacing: var(--tracking-body-sm);
+}
+
+/* --- /trips/:id — the timeline rail ----------------------------------
+ *
+ * The structural change of the spec: a day stops being a bordered box holding
+ * an unrailed list and becomes a dated anchor beside a continuous track, with
+ * one card per item hanging off it. It is the genre's convention — every
+ * itinerary product benchmarked draws exactly this — and the box was ours.
+ *
+ * THE TRACK BELONGS TO THE LIST, NOT TO THE DAY. It is one absolutely
+ * positioned line on `.timeline`, so on a fifteen-day trip with items on three
+ * of them the rail runs continuously between the sparse days instead of
+ * restarting per day and leaving the reader with a dotted ladder.
+ */
+
+.timeline {
+  position: relative;
+  display: grid;
+  gap: var(--space-lg);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.timeline::before {
+  content: '';
+  position: absolute;
+  top: var(--space-xs);
+  bottom: var(--space-xs);
+  left: var(--timeline-track-offset);
+  width: 1.5px;
+  background: var(--hairline);
+}
+
+/* Two columns: the anchor in the first, everything the day holds in the second.
+   The first track is exactly `--timeline-track-offset` wide, so the line above
+   runs down its right edge and the cards begin one gutter clear of it. */
+.timeline__day {
+  display: grid;
+  grid-template-columns: var(--timeline-track-offset) minmax(0, 1fr);
+  column-gap: var(--space-lg);
+}
+
+/* The anchor. `align-self: start` is what lets a grid item stick at all. */
+.timeline__anchor {
+  z-index: 4;
+  align-self: start;
+  background: var(--canvas);
+}
+
+/* IT STICKS ONLY WHERE THE FILTER BAR IS DEMONSTRABLY ONE ROW TALL.
+ *
+ * The anchor offsets by `--filter-bar-height` through the same custom property
+ * the bar sets its own height from, so the two cannot drift — but that only
+ * holds while the bar is a single row. Between 768px (where the bar turns
+ * sticky) and roughly 900px the Polish labels wrap it to two rows, 88px
+ * measured, and no fixed offset can clear a height the content decides. The
+ * bar's `z-index: 5` beats the anchor's 4, so there the date and its link
+ * simply disappeared under the bar while scrolling — exactly when the anchor is
+ * wanted.
+ *
+ * 900px is the narrowest width at which the bar was measured at one row (56px)
+ * in both locales, and it only gets roomier above that. Below it the anchor
+ * scrolls with its day, which is what it did on phones already: a covered
+ * anchor is worse than a scrolled one. */
+@media (min-width: 900px) {
+  .timeline__anchor {
+    position: sticky;
+    top: calc(var(--header-height) + var(--filter-bar-height));
+  }
+}
+
+.timeline__anchor-link {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2xs);
+  padding: var(--space-2xs) 0;
+  color: inherit;
+  text-decoration: none;
+}
+
+.timeline__anchor-month {
+  color: var(--text-muted);
+  font: var(--type-label-sm);
+  letter-spacing: var(--tracking-label-sm);
+  text-transform: uppercase;
+}
+
+.timeline__anchor-day {
+  font: var(--type-headline-md);
+  letter-spacing: var(--tracking-headline-md);
+  font-variant-numeric: tabular-nums;
+}
+
+.timeline__day-body {
+  min-width: 0;
+  padding-bottom: var(--space-xs);
+}
+
+.timeline__stages {
+  margin: 0 0 var(--space-xs);
+  color: var(--text-muted);
+  font: var(--type-label-lg);
+  letter-spacing: var(--tracking-label-lg);
+}
+
+/* The invitation on an empty day: still on the rail, still a card-shaped place
+   for the first item rather than a gap in the plan. */
+.timeline__empty-day {
+  margin: 0;
+  padding: var(--space-sm) var(--space-md);
+  border: 1px dashed var(--hairline);
+  border-radius: var(--radius-lg);
+  color: var(--text-muted);
+  font: var(--type-body-sm);
+  letter-spacing: var(--tracking-body-sm);
+}
+
+/* --- the day detail ---------------------------------------------------
+ *
+ * The export's day heading: a breadcrumb, the derived stage as an eyebrow, and
+ * the date itself at `headline-xl`. Both lines above the heading ride the
+ * shell's single existing slot as siblings — see `DayDetailPage` for why that
+ * is preferable to a fourth prop on a component four screens share.
+ *
+ * The screen hook is `:has(> .day-nav)`, the same `:has()` scoping the trip
+ * banner and the creator use: the shell offers no screen-specific class, and a
+ * paint job does not earn a new prop.
+ */
+
+/* The eyebrow: the day's derived stage, immediately above the date it belongs
+   to. Same treatment as the creator's eyebrow — this is the export's one
+   eyebrow style, not two. */
+.day-stages {
+  margin: 0 0 var(--space-2xs);
+  color: var(--text-muted);
+  font: var(--type-label-md);
+  letter-spacing: var(--tracking-label-md);
+  text-transform: uppercase;
+}
+
+.page__canvas:has(> .day-nav) > .page-heading {
+  margin-bottom: var(--space-md);
+}
+
+/* The date at its full `headline-xl` size, undoing the component layer's
+   1.75rem cap for this screen only. */
+.page__canvas:has(> .day-nav) > .page-heading h1 {
+  font: var(--type-headline-xl);
+  letter-spacing: var(--tracking-headline-xl);
+}
+
+.day-nav {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-md);
+  margin-bottom: var(--space-md);
+  padding-bottom: var(--space-md);
+  border-bottom: 1px solid var(--hairline);
+}
+
+/* The two controls wear the ghost recipe from `components.css`; this adds only
+   the glyph gap and undoes the link underline. */
+.day-nav__link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  min-height: 40px;
+  padding: var(--space-xs) var(--space-sm);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius);
+  font: var(--type-label-lg);
+  letter-spacing: var(--tracking-label-lg);
+  text-decoration: none;
+}
+
+/* The chevron, `aria-hidden` in the markup and smaller than the `.icon`
+   default: the control's VISIBLE name is the word beside it, so the glyph is
+   the quieter half of the pair. */
+.day-nav__icon {
+  width: 1rem;
+  height: 1rem;
+}
+
+/* Disabled rather than hidden: the trip's first and last days should look like
+   boundaries, not like a navigator that lost half its controls. A missing
+   control teaches nothing; a dimmed one says "this is the first day". */
+.day-nav__disabled {
+  color: var(--text-muted);
+  opacity: 0.5;
+  cursor: not-allowed;
+}

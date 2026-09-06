@@ -28,7 +28,7 @@ Do not report a finding the tooling already catches — `ruff` and `npm run type
 ## 2. Security
 
 - **No secrets in the diff.** API keys, tokens, connection strings, and `.env` content never land in the repository. A credential-looking string in a diff is a blocker, and rotating it is part of the fix — deleting the line is not enough once it is pushed.
-- Every external input is validated at the boundary before it reaches domain logic. TODO: name the validation library and the shared pattern once chosen.
+- Every external input is validated at the boundary before it reaches domain logic. The library is **Pydantic v2**, and the shared pattern is a request model per endpoint with `model_config = ConfigDict(extra="forbid")`, so an unknown field is a `422` rather than a silently dropped typo. Domain functions take already-validated values; a handler that passes raw request data into `domain/` is a finding.
 - Authorization is checked per resource, not per route. A trip belongs to a user; reading, editing, or sharing it must verify that ownership at the point of access.
 - User-supplied content rendered in React must not use `dangerouslySetInnerHTML` without an explicit, reviewed sanitization step.
 - Outbound calls to third-party APIs (maps, places, weather, LLM providers) must not forward more user data than the feature needs. Flag anything that sends personal data to a new destination — that is a product decision, not an implementation detail.
