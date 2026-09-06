@@ -644,21 +644,55 @@ textarea:disabled {
   color: var(--on-danger-surface);
 }
 
-/* --- the filter bar --- */
+/* --- the filter bar (the export's day-selector pills) -----------------
+ *
+ * THE PILLS ARE PAINT ON A RADIO GROUP. The markup is untouched: a `<fieldset>`
+ * with a `<legend>` and two `<input type="radio">`, each inside its `<label>`.
+ * The bar is announced as one control with two options, arrow keys still move
+ * between them, and nothing here would survive as a control if every rule below
+ * were deleted — which is the test that says a pill is styling and not a
+ * rebuild.
+ *
+ * `label:has(:checked)` rather than the spec's shorthand `:checked + label`:
+ * the radio sits *inside* its label in the existing markup, so there is no
+ * sibling to select. Rewriting the pair into `id`/`for` siblings would be a
+ * markup change made for a background colour.
+ *
+ * The bar's own height is `--filter-bar-height`, the token the day anchors
+ * offset by — 8px + a 36px pill + 8px, exactly as that token's comment derives
+ * it — so the two sticky layers cannot drift apart.
+ */
 
 .filter-bar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-sm) var(--space-md);
+  gap: var(--space-xs) var(--space-md);
+  min-height: var(--filter-bar-height);
   margin-bottom: var(--space-md);
-  padding: var(--space-sm);
+  padding: var(--space-xs) var(--space-sm);
+}
+
+/* Sticky beneath the header from 768px up. On a fifteen-day trip the filter
+   currently scrolls away exactly when it is most wanted.
+   BELOW 768px IT IS NOT STICKY: three sticky layers on a short phone viewport
+   would leave almost nothing for the plan itself, and a phone gives up the
+   filter before it gives up the plan. `z-index` sits below the header's 20 and
+   above the day anchors' 4, which is the order they overlap in. */
+@media (min-width: 768px) {
+  .filter-bar {
+    position: sticky;
+    top: var(--header-height);
+    z-index: 5;
+  }
 }
 
 .filter-bar__filters {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-sm);
+  gap: var(--space-xs);
+  min-width: 0;
   margin: 0;
   padding: 0;
   border: none;
@@ -669,18 +703,72 @@ textarea:disabled {
   margin-right: var(--space-sm);
   padding: 0;
   color: var(--text-muted);
-  font-size: 0.8125rem;
-  font-weight: 600;
+  font: var(--type-label-md);
+  letter-spacing: var(--tracking-label-md);
+  text-transform: uppercase;
 }
 
+/* The ghost pill: a hairline boundary on the surface, the muted tone for its
+   label. */
 .filter-bar__filters label {
+  position: relative;
   display: inline-flex;
   align-items: center;
   gap: var(--space-2xs);
-  font-size: 0.875rem;
+  min-height: 36px;
+  padding: var(--space-xs) var(--space-md);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-full);
+  background: var(--surface);
+  color: var(--text-muted);
+  font: var(--type-label-lg);
+  letter-spacing: var(--tracking-label-lg);
+  cursor: pointer;
 }
 
-/* Counts, not controls — they are not buttons and must not look like them. */
+/* The radio is moved out of sight, NEVER out of the accessibility tree:
+   `display: none` or `visibility: hidden` would take it out of the tab order
+   and out of the radio group, which is the whole contract. */
+.filter-bar__filters input[type='radio'] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.filter-bar__filters label:has(:checked) {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: var(--on-primary);
+}
+
+/* The ring follows the hidden input onto the pill, so keyboard focus is visible
+   on the thing the reader can actually see. */
+.filter-bar__filters label:has(:focus-visible) {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.filter-bar__filters label:hover:not(:has(:checked)) {
+  background: var(--surface-sunken);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .filter-bar__filters label {
+    transition:
+      background-color 150ms ease,
+      border-color 150ms ease,
+      color 150ms ease;
+  }
+}
+
+/* Counts, not controls — they are not buttons and must not look like them.
+   They wear the draft-badge recipe: the same triple the draft status chip
+   uses, which is the design's own "quiet count" treatment. */
 .filter-bar__chips {
   display: flex;
   flex-wrap: wrap;
@@ -692,11 +780,13 @@ textarea:disabled {
 
 .kind-chip {
   padding: var(--space-2xs) var(--space-xs);
-  border-radius: 999px;
-  background: var(--canvas);
-  color: var(--text-muted);
-  font-size: 0.75rem;
-  font-weight: 600;
+  border: 1px solid var(--status-draft-border);
+  border-radius: var(--radius-full);
+  background: var(--status-draft-bg);
+  color: var(--status-draft-text);
+  font: var(--type-label-sm);
+  letter-spacing: var(--tracking-label-sm);
+  white-space: nowrap;
 }
 
 /* --- the confirmation dialog --- */

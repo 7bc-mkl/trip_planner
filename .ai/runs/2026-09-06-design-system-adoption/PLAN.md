@@ -33,7 +33,7 @@
 | 4 | 4.1 | `/login` and `/trips` restyled (spec step 17) | dispatch | done | pending |
 | 4 | 4.2 | The trip banner on `/trips/:id` (spec step 18) | group:D | done | pending |
 | 4 | 4.3 | The readiness ring behind the optional `ring` prop (spec step 19) | group:D | done | pending |
-| 4 | 4.4 | The sticky pill filter bar (spec step 20) | group:D | todo | — |
+| 4 | 4.4 | The sticky pill filter bar (spec step 20) | group:D | done | pending |
 | 4 | 4.5 | The timeline rail, day anchors and item cards (spec step 21) | group:D | todo | — |
 | 4 | 4.6 | `/trips/new` — the multi-stop creator (spec step 22) | dispatch | todo | — |
 | 4 | 4.7 | `/trips/:id/days/:date` — the day detail (spec step 23) | dispatch | todo | — |
