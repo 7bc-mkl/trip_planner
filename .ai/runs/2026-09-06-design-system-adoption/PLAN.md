@@ -29,7 +29,7 @@
 | 3 | 3.1 | Rebuild the header in `styles/chrome.css` and `AppShell` (spec step 13) | group:C | done | pending |
 | 3 | 3.2 | The optional `context` prop on trip-scoped routes (spec step 14) | group:C | done | pending |
 | 3 | 3.3 | The optional `dock` prop and the responsive page grid (spec step 15) | group:C | done | pending |
-| 3 | 3.4 | Phase-3 screenshot set, including 360px (spec step 16) | inline | todo | — |
+| 3 | 3.4 | Phase-3 screenshot set, including 360px (spec step 16) | inline | done | pending |
 | 4 | 4.1 | `/login` and `/trips` restyled (spec step 17) | dispatch | todo | — |
 | 4 | 4.2 | The trip banner on `/trips/:id` (spec step 18) | group:D | todo | — |
 | 4 | 4.3 | The readiness ring behind the optional `ring` prop (spec step 19) | group:D | todo | — |
