@@ -50,8 +50,11 @@ from tests.test_domain_uploads import (
 )
 from tests.test_items_api import DAY, add_item
 from tests.test_trips_api import TRIPS, create, error_code
+from trip_planner.api import attachments as attachments_module
+from trip_planner.api.attachments import MAX_BODY_BYTES, MAX_PARTS, parse_single_file_part
 from trip_planner.db.models import Attachment, AttachmentBlob, Owner, Trip
 from trip_planner.domain.uploads import MAX_ATTACHMENT_BYTES
+from trip_planner.errors import ApiError, ErrorCode
 from trip_planner.security.quota import UploadQuota, get_upload_quota, set_upload_quota
 
 BOUNDARY = "----trip-planner-test-boundary"
@@ -104,10 +107,18 @@ def multipart_body(parts: list[tuple[str, bytes, str | None]]) -> bytes:
     return b"".join(chunks)
 
 
+def pdf_of_exactly(size: int) -> bytes:
+    """A valid PDF padded to `size` bytes exactly, for testing the cap's edges."""
+    base = make_pdf()
+    padding = b"%" + b"a" * (size - len(base) - 2)
+    padded = base.replace(b"trailer", padding + b"\ntrailer")
+    assert len(padded) == size, "the padding arithmetic, not the code under test"
+    return padded
+
+
 def oversized_pdf() -> bytes:
     """A PDF one byte past the per-file cap. Valid, and refused for its size alone."""
-    padding = b"%" + b"a" * (MAX_ATTACHMENT_BYTES - len(make_pdf()))
-    return make_pdf().replace(b"trailer", padding + b"\ntrailer")
+    return pdf_of_exactly(MAX_ATTACHMENT_BYTES + 1)
 
 
 class TestUploadingToADay:
@@ -231,10 +242,45 @@ class TestRefusals:
         assert db_session.query(Attachment).count() == 0
         assert db_session.query(AttachmentBlob).count() == 0
 
-    def test_a_declared_length_over_the_cap_is_refused(
+    def test_a_file_one_byte_over_the_cap_is_refused(
         self, signed_in_client: TestClient, trip: dict
     ) -> None:
         response = upload(signed_in_client, day_attachments_url(trip), oversized_pdf())
+
+        assert response.status_code == 413
+        assert error_code(response) == "attachment_too_large"
+
+    def test_a_file_of_exactly_the_cap_is_stored(
+        self, signed_in_client: TestClient, trip: dict, db_session: OrmSession
+    ) -> None:
+        """The documented limit is inclusive, and the test above it is the first refusal.
+
+        The body carries the multipart envelope as well as the file, so bounding
+        the *body* at the per-file cap refused a file of exactly 10 MB while
+        quoting 10 MB back at the client — and made
+        `ck_attachment_byte_size`'s `byte_size <= 10485760` unreachable by any
+        code path. This is the path that reaches it.
+        """
+        data = pdf_of_exactly(MAX_ATTACHMENT_BYTES)
+
+        response = upload(signed_in_client, day_attachments_url(trip), data)
+
+        assert response.status_code == 201, response.text
+        assert response.json()["byte_size"] == MAX_ATTACHMENT_BYTES
+
+        stored = db_session.get(Attachment, uuid.UUID(response.json()["id"]))
+        assert stored is not None
+        assert stored.byte_size == MAX_ATTACHMENT_BYTES
+
+    def test_a_declared_length_past_the_body_bound_is_refused(
+        self, signed_in_client: TestClient, trip: dict
+    ) -> None:
+        """The pre-read half of the memory control, on the body rather than the file."""
+        response = signed_in_client.post(
+            day_attachments_url(trip),
+            content=b"x" * (MAX_BODY_BYTES + 1),
+            headers={"content-type": MULTIPART_CONTENT_TYPE},
+        )
 
         assert response.status_code == 413
         assert error_code(response) == "attachment_too_large"
@@ -310,6 +356,71 @@ class TestTheOneFilePartRule:
         self, signed_in_client: TestClient, trip: dict
     ) -> None:
         body = multipart_body([("file", make_pdf(), "one.pdf"), ("caption", b"x" * 200, None)])
+
+        response = signed_in_client.post(
+            day_attachments_url(trip),
+            content=body,
+            headers={"content-type": MULTIPART_CONTENT_TYPE},
+        )
+
+        assert response.status_code == 201, response.text
+
+
+class TestThePartCountIsBoundedByTheParser:
+    """The part count is the parser's limit, not a count taken after it finished.
+
+    `read_body` bounds the *bytes*; nothing bounded the objects built out of
+    them. A 10 MB body of empty parts is over a million `_Part`s, each with its
+    own `bytearray` — ~145 MB resident before the post-hoc "exactly one `file`
+    part" check answered `422`. The measurement that matters is therefore how
+    many parts were *built*, not what the request answered: the answer was
+    already right.
+    """
+
+    def test_far_fewer_parts_are_built_than_the_body_submits(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        submitted = 20_000
+        body = multipart_body([("x", b"", None)] * submitted)
+        built = 0
+        real_part = attachments_module._Part
+
+        def counting_part() -> object:
+            nonlocal built
+            built += 1
+            return real_part()
+
+        monkeypatch.setattr(attachments_module, "_Part", counting_part)
+
+        with pytest.raises(ApiError) as raised:
+            parse_single_file_part(MULTIPART_CONTENT_TYPE, body)
+
+        assert raised.value.code is ErrorCode.MALFORMED_UPLOAD
+        assert built == MAX_PARTS, "the parse must stop at the bound, not run to the end"
+        assert built < submitted / 1000
+
+    def test_a_body_of_many_parts_is_malformed_at_the_endpoint(
+        self, signed_in_client: TestClient, trip: dict
+    ) -> None:
+        body = multipart_body([("file", make_pdf(), "one.pdf")] + [("x", b"", None)] * 20_000)
+
+        response = signed_in_client.post(
+            day_attachments_url(trip),
+            content=body,
+            headers={"content-type": MULTIPART_CONTENT_TYPE},
+        )
+
+        assert response.status_code == 422
+        assert error_code(response) == "malformed_upload"
+
+    def test_the_bound_leaves_room_for_a_clients_stray_fields(
+        self, signed_in_client: TestClient, trip: dict
+    ) -> None:
+        """`MAX_PARTS` is not "refuse the second part" — a few stray fields still upload."""
+        assert MAX_PARTS >= 4
+        body = multipart_body(
+            [("file", make_pdf(), "one.pdf")] + [(f"f{n}", b"v", None) for n in range(3)]
+        )
 
         response = signed_in_client.post(
             day_attachments_url(trip),

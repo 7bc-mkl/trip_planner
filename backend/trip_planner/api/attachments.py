@@ -43,6 +43,17 @@ threads at once because each of those hops is awaited to completion before the
 next begins, and `get_db`'s commit — the point at which the lock is released —
 is itself run in a threadpool by FastAPI's dependency teardown.
 
+**The bound that remains, named so the next reader does not have to re-derive
+it.** An upload waiting on `pg_advisory_xact_lock` holds one anyio worker
+thread, and that threadpool is shared with every sync endpoint in the
+application. So enough concurrent uploads *to one trip* — the only requests that
+serialise on that lock — occupy worker threads and slow unrelated sync requests
+while they queue. This **drains** rather than wedging: every waiter is released
+by the previous transaction's commit, which no longer needs the event loop, so
+the queue always empties. A dedicated semaphore would buy a second queue to
+reason about and a second place to deadlock, for a workload (one owner, one
+trip, a handful of files) nowhere near the bound. Left as is, deliberately.
+
 The multipart bytes are then parsed **in memory** by `python-multipart`'s own
 low-level parser — the same parser Starlette uses, driven directly so that no
 `UploadFile` and no spooled file exists at any point.
@@ -101,6 +112,38 @@ FILE_PART_NAME = b"file"
 #: parsing rather than to a fully-built value.
 MAX_FIELD_BYTES = 200
 
+#: How many parts the parser will build before it stops, refusing the request.
+#:
+#: The spec puts this control on "the multipart parser's own limits, not a
+#: post-hoc check", and the distinction is measurable rather than stylistic: a
+#: 10 MB body of empty parts is over a million parts, each of which is a `_Part`
+#: with its own `bytearray`, so counting the `file` parts *after* `finalize()`
+#: costs ~145 MB of resident memory before answering `422`. `read_body` bounds
+#: the bytes; nothing bounded the objects built out of them. Checked from
+#: `on_part_begin`, so the parse **stops** at the bound instead of completing.
+#:
+#: Eight rather than two: the one-part rule is about *`file`* parts, and a small
+#: stray field alongside the file is accepted, not refused (see
+#: `test_a_field_value_within_the_cap_is_ignored_not_refused`). Eight leaves room
+#: for a client's incidental fields and is still four orders of magnitude below
+#: what a 10 MB body can otherwise allocate.
+MAX_PARTS = 8
+
+#: How much multipart envelope is allowed *on top of* the per-file cap.
+#:
+#: `MAX_ATTACHMENT_BYTES` is a limit on the **file**, but the body carries the
+#: boundary, the part headers and any small fields as well — 150–250 bytes for a
+#: plain one-part upload. Bounding the body at the file cap therefore refused a
+#: file of exactly 10 MB while telling the client it was over 10 MB, and left
+#: `ck_attachment_byte_size`'s `byte_size <= 10485760` unreachable. The real
+#: per-file limit is the **counted length of the `file` part** (`_receive`); this
+#: allowance only keeps the body bound from cutting into it. Sized for
+#: `MAX_PARTS` parts of headers plus a long filename, with room to spare.
+MAX_MULTIPART_ENVELOPE_BYTES = 4096
+
+#: The bound `read_body` applies to the whole body. Not itself a per-file limit.
+MAX_BODY_BYTES = MAX_ATTACHMENT_BYTES + MAX_MULTIPART_ENVELOPE_BYTES
+
 
 def _refuse(rejection: UploadRejection | QuotaRejection) -> ApiError:
     """Turn a domain or quota rejection into the API error carrying its code.
@@ -143,21 +186,27 @@ class UploadedFile:
 
 
 async def read_body(request: Request) -> bytes:
-    """The request body, in memory, refused the moment it passes the per-file cap.
+    """The request body, in memory, refused the moment it passes `MAX_BODY_BYTES`.
 
-    Both halves of the spec's per-file limit live here: `Content-Length` is
-    refused *before a byte is read*, and the bytes are counted *while* they are
-    read, because a chunked request can lie about or omit its length. Neither
-    check alone is the limit.
+    Both halves of the *memory* control live here: `Content-Length` is refused
+    *before a byte is read*, and the bytes are counted *while* they are read,
+    because a chunked request can lie about or omit its length. Neither check
+    alone bounds the memory.
+
+    Both are applied to `MAX_BODY_BYTES`, not to `MAX_ATTACHMENT_BYTES`: what is
+    read is the file **plus its multipart envelope**, and charging the envelope
+    to the file's budget would refuse a file of exactly the documented size while
+    quoting that size back at the client. The per-file limit is enforced on the
+    counted length of the parsed `file` part instead — see `_receive`.
     """
     declared = request.headers.get("content-length")
-    if declared is not None and declared.isdigit() and int(declared) > MAX_ATTACHMENT_BYTES:
+    if declared is not None and declared.isdigit() and int(declared) > MAX_BODY_BYTES:
         raise ApiError(ErrorCode.ATTACHMENT_TOO_LARGE, field="file")
 
     body = bytearray()
     async for chunk in request.stream():
         body += chunk
-        if len(body) > MAX_ATTACHMENT_BYTES:
+        if len(body) > MAX_BODY_BYTES:
             # Abandoned mid-stream rather than after the fact: the remaining
             # bytes are never accumulated, so the memory a hostile caller can
             # make this process hold is bounded by the cap and not by the body.
@@ -185,6 +234,12 @@ def parse_single_file_part(content_type_header: str, body: bytes) -> UploadedFil
     header_value = bytearray()
 
     def on_part_begin() -> None:
+        if len(parts) >= MAX_PARTS:
+            # Raised *out of* the parser, so `parser.write` never returns and the
+            # remaining parts are neither scanned nor allocated. A check after
+            # `finalize()` would answer the same `422` having already built one
+            # `_Part` per part in the body — see `MAX_PARTS`.
+            raise ApiError(ErrorCode.MALFORMED_UPLOAD, field="file")
         parts.append(_Part())
 
     def on_header_field(data: bytes, start: int, end: int) -> None:
@@ -319,7 +374,17 @@ async def _receive(request: Request, db: OrmSession, owner: Owner) -> UploadedFi
         raise _refuse(rejection)
 
     body = await read_body(request)
-    return parse_single_file_part(request.headers.get("content-type", ""), body)
+    upload = parse_single_file_part(request.headers.get("content-type", ""), body)
+
+    # The per-file cap, on the file: the counted length of the `file` part, with
+    # no envelope charged to it. `read_body` bounded the memory; this is the
+    # limit the error message names and the one `ck_attachment_byte_size`
+    # repeats, which is why a file of exactly `MAX_ATTACHMENT_BYTES` reaches the
+    # database instead of being refused a few hundred bytes early.
+    if len(upload.data) > MAX_ATTACHMENT_BYTES:
+        raise ApiError(ErrorCode.ATTACHMENT_TOO_LARGE, field="file")
+
+    return upload
 
 
 @router.post(

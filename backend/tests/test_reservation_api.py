@@ -224,6 +224,11 @@ class TestRefusedValues:
         [
             ("-1.00", "PLN"),  # a negative price
             ("10.101", "PLN"),  # a third decimal the column cannot hold
+            # A magnitude the column cannot hold: `NUMERIC(12,2)` stops just
+            # below 10^10. Unbounded, this was a driver-level `DataError` —
+            # an unhandled 500, not this 422.
+            ("12345678901.00", "PLN"),
+            ("10000000000.00", "PLN"),  # one cent past the largest storable amount
             ("249.00", "pln"),  # lower case: refused, never upper-cased
             ("249.00", "ZLOTY"),  # not ISO 4217's shape
         ],

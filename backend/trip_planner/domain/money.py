@@ -36,7 +36,14 @@ import re
 from decimal import Decimal
 from enum import StrEnum
 
-__all__ = ["CURRENCY_CODE_PATTERN", "MAX_COST_DECIMAL_PLACES", "CostRejection", "validate_cost"]
+__all__ = [
+    "CURRENCY_CODE_PATTERN",
+    "MAX_COST_AMOUNT",
+    "MAX_COST_DECIMAL_PLACES",
+    "MAX_COST_DIGITS",
+    "CostRejection",
+    "validate_cost",
+]
 
 #: ISO 4217's shape: three upper-case letters, nothing else. Not an allow-list —
 #: see the module docstring for why one is not wanted.
@@ -47,13 +54,29 @@ CURRENCY_CODE_PATTERN = re.compile(r"^[A-Z]{3}$")
 #: stated before the insert rather than after it.
 MAX_COST_DECIMAL_PLACES = 2
 
+#: The other half of `NUMERIC(12,2)` — its *precision*. Twelve significant
+#: digits, two of which are the cents, so the largest storable amount is
+#: `9999999999.99`. Both halves of the column definition are stated here, once,
+#: because a magnitude the column cannot hold is exactly the same class of fact
+#: as a third decimal place: refused before the insert rather than raised by the
+#: driver as a `DataError` after it, which the API layer would answer `500`.
+MAX_COST_DIGITS = 12
+
+#: The inclusive upper bound `MAX_COST_DIGITS` and `MAX_COST_DECIMAL_PLACES`
+#: imply: `10 ** (12 - 2) - 0.01`. Derived, not typed out, so the two constants
+#: above stay the only place `NUMERIC(12,2)` is written down.
+MAX_COST_AMOUNT = Decimal(10) ** (MAX_COST_DIGITS - MAX_COST_DECIMAL_PLACES) - Decimal(
+    10
+) ** -MAX_COST_DECIMAL_PLACES
+
 
 class CostRejection(StrEnum):
     """Why a cost was refused. The value is the wire code Step 1.5 maps it to."""
 
     #: Any of: the two halves were not both present or both absent; the amount
     #: is negative; the amount has more than `MAX_COST_DECIMAL_PLACES` decimal
-    #: digits; or the currency does not match `CURRENCY_CODE_PATTERN`. The spec's
+    #: digits; the amount is larger than `MAX_COST_AMOUNT`; or the currency does
+    #: not match `CURRENCY_CODE_PATTERN`. The spec's
     #: Edge Cases table does not split these into separate wire codes, so neither
     #: does this module.
     INVALID_COST = "invalid_cost"
@@ -86,7 +109,15 @@ def validate_cost(
     3. **At most two decimal places.** Three decimals is not a rounding
        question, it is a value the `NUMERIC(12,2)` column two steps from here
        cannot hold.
-    4. **ISO-4217 shape.** `^[A-Z]{3}$`, checked last so a badly-shaped
+    4. **At most `MAX_COST_AMOUNT`.** The column's *precision*, the same fact
+       from the other end: `12345678901.00` is as unstorable as `10.101`, and
+       without this rule PostgreSQL answers it with a `numeric field overflow`
+       `DataError` — an unhandled `500`, not the `422 invalid_cost` the Edge
+       Cases table promises, with the failed statement poisoning the session for
+       the rest of the request. `ItemUpdate` deliberately omits `max_digits` so
+       that this is the one place the bound is written; that only works if the
+       bound is actually written here.
+    5. **ISO-4217 shape.** `^[A-Z]{3}$`, checked last so a badly-shaped
        currency does not also have to have a well-formed amount to be reported.
     """
     if (cost_amount is None) != (cost_currency is None):
@@ -100,6 +131,9 @@ def validate_cost(
 
     exponent = cost_amount.as_tuple().exponent
     if not isinstance(exponent, int) or exponent < -MAX_COST_DECIMAL_PLACES:
+        return CostRejection.INVALID_COST
+
+    if cost_amount > MAX_COST_AMOUNT:
         return CostRejection.INVALID_COST
 
     if CURRENCY_CODE_PATTERN.fullmatch(cost_currency) is None:

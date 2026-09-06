@@ -273,10 +273,32 @@ def _check_jpeg(data: bytes) -> InspectedUpload | UploadRejection:
         return UploadRejection.MALFORMED_UPLOAD
     if not data.endswith(_JPEG_EOI):
         return UploadRejection.MALFORMED_UPLOAD
+    rejection = _check_dimensions(*dimensions)
+    if rejection is not None:
+        return rejection
     width, height = dimensions
+    return InspectedUpload("image/jpeg", width=width, height=height)
+
+
+def _check_dimensions(width: int, height: int) -> UploadRejection | None:
+    """The dimension rules both image formats answer, in one place.
+
+    Hoisted out of `_check_png`, where the zero check used to live alone: a JPEG
+    declaring `0 × 0` passed `within_pixel_bound` — `0 * h <= MAX_PIXELS` is true
+    — and was stored, where it renders as a broken `<img>` in the gallery and the
+    lightbox that the equivalent PNG was correctly refused for. One rule cannot
+    have two answers depending on which branch reaches it, so neither branch
+    states it any more.
+
+    A zero dimension is `malformed_upload`, not `unsupported_file_type`: the file
+    claims a format this application accepts and then contradicts itself, which
+    is the same class of fact as a JPEG missing its EOI.
+    """
+    if width == 0 or height == 0:
+        return UploadRejection.MALFORMED_UPLOAD
     if not within_pixel_bound(width, height):
         return UploadRejection.UNSUPPORTED_FILE_TYPE
-    return InspectedUpload("image/jpeg", width=width, height=height)
+    return None
 
 
 def png_dimensions(data: bytes) -> tuple[int, int] | None:
@@ -314,11 +336,10 @@ def _check_png(data: bytes) -> InspectedUpload | UploadRejection:
     ):
         return UploadRejection.MALFORMED_UPLOAD
 
+    rejection = _check_dimensions(*dimensions)
+    if rejection is not None:
+        return rejection
     width, height = dimensions
-    if width == 0 or height == 0:
-        return UploadRejection.MALFORMED_UPLOAD
-    if not within_pixel_bound(width, height):
-        return UploadRejection.UNSUPPORTED_FILE_TYPE
     return InspectedUpload("image/png", width=width, height=height)
 
 

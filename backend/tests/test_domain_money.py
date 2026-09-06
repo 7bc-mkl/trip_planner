@@ -4,7 +4,13 @@ from __future__ import annotations
 
 from decimal import Decimal
 
-from trip_planner.domain.money import CostRejection, validate_cost
+from trip_planner.domain.money import (
+    MAX_COST_AMOUNT,
+    MAX_COST_DECIMAL_PLACES,
+    MAX_COST_DIGITS,
+    CostRejection,
+    validate_cost,
+)
 
 
 class TestValidateCost:
@@ -24,6 +30,29 @@ class TestValidateCost:
     def test_three_decimal_places_is_refused(self) -> None:
         """A `NUMERIC(12,2)` column cannot hold a third decimal digit."""
         result = validate_cost(cost_amount=Decimal("10.123"), cost_currency="PLN")
+
+        assert result is CostRejection.INVALID_COST
+
+    def test_the_bound_is_the_columns_own_precision(self) -> None:
+        """`NUMERIC(12,2)` holds at most `9999999999.99`, written once as data."""
+        assert (MAX_COST_DIGITS, MAX_COST_DECIMAL_PLACES) == (12, 2)
+        assert Decimal("9999999999.99") == MAX_COST_AMOUNT
+
+    def test_the_largest_storable_amount_is_valid(self) -> None:
+        """The bound is inclusive; the test below it is the first refusal."""
+        assert validate_cost(cost_amount=MAX_COST_AMOUNT, cost_currency="PLN") is None
+
+    def test_an_amount_past_the_columns_precision_is_refused(self) -> None:
+        """Without this the driver raises `numeric field overflow` — a `500`, and
+        a poisoned session — where the spec promises `422 invalid_cost`."""
+        result = validate_cost(cost_amount=Decimal("12345678901.00"), cost_currency="PLN")
+
+        assert result is CostRejection.INVALID_COST
+
+    def test_one_cent_past_the_bound_is_refused(self) -> None:
+        result = validate_cost(
+            cost_amount=MAX_COST_AMOUNT + Decimal("0.01"), cost_currency="PLN"
+        )
 
         assert result is CostRejection.INVALID_COST
 

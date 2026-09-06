@@ -135,16 +135,31 @@ class UploadQuota:
     def _now(self, now: datetime | None) -> datetime:
         return now or datetime.now(UTC)
 
-    def prune(self, db: OrmSession, *, now: datetime | None = None) -> None:
-        """Delete `upload_event` rows outside every window.
+    def prune(
+        self, db: OrmSession, *, owner_id: uuid.UUID, now: datetime | None = None
+    ) -> None:
+        """Delete **this owner's** `upload_event` rows outside every window.
 
         Lazily, on each check, exactly as `login_attempt` is pruned: there is no
         scheduler in this milestone, and a table that only grows is a slow leak
         rather than a limit. The cut-off is the *longest* window — pruning to the
         shorter one would silently disarm the volume limit.
+
+        **Scoped to the owner, and that scope is the point.** `check_rate` runs
+        before the request body is read, inside the request's own transaction, so
+        an unscoped `DELETE` would take row locks on *every* owner's expired
+        events and hold them for the whole of `read_body` and the upload —
+        head-of-line blocking on the one statement every upload begins with, and
+        self-inflicted, since the only rows this check ever consults are this
+        owner's. Each owner prunes his own on his next upload, so nothing is left
+        behind: an owner who never uploads again writes no rows to leak.
         """
         oldest = self._now(now) - max(self.rate_window, self.volume_window)
-        db.execute(sa.delete(UploadEvent).where(UploadEvent.occurred_at < oldest))
+        db.execute(
+            sa.delete(UploadEvent).where(
+                UploadEvent.owner_id == owner_id, UploadEvent.occurred_at < oldest
+            )
+        )
 
     def check_rate(
         self, db: OrmSession, *, owner_id: uuid.UUID, now: datetime | None = None
@@ -162,7 +177,7 @@ class UploadQuota:
         Both windows are counted in one pass over the same rows, because both
         are questions about the same events.
         """
-        self.prune(db, now=now)
+        self.prune(db, owner_id=owner_id, now=now)
         moment = self._now(now)
 
         counted = db.execute(
@@ -194,9 +209,16 @@ class UploadQuota:
         byte_size: int,
         now: datetime | None = None,
     ) -> None:
-        """Log an upload against both windows, and prune what has aged out of them."""
+        """Log an upload against both windows.
+
+        It does **not** prune. Every path that reaches here has already run
+        `check_rate` for this owner in this transaction — the pre-read memory
+        control and again `check_within_transaction`'s first step — and that
+        check prunes. A second `DELETE` for the same owner immediately after
+        would find nothing but the row just written, so the double prune was
+        pure cost.
+        """
         db.add(UploadEvent(owner_id=owner_id, byte_size=byte_size, occurred_at=self._now(now)))
-        self.prune(db, now=now)
         db.flush()
 
     # ------------------------------------------------- in-transaction quotas

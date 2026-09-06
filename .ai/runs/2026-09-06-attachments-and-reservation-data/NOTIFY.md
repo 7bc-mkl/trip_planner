@@ -459,3 +459,44 @@ never sees. That is what replaces "Sprawdź zaznaczone pola" with nothing marked
   only; the two in this feature's code are deliberate documented patterns, surfaced for the reviewer
   rather than rewritten at the gate.
 - Seven residual findings recorded for the reviewer in `final-gate-checks.md`.
+
+## 2026-09-06T22:46:17Z — review-fix batch (backend findings of the PR #12 review)
+One commit, five findings, no new Steps — these are review findings, not plan Steps.
+
+- **MAJOR 1 — a cost ≥ 10¹⁰ was a 500, not a 422.** `validate_cost` checked scale but never
+  magnitude, so `12345678901.00` reached `NUMERIC(12,2)` and came back as psycopg's
+  `numeric field overflow` — an unhandled `DataError` (`app.py` maps only `ApiError`,
+  `RequestValidationError`, `StarletteHTTPException`, `OperationalError`), with the failed
+  statement poisoning the session. `domain/money.py` now states **both** halves of the column:
+  `MAX_COST_DIGITS = 12` beside the existing `MAX_COST_DECIMAL_PLACES = 2`, with
+  `MAX_COST_AMOUNT` **derived** from them rather than typed out, so `ItemUpdate`'s deliberate
+  omission of `max_digits` is honest again. Pinned by two new rows in the parametrised refusal
+  test and four unit tests, including the inclusive `9999999999.99`.
+- **MAJOR 2 — a multi-part body amplified memory ~14×.** `read_body` bounded the bytes; nothing
+  bounded the `_Part` objects built out of them (measured: 1 165 084 parts in a 10 MB body,
+  84 MB → 229 MB RSS, *then* a correct `422`). `MAX_PARTS = 8` is now checked in `on_part_begin`,
+  so the parse **stops** instead of completing. Eight, not two: the one-part rule is about `file`
+  parts, and a stray field must still be accepted. The regression test asserts the **bound** —
+  exactly 8 `_Part`s built for a 20 000-part body — not the outcome, which already held.
+- **MINOR 3 — the last ~200 bytes of the 10 MB cap were unusable.** The body bound is now
+  `MAX_BODY_BYTES = MAX_ATTACHMENT_BYTES + 4096`; the real per-file limit is the counted length of
+  the parsed `file` part, checked in `_receive`. `ck_attachment_byte_size` is reachable again, and
+  a file of exactly `MAX_ATTACHMENT_BYTES` is stored (new test) rather than told it is over 10 MB.
+- **MINOR 4 — a JPEG declaring 0×0 was accepted where the PNG was refused.** The zero check is
+  hoisted into one `_check_dimensions` both formats call; six new refusal rows.
+- **MINOR 7 / NIT — the pre-read prune locked every owner's rows.** `prune` is now scoped to
+  `owner_id`, so `check_rate` no longer holds unrelated row locks across `read_body` and the
+  upload. `record_upload`'s duplicate prune is gone with it: `check_rate` always precedes it in the
+  same transaction, so it only ever deleted the row just written.
+- **MINOR 8 — no code change, by the reviewer's instruction.** The remaining bound (uploads
+  waiting on `pg_advisory_xact_lock` occupy shared anyio worker threads; it drains, it does not
+  wedge) is now named in the module docstring, with the reason a semaphore is the wrong trade.
+
+Gate: `ruff` clean; **654 backend tests passed, 0 skipped**; all three `scripts/check_*.py` green.
+No frontend file touched (the client-side mirror of MAJOR 1 is a separate executor's).
+`test_a_field_value_within_the_cap_is_ignored_not_refused` passes **unmodified**. One existing test
+was renamed, not weakened: `test_a_declared_length_over_the_cap_is_refused` →
+`test_a_file_one_byte_over_the_cap_is_refused`, because with the envelope allowance that body is
+now refused by the counted file length rather than by its declared length — same status, same code,
+different mechanism, so the old name described a path it no longer took. The declared-length path
+keeps its own test against `MAX_BODY_BYTES`.

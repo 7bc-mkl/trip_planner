@@ -211,6 +211,27 @@ def test_a_png_whose_first_chunk_is_not_ihdr_is_refused() -> None:
     assert inspect_upload(not_ihdr) is UploadRejection.MALFORMED_UPLOAD
 
 
+@pytest.mark.parametrize(
+    ("label", "data"),
+    [
+        ("a jpeg claiming 0 x 0", make_jpeg(0, 0)),
+        ("a jpeg claiming 0 x 480", make_jpeg(0, 480)),
+        ("a jpeg claiming 640 x 0", make_jpeg(640, 0)),
+        ("a png claiming 0 x 0", make_png(0, 0)),
+        ("a png claiming 0 x 90", make_png(0, 90)),
+        ("a png claiming 120 x 0", make_png(120, 0)),
+    ],
+)
+def test_an_image_declaring_a_zero_dimension_is_refused(label: str, data: bytes) -> None:
+    """One rule, one answer, whichever format states it.
+
+    The pixel bound alone lets a zero through — `0 * h <= MAX_PIXELS` is true —
+    so JPEG accepted what PNG refused, and the stored file rendered as a broken
+    `<img>` in the gallery and the lightbox.
+    """
+    assert inspect_upload(data) is UploadRejection.MALFORMED_UPLOAD
+
+
 def test_a_png_header_alone_is_refused() -> None:
     assert inspect_upload(PNG_SIGNATURE) is UploadRejection.MALFORMED_UPLOAD
 
