@@ -38,13 +38,6 @@
 | 4 | 4.6 | `/trips/new` — the multi-stop creator (spec step 22) | dispatch | done | 72c5aef |
 | 4 | 4.7 | `/trips/:id/days/:date` — the day detail (spec step 23) | dispatch | done | 14781cc |
 | 4 | 4.8 | Phase-4 screenshot set and the before/after pairs (spec step 24) | inline | done | 8d85675 |
-| 5 | 5.1 | The preview primitives in `features/preview/` (spec step 25) | dispatch | todo | — |
-| 5 | 5.2 | The share preview and its State A dialog (spec step 26) | dispatch | todo | — |
-| 5 | 5.3 | The chat drawer preview (spec step 27) | dispatch | todo | — |
-| 5 | 5.4 | The day-documents panel preview (spec step 28) | dispatch | todo | — |
-| 5 | 5.5 | The reservation-disclosure preview in `ItemDialog` (spec step 29) | dispatch | todo | — |
-| 5 | 5.6 | The `data-preview` census test (spec step 30) | dispatch:cheap | todo | — |
-| 5 | 5.7 | Phase-5 screenshot set (spec step 31) | inline | todo | — |
 | 6 | 6.1 | The icon sprite and the `<Icon>` wrapper (spec step 32) | dispatch | todo | — |
 | 6 | 6.2 | Final verification pass — contrast, diacritics, locales, bundle (spec step 33) | inline | todo | — |
 
@@ -76,6 +69,35 @@ reservation data — as inert, honest preview surfaces in their designed positio
   generation, PDF/e-mail import, a trip-wide documents centre, maps/routing, weather, export,
   "Zadania & Przygotowanie", guest comments, dead chrome.
 - No locale key renamed or repurposed — new keys only.
+
+## Scope change — Phase 5 cut by the owner, 2026-09-06
+
+The owner was asked at the engine's safety checkpoint (24 Steps landed, Phases 1–4 complete)
+whether to build workstream B, and answered **"Skip 5, do 6"**. Phase 5's seven Steps — the
+preview primitives, the share preview, the chat drawer, the day-documents panel, the
+reservation disclosure, the `data-preview` census test and its screenshot set — are therefore
+**not built in this run** and their rows are removed from the Tasks table, which admits only
+`todo` and `done`.
+
+This is the outcome the spec's own phasing was designed to make cheap: Phase 5 is sequenced
+last precisely so that cutting it costs nothing already shipped, and its rollback row reads
+"Yes, and cleanly: this is the phase most likely to be reverted." What ships is the spec's
+first draft — the design system adopted, with no preview surfaces — which is a coherent
+deliverable rather than a truncated one.
+
+Consequences for Phase 6, which the owner did ask for:
+
+- **Step 6.1 is unaffected.** The icon sprite covers the five item kinds and the two chevrons
+  regardless; the three workstream-B glyphs (chat, share, paperclip) are dropped, because a
+  glyph with no consumer is dead weight the spec's own reasoning would refuse.
+- **Step 6.2 loses two of its checks**, both of which exist only to police preview surfaces:
+  the `data-preview` census test is Step 5.6's deliverable, and the forced-colors capture's
+  preview clause ("every preview must still read as unavailable through its badge text") has
+  nothing to assert. Both are recorded as `n/a — Phase 5 cut` rather than silently dropped.
+  Every other part of the final verification pass runs in full.
+
+Workstream B remains in the brief's *Now* scope and is not abandoned — it is unbuilt, and a
+follow-up issue should carry it, since the spec that specifies it is merged on `main`.
 
 ## Delivery shape — one PR, six reviewable phases
 
@@ -239,7 +261,11 @@ Every Step is exactly one commit. `(automated)` and `(visual QA)` markers are th
 - Five routes × two locales at desktop, plus the timeline and day detail at 360px — fourteen PNGs —
   plus a before/after pair per route for the PR body.
 
-### Phase 5 — The V1 preview surfaces
+### Phase 5 — The V1 preview surfaces — ⛔ CUT BY THE OWNER, NOT BUILT
+
+> Steps 5.1–5.7 below are left in this plan as the record of what was scoped and what a
+> follow-up must pick up. None of them landed; see "Scope change" above.
+
 
 **5.1 The preview primitives (spec step 25)**
 - `frontend/src/features/preview/` with `PreviewBadge`, `PreviewAction`, `PreviewNotice`, their

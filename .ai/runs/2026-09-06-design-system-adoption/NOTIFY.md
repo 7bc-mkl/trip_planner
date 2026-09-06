@@ -82,3 +82,10 @@
 - Step review (`checkpoint`) over `40d88c0..8d85675`: no blocker. One **major flagged for a human**: the day detail's status control was a `<select>`, not a radio group, so spec step 23's "it remains a radio group" required converting the widget. Accessible name and i18n keys unchanged; one test re-queried by role. Five minors accepted and recorded in `checkpoint-4-checks.md`.
 - UI verification ran: fourteen PNGs in `checkpoint-4-artifacts/` — five routes × two locales at 1440, plus the timeline and day detail at 360 in both.
 - **Safety checkpoint reached**: 24 consecutive Steps have landed without a halt. Per `references/executor-dispatch.md`, dispatch pauses here for the user to review before Phase 5 — which the spec itself names as the phase most likely to be cut or revised.
+
+## 2026-09-06T14:48:38Z — scope change: Phase 5 cut by the owner
+- Asked at the safety checkpoint whether to build workstream B. Owner answered **"Skip 5, do 6"**.
+- Steps 5.1–5.7 are not built. Their rows are removed from the Tasks table (which admits only `todo`/`done`); the Implementation Plan section is kept, marked ⛔ CUT, as the record of what a follow-up must pick up.
+- The spec sequenced Phase 5 last precisely so cutting it would cost nothing already shipped, and its own rollback row calls it the phase most likely to be reverted. What ships is the spec's first draft: the design system adopted, no preview surfaces.
+- Phase 6 consequences: 6.1 drops the three workstream-B glyphs (chat, share, paperclip) — a glyph with no consumer is dead weight; 6.2 records the `data-preview` census test and the forced-colors preview clause as `n/a — Phase 5 cut`, since both exist only to police preview surfaces. Everything else in the final pass runs in full.
+- Workstream B stays in the brief's *Now* scope and is unbuilt rather than abandoned; a follow-up issue should carry it.
