@@ -354,6 +354,19 @@ fieldset.field-card {
   outline-offset: 2px;
 }
 
+/* Without `:has()`, undo the hiding rather than ship a segmented control with
+   no selected segment and no visible focus — the same fallback the filter bar
+   and the status choice carry, for the same reason. */
+@supports not selector(:has(*)) {
+  .route-mode__options input[type='radio'] {
+    position: static;
+    width: auto;
+    height: auto;
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
 @media (prefers-reduced-motion: no-preference) {
   .route-mode__options span {
     transition:
@@ -744,16 +757,33 @@ fieldset.field-card {
   column-gap: var(--space-lg);
 }
 
-/* The anchor. Sticky beneath BOTH layers above it, through the same two custom
-   properties those layers set their own height from — a magic number here would
-   put the date under the filter bar on exactly the screens the anchor exists
-   for. `align-self: start` is what lets a grid item stick at all. */
+/* The anchor. `align-self: start` is what lets a grid item stick at all. */
 .timeline__anchor {
-  position: sticky;
-  top: calc(var(--header-height) + var(--filter-bar-height));
   z-index: 4;
   align-self: start;
   background: var(--canvas);
+}
+
+/* IT STICKS ONLY WHERE THE FILTER BAR IS DEMONSTRABLY ONE ROW TALL.
+ *
+ * The anchor offsets by `--filter-bar-height` through the same custom property
+ * the bar sets its own height from, so the two cannot drift — but that only
+ * holds while the bar is a single row. Between 768px (where the bar turns
+ * sticky) and roughly 900px the Polish labels wrap it to two rows, 88px
+ * measured, and no fixed offset can clear a height the content decides. The
+ * bar's `z-index: 5` beats the anchor's 4, so there the date and its link
+ * simply disappeared under the bar while scrolling — exactly when the anchor is
+ * wanted.
+ *
+ * 900px is the narrowest width at which the bar was measured at one row (56px)
+ * in both locales, and it only gets roomier above that. Below it the anchor
+ * scrolls with its day, which is what it did on phones already: a covered
+ * anchor is worse than a scrolled one. */
+@media (min-width: 900px) {
+  .timeline__anchor {
+    position: sticky;
+    top: calc(var(--header-height) + var(--filter-bar-height));
+  }
 }
 
 .timeline__anchor-link {

@@ -584,6 +584,21 @@ textarea:disabled {
   letter-spacing: var(--tracking-headline-sm);
 }
 
+/* THE TITLE TAKES ITS OWN LINE ON A PHONE, exactly as the notes already do.
+   On the timeline the card is already inset by the 40px rail column and one
+   `--space-lg` gutter, and inside it the time reserves 5.5rem, the icon tile
+   2rem and the kind label whatever the language needs; at 360px that leaves the
+   title a few pixels and `overflow-wrap: anywhere` then breaks it to roughly one
+   character per line ("Petr / onas / Tow / ers"). Giving it the full width is
+   the smaller of the two fixes the spec allows — the rail stays, and the rail
+   is the structural change this redesign is about — and it costs nothing above
+   768px, where the title never ran out of room. */
+@media (max-width: 767px) {
+  .item-row__title {
+    flex-basis: 100%;
+  }
+}
+
 .item-row__spans {
   color: var(--text-muted);
   font: var(--type-label-md);
@@ -615,7 +630,13 @@ textarea:disabled {
   place-items: center;
   padding: var(--space-md);
   background: var(--scrim);
-  z-index: 10;
+  /* Above the sticky header's 20 — see the layer scale on `.app-header` in
+     `chrome.css`. Nothing between the overlay and the root establishes a
+     stacking context, so this number is compared directly against the
+     header's; below it the header both painted over the modal and stayed
+     clickable behind it. `frontend/src/features/trips/items.test.tsx` asserts
+     the ordering against these two files. */
+  z-index: 30;
 }
 
 .dialog {
@@ -638,13 +659,20 @@ textarea:disabled {
  * `--surface` so the frost cannot drift from the opaque fallback, and the extra
  * percent buys back the contrast the blur does not.
  */
-@supports (backdrop-filter: blur(12px)) {
+/* The condition and the declarations are the prefixed pair `chrome.css` uses on
+   the header, not the unprefixed property alone: Safari still ships
+   `backdrop-filter` only behind `-webkit-`, so an unprefixed-only test failed
+   there and an unprefixed-only declaration would have been dropped even where
+   the test passed. */
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   .dialog-overlay {
+    -webkit-backdrop-filter: blur(var(--scrim-blur));
     backdrop-filter: blur(var(--scrim-blur));
   }
 
   .dialog {
     background: color-mix(in srgb, var(--surface) 96%, transparent);
+    -webkit-backdrop-filter: blur(var(--scrim-blur));
     backdrop-filter: blur(var(--scrim-blur));
   }
 }
@@ -795,6 +823,19 @@ textarea:disabled {
   outline-offset: 2px;
 }
 
+/* Without `:has()`, undo the hiding rather than ship three unfilled pills with
+   no visible focus at all — the same fallback the filter bar's pills carry, for
+   the same reason. */
+@supports not selector(:has(*)) {
+  .status-choice__options input[type='radio'] {
+    position: static;
+    width: auto;
+    height: auto;
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
 @media (prefers-reduced-motion: no-preference) {
   .status-choice__pill {
     transition:
@@ -850,8 +891,11 @@ textarea:disabled {
  * markup change made for a background colour.
  *
  * The bar's own height is `--filter-bar-height`, the token the day anchors
- * offset by — 8px + a 36px pill + 8px, exactly as that token's comment derives
- * it — so the two sticky layers cannot drift apart.
+ * offset by — its hairline, 8px, a 38px pill, 8px and its hairline again,
+ * exactly as that token's comment derives it — so the two sticky layers cannot
+ * drift apart. It is a *minimum*, not a height: in Polish the bar wraps to two
+ * rows below roughly 900px, which is why the anchors only stick above that
+ * width (see `.timeline__anchor` in `screens.css`).
  */
 
 .filter-bar {
@@ -946,6 +990,24 @@ textarea:disabled {
 
 .filter-bar__filters label:hover:not(:has(:checked)) {
   background: var(--surface-sunken);
+}
+
+/* WITHOUT `:has()` THE PAINT IS NOT A DEGRADED PILL, IT IS AN INVISIBLE
+   CONTROL. The radio above is `opacity: 0`, so the base `:focus-visible` ring
+   never shows on it, and every rule that fills the selected pill or moves the
+   ring onto it is gated behind `:has()`. In a browser without it, nothing is
+   filled *and* keyboard focus has nowhere to land — and the accessibility
+   contract says the focus ring is never removed. So the hiding is undone
+   instead: the reader gets the platform's own radio, checked state and focus
+   ring included, beside its label. Plainer than the pill; still a control. */
+@supports not selector(:has(*)) {
+  .filter-bar__filters input[type='radio'] {
+    position: static;
+    width: auto;
+    height: auto;
+    opacity: 1;
+    pointer-events: auto;
+  }
 }
 
 @media (prefers-reduced-motion: no-preference) {

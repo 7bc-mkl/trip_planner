@@ -38,8 +38,20 @@
 .app-header {
   position: sticky;
   top: 0;
-  /* Above the canvas and above the sticky layers that offset by
-     `--header-height`; below the dialog and drawer overlays. */
+  /* THE APP'S WHOLE LAYER SCALE, because nothing else establishes a stacking
+     context and every one of these values is therefore compared against every
+     other:
+
+       4   the day anchors      (`screens.css`, `.timeline__anchor`)
+       5   the filter bar       (`components.css`, `.filter-bar`)
+       20  this header
+       30  the dialog overlay   (`components.css`, `.dialog-overlay`)
+
+     THE OVERLAY MUST OUTRANK THE HEADER. When it did not, the sticky header
+     painted over an `aria-modal="true"` dialog and — worse than the paint — its
+     controls stayed hit-testable, so a reader could reach Sign out from behind
+     an open modal. Anything added above 20 has to stay below 30 for the same
+     reason. */
   z-index: 20;
   background: var(--surface);
   border-bottom: 1px solid var(--hairline);

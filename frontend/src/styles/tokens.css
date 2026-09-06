@@ -198,10 +198,16 @@
   --header-height: 4rem;
 
   /* Derived: the filter bar is a row of `rounded-full` pills on the label-lg
-     role — 20px line box plus --space-xs (8px) padding above and below = 36px
-     — and the bar pads those pills by --space-xs on each side.
-     8px + 36px + 8px = 52px = 3.25rem. */
-  --filter-bar-height: 3.25rem;
+     role — 20px line box plus --space-xs (8px) padding above and below, plus
+     the pill's own 1px hairline top and bottom = 38px — and the bar pads those
+     pills by --space-xs on each side and carries a hairline of its own.
+     1px + 8px + 38px + 8px + 1px = 56px = 3.5rem.
+
+     THE BORDERS ARE PART OF THE DERIVATION, not a rounding error: everything
+     here is `border-box`, so the day anchors offsetting by this token clear the
+     bar's outer edge only if the two hairlines are counted. They were not, and
+     the anchors sat 4px under the bar at every width. */
+  --filter-bar-height: 3.5rem;
 
   /* The spec's desktop cap: the page grid is capped at 90rem and centred, so
      the dock is 22/90 of the width at the cap. Not a DESIGN.md token. */

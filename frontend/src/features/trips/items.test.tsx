@@ -3,6 +3,8 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { readFileSync } from 'node:fs'
+
 import App from '../../App'
 import en from '../../locales/en.json'
 import pl from '../../locales/pl.json'
@@ -313,6 +315,46 @@ describe('the item editor', () => {
       expect(screen.getByRole('dialog').contains(document.activeElement)).toBe(true),
     )
     expect(user).toBeDefined()
+  })
+
+  /**
+   * The layering contract, asserted against the stylesheets themselves.
+   *
+   * jsdom does no layout and the suite runs with `css: false`, so nothing here
+   * can render the overlay and ask which element is on top —
+   * `getComputedStyle` would answer `auto` for both. A test built on that would
+   * pass whatever the numbers were, and a test that cannot fail is worse than
+   * none. So the assertion is made where the bug actually lived: the two
+   * declarations. The header shipped at 20 and the overlay at 10, nothing
+   * between either and the root establishes a stacking context, and the header
+   * therefore painted over an `aria-modal` dialog with its Sign out button
+   * still hit-testable behind it.
+   *
+   * The manual check this stands in for: open the item editor and confirm
+   * `document.elementFromPoint` at the header's right edge is inside the
+   * overlay, not the header's buttons.
+   */
+  it('declares the dialog overlay above the sticky header', () => {
+    // Vitest runs from `frontend/`, and the suite has `css: false`, so the
+    // stylesheets are read rather than imported — a `?raw` import resolves to
+    // an empty string under that setting.
+    const read = (file: string) => readFileSync(`src/styles/${file}`, 'utf8')
+
+    const zIndexOf = (css: string, selector: string) => {
+      const rule = new RegExp(`\\${selector}\\s*\\{[^}]*?z-index:\\s*(\\d+)`, 'u').exec(css)
+      expect(rule, `no z-index found for ${selector}`).not.toBeNull()
+      return Number(rule![1])
+    }
+
+    const components = read('components.css')
+    const header = zIndexOf(read('chrome.css'), '.app-header')
+    const overlay = zIndexOf(components, '.dialog-overlay')
+    const filterBar = zIndexOf(components, '.filter-bar')
+    const anchor = zIndexOf(read('screens.css'), '.timeline__anchor')
+
+    expect(overlay).toBeGreaterThan(header)
+    expect(header).toBeGreaterThan(filterBar)
+    expect(filterBar).toBeGreaterThan(anchor)
   })
 
   it('closes on Escape', async () => {

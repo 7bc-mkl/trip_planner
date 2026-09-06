@@ -40,6 +40,9 @@
 | 4 | 4.8 | Phase-4 screenshot set and the before/after pairs (spec step 24) | inline | done | 8d85675 |
 | 6 | 6.1 | The icon sprite and the `<Icon>` wrapper (spec step 32) | dispatch | done | d0a719d |
 | 6 | 6.2 | Final verification pass — contrast, diacritics, locales, bundle (spec step 33) | inline | done | d0dc40d |
+| 4 | 4.9-review-fix | Dialog layering and the 360px timeline title | inline | done | pending |
+| 6 | 6.3-review-fix | Harden the two gate scripts and fix the README outlier | inline | todo | — |
+| 6 | 6.4-review-fix | Harden the QA scripts and clear the cut-phase leftovers | inline | todo | — |
 
 ## Goal
 
