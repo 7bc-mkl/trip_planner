@@ -64,15 +64,8 @@
   margin-bottom: calc(var(--space-1) * -1);
 }
 
-.login input {
-  width: 100%;
-  padding: var(--space-3);
-  border: 1px solid var(--colour-border);
-  border-radius: var(--radius-sm);
-  background: var(--colour-surface);
-  color: inherit;
-  font: inherit;
-}
+/* The card's two inputs declare nothing of their own — they wear the field
+   recipe in `components.css`, `:user-invalid` and all. */
 
 /* `/login`'s submit is unclassed markup, so it cannot reach `.button-primary`
    without a TSX change this phase does not make. It wears the primary recipe's
@@ -176,15 +169,7 @@
   font-weight: 600;
 }
 
-.trip-form input {
-  width: 100%;
-  padding: var(--space-3);
-  border: 1px solid var(--colour-border);
-  border-radius: var(--radius-sm);
-  background: var(--colour-surface);
-  color: inherit;
-  font: inherit;
-}
+/* The creator's inputs wear the field recipe in `components.css`. */
 
 .trip-form .field-row {
   display: flex;

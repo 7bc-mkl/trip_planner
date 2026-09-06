@@ -13,6 +13,85 @@
  * also where the bridge is deleted.
  */
 
+/* --- the field recipe (DESIGN.md, "Input Fields & Date Pickers") ------
+ *
+ * One recipe for every text-entry control in the app — text, email, date, time,
+ * number, `<select>` and `<textarea>` — instead of the four near-identical
+ * per-screen copies the skeleton carried. The screens no longer declare a field
+ * at all; they declare where it sits.
+ *
+ * The selector is an element list wrapped in `:where()`, so the whole thing
+ * weighs (0,0,1) and any class rule in this file or in `screens.css` can still
+ * override it without an `!important`. Checkboxes and radios are excluded: the
+ * filter bar's checkboxes and the creator's route-mode radios are native
+ * controls that a text-field border would only disfigure.
+ *
+ * BOUNDARY. DESIGN.md specifies `#CBD5E1` here. That is 1.48:1 on `#FFFFFF` —
+ * and a field's resting border is what identifies the control, so WCAG 1.4.11's
+ * 3:1 floor applies to it. Phase 1 corrected it to `--field-border` (#84919F,
+ * 3.21:1) the same way it corrected the three chip foregrounds; read that
+ * token's comment in `tokens.css`. Everything else here is the design's own:
+ * `--surface` fill, `--radius`, a 2px `--primary` active outline.
+ */
+
+input:where(:not([type='checkbox'], [type='radio'])),
+select,
+textarea {
+  width: 100%;
+  padding: var(--space-xs) var(--space-sm);
+  border: 1px solid var(--field-border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  font: var(--type-body-md);
+  letter-spacing: var(--tracking-body-md);
+}
+
+/* The design's active outline hugs the field rather than floating off it, so
+   the 2px ring sits directly on the 8px corner. The ring itself comes from
+   `base.css`, which no rule here may weaken. */
+input:where(:not([type='checkbox'], [type='radio'])):focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  border-color: var(--primary);
+  outline-offset: 0;
+}
+
+/* INVALID IS AN ADDITION, NEVER A REPLACEMENT. The border colour joins the
+   `role="alert"` message that the forms already render; it does not stand in
+   for it, because a colour-only error is invisible to the readers the whole
+   status-chip contract exists for. Two hooks, both satisfied by markup that
+   exists today: the ARIA attribute when a form declares its own validity, and
+   `:user-invalid` for native constraint validation (`/login`'s required
+   e-mail), which fires only after the reader has actually interacted. */
+input:where([aria-invalid='true'], :user-invalid),
+select:where([aria-invalid='true'], :user-invalid),
+textarea:where([aria-invalid='true'], :user-invalid) {
+  border-color: var(--danger);
+}
+
+/* Defined now because Phase 5's preview fields need it: a preview control is
+   readable, obviously inert, and still has a boundary. `--text-subtle` rather
+   than `--field-border` on the boundary — #84919F drops to 2.93:1 against the
+   sunken fill, while #64748B holds 4.34:1, so the disabled field is the one
+   place the subtle tone is the *stronger* choice. */
+input:where(:not([type='checkbox'], [type='radio'])):disabled,
+select:disabled,
+textarea:disabled {
+  border-color: var(--text-subtle);
+  background: var(--surface-sunken);
+  color: var(--text-subtle);
+  cursor: not-allowed;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  input:where(:not([type='checkbox'], [type='radio'])),
+  select,
+  textarea {
+    transition: border-color 150ms ease;
+  }
+}
+
 /* --- the locale switch, present on every screen (R01) --- */
 
 .locale-switch {
@@ -418,17 +497,8 @@
   font-weight: 600;
 }
 
-.dialog input,
-.dialog select,
-.dialog textarea {
-  width: 100%;
-  padding: var(--space-3);
-  border: 1px solid var(--colour-border);
-  border-radius: var(--radius-sm);
-  background: var(--colour-surface);
-  color: inherit;
-  font: inherit;
-}
+/* The dialog's inputs, selects and textareas declare nothing of their own: they
+   wear the field recipe at the top of this file, like every other field. */
 
 .dialog .field-row {
   display: flex;
