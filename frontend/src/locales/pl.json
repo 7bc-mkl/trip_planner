@@ -107,7 +107,7 @@
     "delete": "Usuń",
     "allDay": "Cały dzień",
     "spansUntil": "→ {date}",
-    "attachmentCount": "Załączniki ({count, number})",
+    "attachmentCount": "{count, plural, one {# plik} few {# pliki} many {# plików} other {# pliku}}",
     "kind": {
       "accommodation": "Nocleg",
       "transport": "Transport",

@@ -720,7 +720,7 @@ describe("the item card's paperclip badge", () => {
 
     const badge = container.querySelector('.item-row__attachments')
     expect(badge).not.toBeNull()
-    expect(screen.getByText(pl.item.attachmentCount.replace('{count, number}', '3'))).toBeInTheDocument()
+    expect(screen.getByText('3 pliki')).toBeInTheDocument()
 
     const icon = badge?.querySelector('svg')
     expect(icon).toHaveAttribute('aria-hidden', 'true')
@@ -728,12 +728,30 @@ describe("the item card's paperclip badge", () => {
     expect(icon?.querySelector('use')?.getAttribute('href')).toMatch(/icons\.svg.*#paperclip$/u)
   })
 
+  it('renders the Polish few and many plural forms distinctly, the split ICU exists for', () => {
+    const { rerender } = render(
+      <ItemRow item={MUSEUM} dayDate="2026-10-11" attachmentCount={2} />,
+    )
+    expect(screen.getByText('2 pliki')).toBeInTheDocument()
+
+    rerender(<ItemRow item={MUSEUM} dayDate="2026-10-11" attachmentCount={5} />)
+    expect(screen.getByText('5 plików')).toBeInTheDocument()
+  })
+
   it('renders the translated count in English too', async () => {
     await applyLocale('en')
 
-    render(<ItemRow item={MUSEUM} dayDate="2026-10-11" attachmentCount={2} />)
+    render(<ItemRow item={MUSEUM} dayDate="2026-10-11" attachmentCount={1} />)
 
-    expect(screen.getByText(en.item.attachmentCount.replace('{count, number}', '2'))).toBeInTheDocument()
+    expect(screen.getByText('1 file')).toBeInTheDocument()
+  })
+
+  it('renders the English plural form for several', async () => {
+    await applyLocale('en')
+
+    render(<ItemRow item={MUSEUM} dayDate="2026-10-11" attachmentCount={5} />)
+
+    expect(screen.getByText('5 files')).toBeInTheDocument()
   })
 })
 

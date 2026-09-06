@@ -107,7 +107,7 @@
     "delete": "Delete",
     "allDay": "All day",
     "spansUntil": "→ {date}",
-    "attachmentCount": "Attachments ({count, number})",
+    "attachmentCount": "{count, plural, one {# file} other {# files}}",
     "kind": {
       "accommodation": "Accommodation",
       "transport": "Transport",
