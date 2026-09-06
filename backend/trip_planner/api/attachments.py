@@ -1,4 +1,4 @@
-"""Uploading a file to a day or to an item — the two `POST` routes.
+"""The attachment endpoints: two uploads, the metadata read, the download, the delete.
 
 **The order of the checks in this module is the security control**, and it is the
 reason these handlers drive the raw request instead of declaring an
@@ -37,6 +37,12 @@ Every rejection reason arrives as an `UploadRejection` or a `QuotaRejection`
 whose *value is already the wire code*, so mapping one onto an `ErrorCode` is
 `ErrorCode(rejection.value)` — an identity lookup that cannot fall out of step
 with a new member, rather than an `if` ladder that silently would.
+
+The read half — metadata, content, delete — is at the bottom of the file. There
+is deliberately **no `PATCH`**: a file's bytes are immutable by construction
+(replacing one is a delete and an upload), and that immutability is what lets
+the content route serve a strong `ETag`. Adding one would quietly invalidate the
+caching contract described on `_serving_headers`.
 """
 
 from __future__ import annotations
@@ -45,18 +51,22 @@ import hashlib
 import uuid
 from dataclasses import dataclass, field
 from datetime import date as date_type
+from urllib.parse import quote
 
-from fastapi import APIRouter, Request, status
+import sqlalchemy as sa
+from fastapi import APIRouter, Request, Response, status
 from python_multipart.exceptions import MultipartParseError
 from python_multipart.multipart import MultipartParser, parse_options_header
 from sqlalchemy.orm import Session as OrmSession
+from sqlalchemy.orm import aliased
 
 from trip_planner.api.deps import CurrentOwner, DbSession, OwnedTrip
 from trip_planner.api.items import find_item, get_day
 from trip_planner.api.schemas import AttachmentRead
-from trip_planner.db.models import Attachment, AttachmentBlob, Owner, Trip
+from trip_planner.db.models import Attachment, AttachmentBlob, Item, Owner, Trip, TripDay
 from trip_planner.domain.uploads import (
     MAX_ATTACHMENT_BYTES,
+    NormalisedFilename,
     UploadRejection,
     inspect_upload,
     normalise_filename,
@@ -319,6 +329,178 @@ async def upload_item_attachment(
     upload = await _receive(request, db, owner)
 
     return store_attachment(db, owner=owner, trip=trip, upload=upload, item_id=item.id)
+
+
+# --------------------------------------------------------------------------- #
+# Reading one back: metadata, bytes, and the delete
+# --------------------------------------------------------------------------- #
+
+
+def find_attachment(db: OrmSession, trip: Trip, attachment_id: uuid.UUID) -> Attachment:
+    """An attachment of *this* trip, or 404 — `find_item`'s pattern, one hop longer.
+
+    An attachment has two possible parents, so the trip is reached by two
+    different chains — `attachment → item → trip_day → trip` for an item's file
+    and `attachment → trip_day → trip` for a day's — and the row carries no
+    `trip_id` of its own to short-circuit them (`db/models.py` says why). Both are
+    outer-joined through separate aliases of `trip_day`, because one query that
+    covers both chains cannot be the one that forgets a chain.
+
+    **This must not read the bytes.** `attachment_blob` is a separate table
+    precisely so that listing a day's six attachments does not read sixty
+    megabytes; nothing here joins it, and `Attachment.blob` is a lazy
+    relationship that stays unloaded unless a caller asks.
+
+    An attachment belonging to another trip is a `404`, never a `403`, exactly as
+    any other cross-owner access — the same condition gets the same code.
+    """
+    item_day = aliased(TripDay)
+    day = aliased(TripDay)
+
+    attachment = db.execute(
+        sa.select(Attachment)
+        .outerjoin(Item, Attachment.item_id == Item.id)
+        .outerjoin(item_day, Item.trip_day_id == item_day.id)
+        .outerjoin(day, Attachment.trip_day_id == day.id)
+        .where(
+            Attachment.id == attachment_id,
+            sa.or_(item_day.trip_id == trip.id, day.trip_id == trip.id),
+        )
+    ).scalar_one_or_none()
+
+    if attachment is None:
+        raise ApiError(ErrorCode.NOT_FOUND, field="attachment_id")
+    return attachment
+
+
+def content_disposition(filename: NormalisedFilename) -> str:
+    """`attachment; filename="<ascii>"; filename*=UTF-8''<percent-encoded>`.
+
+    **Two mechanisms, because one is not enough** (spec, "What a malicious upload
+    cannot do"). The `filename="…"` parameter is an HTTP quoted string, so it
+    gets the ASCII fallback — already reduced to `[A-Za-z0-9._-]` by
+    `normalise_filename` step 6, which is what stops a name like `a";x=".pdf`
+    from closing the quote and injecting a parameter. The display form goes in
+    `filename*`, where RFC 5987 percent-encoding (`quote` with nothing safe)
+    leaves no character that could terminate the header. The raw filename reaches
+    a header in neither parameter.
+
+    `attachment` is applied **universally, including to images**. An `<img src>`
+    ignores this header entirely, so the gallery still renders; a hostile file
+    navigated to directly downloads instead of rendering in our origin. Inline
+    PDF preview is CUT (A10) — serving a PDF `inline` would run the document's
+    JavaScript in this application's origin with the session cookie in scope, and
+    the separate-origin deployment that would make it safe is not what A12 ships.
+    Do not relax this for any type.
+    """
+    encoded = quote(filename.display, safe="")
+    return f"attachment; filename=\"{filename.ascii_fallback}\"; filename*=UTF-8''{encoded}"
+
+
+def _serving_headers(attachment: Attachment) -> dict[str, str]:
+    """The full header set the spec fixes for serving a file back.
+
+    Every one of these is asserted verbatim in `tests/test_attachments_api.py`, so
+    a header dropped here fails a test rather than a penetration test.
+
+    `Cache-Control: private, no-cache` with a **strong** `ETag` is deliberate and
+    is not a weaker `no-store`. The content is immutable — there is no `PATCH` —
+    so a conditional request answers `304` and a gallery of ten photographs does
+    not re-download ten megabytes on every render, while `no-cache` means every
+    revalidation still travels to this server and therefore still passes through
+    `get_owned_trip` and the session check. `no-store` would buy no privacy the
+    session check does not already provide and would cost that revalidation.
+    """
+    return {
+        # The derived type, stored on upload. The client's claim was discarded at
+        # the multipart parser and has no way of reaching this line.
+        "content-type": attachment.content_type,
+        # Re-run rather than stored: only the display form is a column, and the
+        # ASCII fallback is derived from it. `normalise_filename` is idempotent on
+        # an already-normalised string, so this cannot disagree with what was
+        # written — and a row that predates a tightening of the rules is still
+        # served safely.
+        "content-disposition": content_disposition(
+            normalise_filename(attachment.filename, content_type=attachment.content_type)
+        ),
+        "x-content-type-options": "nosniff",
+        "content-security-policy": "default-src 'none'; sandbox",
+        "cross-origin-resource-policy": "same-origin",
+        "referrer-policy": "no-referrer",
+        "cache-control": "private, no-cache",
+        "etag": f'"{attachment.id}"',
+    }
+
+
+def _matches_etag(header: str | None, etag: str) -> bool:
+    """Whether an `If-None-Match` header names this entity.
+
+    A conditional request may carry a list, and a cache is entitled to weaken a
+    strong validator on the way back, so `W/"…"` matching `"…"` is a hit under
+    the weak comparison RFC 9110 requires for `If-None-Match`. `*` matches any
+    existing entity.
+    """
+    if header is None:
+        return False
+
+    for candidate in header.split(","):
+        value = candidate.strip()
+        if value == "*":
+            return True
+        if value.startswith("W/"):
+            value = value[2:]
+        if value == etag:
+            return True
+
+    return False
+
+
+@router.get("/attachments/{attachment_id}", response_model=AttachmentRead)
+def get_attachment(trip: OwnedTrip, attachment_id: uuid.UUID, db: DbSession) -> Attachment:
+    """One attachment's metadata. Reading it does **not** read its bytes."""
+    return find_attachment(db, trip, attachment_id)
+
+
+@router.get("/attachments/{attachment_id}/content")
+def get_attachment_content(
+    trip: OwnedTrip, attachment_id: uuid.UUID, request: Request, db: DbSession
+) -> Response:
+    """The bytes, to the owner's session only, under the full header set.
+
+    The conditional branch answers before the blob is selected, which is the
+    whole point of the `ETag`: a revalidation costs one metadata row, not ten
+    megabytes off the disk and down the wire.
+    """
+    attachment = find_attachment(db, trip, attachment_id)
+    headers = _serving_headers(attachment)
+
+    if _matches_etag(request.headers.get("if-none-match"), headers["etag"]):
+        return Response(status_code=status.HTTP_304_NOT_MODIFIED, headers=headers)
+
+    data = db.execute(
+        sa.select(AttachmentBlob.data).where(AttachmentBlob.attachment_id == attachment.id)
+    ).scalar_one()
+
+    return Response(content=data, headers=headers)
+
+
+@router.delete("/attachments/{attachment_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_attachment(trip: OwnedTrip, attachment_id: uuid.UUID, db: DbSession) -> Response:
+    """Delete an attachment. Permanent, with no undo in this milestone.
+
+    Issued as a Core `DELETE` rather than `db.delete(attachment)` for one reason:
+    the ORM path would cascade through the `blob` relationship, which means
+    *loading* the blob — up to ten megabytes read out of the database purely to
+    throw it away. The `attachment_blob` row goes with it either way, because its
+    foreign key is `ON DELETE CASCADE`; the database does the deleting, and
+    `tests/test_attachments_api.py` asserts the row is gone rather than trusting
+    that it is.
+    """
+    attachment = find_attachment(db, trip, attachment_id)
+    db.execute(sa.delete(Attachment).where(Attachment.id == attachment.id))
+    db.flush()
+
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 __all__ = ["router"]
