@@ -1,0 +1,557 @@
+/**
+ * components.css — the component layer.
+ *
+ * Everything here is a recipe for a thing that can appear on more than one
+ * screen: buttons, fields, chips, cards, rows, dialogs, empty states, the
+ * locale switch, the shared authenticated chrome. Rules that only ever exist on
+ * one screen live in `screens.css`, which is imported after this file.
+ *
+ * Rule order inside this file is the skeleton's original order from
+ * `index.css`, unchanged — the split must not move anything in the cascade.
+ * Recipes are rewritten in place, phase by phase; the ones still reading the
+ * compatibility-bridge names in `tokens.css` are migrated in step 2.5, which is
+ * also where the bridge is deleted.
+ */
+
+/* --- the locale switch, present on every screen (R01) --- */
+
+.locale-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 0.875rem;
+  color: var(--colour-text-muted);
+}
+
+.locale-switch select {
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--colour-border);
+  border-radius: var(--radius-sm);
+  background: var(--colour-surface);
+  color: inherit;
+  font: inherit;
+  font-size: 0.875rem;
+}
+
+/* --- the authenticated shell --- */
+
+.app-shell {
+  min-height: 100dvh;
+  padding: var(--space-6);
+}
+
+.app-shell > header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--colour-border);
+}
+
+/* SCOPE CORRECTION. This was `.app-shell button` — an element catch-all at
+   specificity (0,1,1), which outranks every `.button-*` class recipe (0,1,0)
+   and so repainted the primary action with the quiet fill on every
+   authenticated screen. `:not([class])` narrows it to the one unclassed button
+   in the shell (sign-out), so the two rule sets no longer overlap at all and
+   the recipes below can be seen. Phase 3 (step 13) rebuilds the header in
+   `chrome.css` and gives that button a class of its own. */
+.app-shell button:not([class]) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: var(--space-xs) var(--space-md);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--primary);
+  font: var(--type-label-lg);
+  letter-spacing: var(--tracking-label-lg);
+  cursor: pointer;
+}
+
+.app-shell button:not([class]):hover {
+  background: var(--surface-sunken);
+}
+
+/* --- shared authenticated chrome --- */
+
+.app-shell__brand {
+  margin-right: auto;
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: inherit;
+  text-decoration: none;
+  letter-spacing: -0.01em;
+}
+
+.app-shell main {
+  width: min(56rem, 100%);
+  margin-inline: auto;
+}
+
+.page-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+}
+
+.page-heading h1 {
+  font-size: 1.75rem;
+  letter-spacing: -0.02em;
+}
+
+.breadcrumb {
+  margin-bottom: var(--space-3);
+  font-size: 0.875rem;
+}
+
+.breadcrumb a {
+  color: var(--colour-text-muted);
+}
+
+/* --- the button recipes (DESIGN.md, "Components" → Buttons) -----------
+ *
+ * Five recipes: primary, deep, ghost, danger and danger-solid. The class names
+ * are the ones the existing markup already carries — this is a rewrite of
+ * declarations, not of selectors — plus one new modifier, `.button-primary--deep`,
+ * for the recipe that had no home yet.
+ *
+ * Shape is shared by all five: 40px minimum height (DESIGN.md's "40px height
+ * for standard actions", the same figure `--header-height` is derived from),
+ * `--radius`, and a 1px boundary so a solid and a ghost button are the same
+ * size. Motion is the design's "subtle scale transition", declared once at the
+ * end of this block inside `prefers-reduced-motion: no-preference`.
+ *
+ * THERE IS DELIBERATELY NO ACCENT BUTTON. DESIGN.md's sixth recipe is the "AI
+ * Action / Accent" button in `--secondary` (#EA580C) — but every one of its
+ * documented uses is AI trip generation, which is in this spec's Cut table, and
+ * white on #EA580C is 3.56:1, under the 4.5:1 floor for its own label. A recipe
+ * for it would be dead CSS that fails contrast the day someone found a use for
+ * it. `--secondary` stays a decorative token with no text on it.
+ */
+
+.button-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: var(--space-xs) var(--space-md);
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  background: var(--primary);
+  color: var(--on-primary);
+  font: var(--type-label-lg);
+  letter-spacing: var(--tracking-label-lg);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.button-primary:hover:not(:disabled) {
+  background: var(--primary-hover);
+}
+
+.button-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* The form-completing action: the deepest tone in the palette, reserved for the
+   one button that ends a flow. Phase 4 (step 22) puts it on the trip creator's
+   full-width submit. Its hover lifts to `--primary` rather than darkening
+   further — #00294d is already the floor of the ramp, and DESIGN.md names no
+   hover for it. */
+.button-primary--deep {
+  background: var(--primary-deep);
+}
+
+.button-primary--deep:hover:not(:disabled) {
+  background: var(--primary);
+}
+
+/* Ghost: DESIGN.md's "Secondary / Ghost". Transparent, primary text, hairline
+   border, sunken fill on hover. */
+.button-quiet {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: var(--space-xs) var(--space-sm);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--primary);
+  font: var(--type-label-lg);
+  letter-spacing: var(--tracking-label-lg);
+  cursor: pointer;
+}
+
+.button-quiet:hover:not(:disabled) {
+  background: var(--surface-sunken);
+}
+
+.button-quiet:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* The design's "subtle scale transition", the whole of it: 150ms is the ceiling
+   the spec sets for every transition in the app, and none of it happens for a
+   reader who asked for less motion. */
+@media (prefers-reduced-motion: no-preference) {
+  .button-primary,
+  .button-quiet,
+  .button-danger,
+  .app-shell button:not([class]) {
+    transition:
+      background-color 150ms ease,
+      border-color 150ms ease,
+      transform 150ms ease;
+  }
+
+  .button-primary:hover:not(:disabled) {
+    transform: scale(1.01);
+  }
+}
+
+[role='alert'] {
+  margin: var(--space-2) 0 0;
+  color: var(--colour-danger);
+  font-size: 0.875rem;
+}
+
+/* An empty state is a designed state, not a blank page. */
+.empty-state {
+  padding: var(--space-8);
+  border: 1px dashed var(--colour-border);
+  border-radius: var(--radius-lg);
+  background: var(--colour-surface);
+  text-align: center;
+}
+
+.empty-state h2 {
+  margin-bottom: var(--space-2);
+  font-size: 1.25rem;
+}
+
+.empty-state p {
+  margin: 0 0 var(--space-4);
+  color: var(--colour-text-muted);
+}
+
+.empty-state--inline {
+  margin-bottom: var(--space-6);
+  padding: var(--space-4);
+  color: var(--colour-text-muted);
+}
+
+/* --- the readiness counter (R02) --- */
+
+.readiness {
+  margin: var(--space-3) 0 0;
+}
+
+.readiness__label {
+  display: block;
+  color: var(--colour-text-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.readiness__value {
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.readiness--compact .readiness__value {
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+/* Nothing tracked yet is a neutral statement, not a failure. There is
+   deliberately no bar and no percentage here: the percentage is undefined at a
+   zero denominator, and "0%" would read as failure. */
+.readiness[data-nothing-tracked='true'] .readiness__value {
+  color: var(--colour-text-muted);
+  font-weight: 600;
+}
+
+/* --- status chips --- */
+
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--colour-border);
+  border-radius: 999px;
+  background: var(--colour-surface);
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* Colour is an addition to the glyph and the label, never a replacement:
+   removing every rule below must still leave the status readable. */
+.status-chip[data-status='to_plan'] {
+  color: var(--colour-text-muted);
+}
+
+.status-chip[data-status='to_book'] {
+  border-color: #b8781f;
+  color: #8a5a12;
+  background: #fdf6e9;
+}
+
+.status-chip[data-status='done'] {
+  border-color: var(--colour-accent);
+  color: var(--colour-accent);
+  background: #eef5f2;
+}
+
+/* --- items --- */
+
+.item-list,
+.timeline__items {
+  display: grid;
+  gap: var(--space-2);
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.item-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2) var(--space-3);
+  width: 100%;
+  padding: var(--space-3);
+  border: 1px solid var(--colour-border);
+  border-radius: var(--radius-sm);
+  background: var(--colour-surface);
+  color: inherit;
+  font: inherit;
+  text-align: start;
+}
+
+.item-row--button {
+  cursor: pointer;
+}
+
+.item-row--button:hover {
+  border-color: var(--colour-accent);
+}
+
+.item-row__time {
+  min-width: 6.5rem;
+  color: var(--colour-text-muted);
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.item-row__kind {
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--colour-bg);
+  font-size: 0.75rem;
+  color: var(--colour-text-muted);
+}
+
+.item-row__title {
+  flex: 1;
+  font-weight: 600;
+}
+
+.item-row__spans {
+  color: var(--colour-text-muted);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.item-row__notes {
+  flex-basis: 100%;
+  color: var(--colour-text-muted);
+  font-size: 0.875rem;
+}
+
+/* --- the item editor dialog --- */
+
+.dialog-overlay {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: var(--space-4);
+  background: rgb(27 36 48 / 45%);
+  z-index: 10;
+}
+
+.dialog {
+  width: min(32rem, 100%);
+  max-height: 90dvh;
+  overflow-y: auto;
+  padding: var(--space-6);
+  border-radius: var(--radius-lg);
+  background: var(--colour-surface);
+  box-shadow: var(--shadow-card);
+}
+
+.dialog h2 {
+  margin-bottom: var(--space-4);
+  font-size: 1.25rem;
+}
+
+.dialog form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.dialog label {
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.dialog input,
+.dialog select,
+.dialog textarea {
+  width: 100%;
+  padding: var(--space-3);
+  border: 1px solid var(--colour-border);
+  border-radius: var(--radius-sm);
+  background: var(--colour-surface);
+  color: inherit;
+  font: inherit;
+}
+
+.dialog .field-row {
+  display: flex;
+  gap: var(--space-4);
+}
+
+.dialog .field-row > div {
+  flex: 1;
+}
+
+.dialog .hint {
+  margin: 0;
+  color: var(--colour-text-muted);
+  font-size: 0.8125rem;
+}
+
+.dialog__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+}
+
+/* Danger: the ghost shape in the danger role. It is a destructive action, so it
+   is never the loudest thing in the dialog — the solid variant below is, and
+   only in the confirmation step. */
+.button-danger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  margin-right: auto;
+  padding: var(--space-xs) var(--space-sm);
+  border: 1px solid var(--danger);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--danger);
+  font: var(--type-label-lg);
+  letter-spacing: var(--tracking-label-lg);
+  cursor: pointer;
+}
+
+.button-danger:hover:not(:disabled) {
+  background: var(--danger-surface);
+  color: var(--on-danger-surface);
+}
+
+/* --- the filter bar --- */
+
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3) var(--space-4);
+  margin-bottom: var(--space-4);
+  padding: var(--space-3);
+  border: 1px solid var(--colour-border);
+  border-radius: var(--radius-md);
+  background: var(--colour-surface);
+}
+
+.filter-bar__filters {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.filter-bar__filters legend {
+  float: left;
+  margin-right: var(--space-3);
+  padding: 0;
+  color: var(--colour-text-muted);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.filter-bar__filters label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: 0.875rem;
+}
+
+/* Counts, not controls — they are not buttons and must not look like them. */
+.filter-bar__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0 0 0 auto;
+  padding: 0;
+  list-style: none;
+}
+
+.kind-chip {
+  padding: var(--space-1) var(--space-2);
+  border-radius: 999px;
+  background: var(--colour-bg);
+  color: var(--colour-text-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+/* --- the confirmation dialog --- */
+
+.dialog--confirm p {
+  margin: 0;
+  color: var(--colour-text-muted);
+}
+
+/* Solid, so the destructive action is unmistakable — but it is not the one that
+   holds focus when the dialog opens. */
+.button-danger--solid {
+  margin-right: 0;
+  border-color: var(--danger);
+  background: var(--danger);
+  color: var(--on-danger);
+}
+
+.button-danger--solid:hover:not(:disabled) {
+  background: var(--on-danger-surface);
+  border-color: var(--on-danger-surface);
+  color: var(--on-danger);
+}
