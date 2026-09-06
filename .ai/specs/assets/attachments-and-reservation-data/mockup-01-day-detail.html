@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<title>Mockup 01 — /trips/:id/days/:date, załączniki dnia (PL)</title>
+<link rel="stylesheet" href="_mockup.css">
+<style>
+  .file-row {
+    display: grid; grid-template-columns: 2.75rem minmax(0,1fr) auto;
+    gap: var(--space-sm); align-items: center;
+    padding: var(--space-sm); border: 1px solid var(--hairline);
+    border-radius: var(--radius-lg); background: var(--surface);
+  }
+  .file-row + .file-row { margin-top: var(--space-xs); }
+  .file-thumb {
+    width: 2.75rem; height: 2.75rem; border-radius: var(--radius);
+    display: grid; place-items: center; font-size: 18px;
+    background: var(--draft-bg); color: var(--primary); overflow: hidden;
+  }
+  .file-thumb--img { background: linear-gradient(135deg,#bfdbfe,#93c5fd 55%,#fcd34d); }
+  .file-name { font-size: 14px; font-weight: 600; word-break: break-all; }
+  .file-acts { display: flex; gap: var(--space-xs); }
+  .breadcrumb { margin: 0 0 var(--space-xs); font-size: 12px; font-weight: 600; letter-spacing: .015em; color: var(--text-subtle); }
+  .dock .row { justify-content: space-between; }
+  .dock__list { display: grid; gap: var(--space-2xs); margin-top: var(--space-xs); font-size: 13px; }
+  .item-card__span { display: block; }
+  .clip {
+    display: inline-flex; align-items: center; gap: 4px; margin-top: var(--space-2xs);
+    height: 22px; padding: 0 var(--space-2xs); border-radius: 9999px;
+    background: var(--draft-bg); color: var(--draft-text);
+    font-size: 11px; font-weight: 600;
+  }
+</style>
+</head>
+<body>
+<header class="chrome">
+  <span class="wordmark">Smart Trip Planner</span>
+  <span class="chrome__context">Malezja, październik 2026</span>
+  <span style="flex:1"></span>
+  <span class="chrome__right">
+    <span class="segmented"><span class="pill" style="background:var(--primary);color:var(--on-primary);border-color:var(--primary)">PL</span><span class="pill">EN</span></span>
+    <span class="muted">michal@… · Wyloguj</span>
+  </span>
+</header>
+
+<p class="mockup-note">Ilustracyjny mockup do <code>.ai/specs/2026-09-05-attachments-and-reservation-data.md</code>. Rysowany <b>na wdrożonym systemie projektowym</b> (<code>_mockup.css</code> skopiowany z <code>assets/design-system-adoption/</code>), więc rozjazd między mockupem a aplikacją jest widocznym błędem, a nie kwestią gustu. Panel dokumentów stoi <b>pod listą pozycji</b> — w pozycji, którą zadeklarowała specyfikacja systemu projektowego. Podgląd PDF w aplikacji jest świadomie wycięty (A10): dokumenty się pobiera. Spinacz na kartach pojawia się tylko przy <code>attachment_count &gt; 0</code>.</p>
+
+<div class="page">
+  <main>
+    <p class="breadcrumb">Moje podróże / Malezja, październik 2026 / Dzień 2</p>
+    <p class="eyebrow">Etap: Kuala Lumpur</p>
+    <h1 class="headline-xl">Dzień 2 — niedziela, 11 października 2026</h1>
+    <p class="hint" style="margin-bottom:var(--space-lg)">3 pozycje · 2 z 2 załatwione tego dnia</p>
+
+    <div class="stack">
+      <article class="item-card">
+        <div class="item-card__time">09:30</div>
+        <div class="item-card__icon" aria-hidden="true">🎟</div>
+        <div class="item-card__body">
+          <h3 class="headline-sm">Petronas Towers — Skybridge</h3>
+          <p class="item-card__notes">Bilety czasowe, kupione z wyprzedzeniem.</p>
+          <span class="clip">📎 2 pliki</span>
+        </div>
+        <div class="item-card__aside"><span class="chip" data-status="done"><span class="chip__glyph" aria-hidden="true">●</span>gotowe</span></div>
+      </article>
+
+      <article class="item-card">
+        <div class="item-card__time">15:00<span class="item-card__span">→ 14.10</span></div>
+        <div class="item-card__icon" aria-hidden="true">🏨</div>
+        <div class="item-card__body">
+          <h3 class="headline-sm">Nocleg: The Chow Kit</h3>
+          <p class="item-card__notes">Pokój Deluxe, 3 noce, śniadanie wliczone.</p>
+          <span class="clip">📎 1 plik</span>
+        </div>
+        <div class="item-card__aside"><span class="chip" data-status="done"><span class="chip__glyph" aria-hidden="true">●</span>gotowe</span></div>
+      </article>
+
+      <article class="item-card">
+        <div class="item-card__time">cały dzień</div>
+        <div class="item-card__icon" aria-hidden="true">🍜</div>
+        <div class="item-card__body">
+          <h3 class="headline-sm">Kolacja na Jalan Alor</h3>
+          <p class="item-card__notes">Bez rezerwacji, wybór na miejscu.</p>
+        </div>
+        <div class="item-card__aside"><span class="chip" data-status="to_plan"><span class="chip__glyph" aria-hidden="true">○</span>do zaplanowania</span></div>
+      </article>
+    </div>
+
+    <section class="card" style="margin-top:var(--space-xl)">
+      <div class="section-title">
+        <h2 class="headline-md">Załączniki i dokumenty dnia</h2>
+        <p class="hint">Materiały, które dotyczą całego dnia, a nie pojedynczej pozycji.</p>
+      </div>
+
+      <div class="file-row">
+        <div class="file-thumb" aria-hidden="true">📄</div>
+        <div>
+          <div class="file-name">Transfer_lotnisko_KLIA_Ekspres.pdf</div>
+          <p class="hint">PDF · 412 kB · dodano 6 września 2026</p>
+        </div>
+        <div class="file-acts">
+          <span class="btn btn--ghost btn--sm">Pobierz</span>
+          <span class="btn btn--danger btn--sm">Usuń</span>
+        </div>
+      </div>
+      <div class="file-row">
+        <div class="file-thumb file-thumb--img" aria-hidden="true"></div>
+        <div>
+          <div class="file-name">mapa_okolicy_screenshot.png</div>
+          <p class="hint">PNG · 1,8 MB · dodano 6 września 2026</p>
+        </div>
+        <div class="file-acts">
+          <span class="btn btn--ghost btn--sm">Pobierz</span>
+          <span class="btn btn--danger btn--sm">Usuń</span>
+        </div>
+      </div>
+
+      <div class="dropzone" style="margin-top:var(--space-md);cursor:pointer">
+        <strong>📎 Dodaj plik / zdjęcie / bilet</strong>
+        <span class="body-sm">Przeciągnij tutaj albo wybierz z dysku. PDF, JPEG lub PNG, do 10 MB.</span>
+      </div>
+      <p class="hint" style="margin-top:var(--space-xs)"><em>Kropkowana obwódka to <code>--hairline-strong</code> w <code>--radius-lg</code>, wypełnienie przy przeciąganiu to <code>--surface-sunken</code> — trzy tokeny, które system projektowy opisał jako „dropzone” jeszcze przed powstaniem tej funkcji.</em></p>
+    </section>
+  </main>
+
+  <aside class="dock">
+    <div class="dock__card">
+      <p class="eyebrow">Ten dzień</p>
+      <div class="dock__list">
+        <div class="row"><span class="muted">Pozycje</span><b>3</b></div>
+        <div class="row"><span class="muted">Załatwione</span><b>2 z 2</b></div>
+        <div class="row"><span class="muted">Załączniki dnia</span><b>2 pliki</b></div>
+        <div class="row"><span class="muted">Załączniki pozycji</span><b>3 pliki</b></div>
+      </div>
+    </div>
+    <div class="dock__card">
+      <p class="eyebrow">Licznik gotowości</p>
+      <p class="hint" style="margin-top:var(--space-2xs)">Licznik liczy wyłącznie statusy (R02). Dane rezerwacji — numer i koszt — nigdy na niego nie wpływają i nigdy nie są wymagane.</p>
+    </div>
+    <div class="dock__card">
+      <p class="eyebrow">Limity</p>
+      <div class="dock__list">
+        <div class="row"><span class="muted">Na plik</span><b>10 MB</b></div>
+        <div class="row"><span class="muted">Na dzień / pozycję</span><b>20</b></div>
+        <div class="row"><span class="muted">Na podróż</span><b>250 MB</b></div>
+      </div>
+    </div>
+  </aside>
+</div>
+</body>
+</html>
