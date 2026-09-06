@@ -260,20 +260,212 @@
   font-size: 0.875rem;
 }
 
-/* --- /trips/:id --- */
+/* --- /trips/:id — the trip banner ------------------------------------
+ *
+ * The export's dark header block, painted across the two elements the shell
+ * renders as siblings: `.page-heading` (the `<h1>` and the trip's own actions,
+ * owned by `AppShell`) and `.trip-banner` (the meta row and the readiness
+ * tile). They are JOINED rather than merged — the heading is not moved into the
+ * banner and the title is not duplicated into it, because a second copy of the
+ * trip name would be a second heading with the same accessible name.
+ *
+ * `:has()` is what scopes the heading half to this screen: the shell has no
+ * screen-specific hook, and a new prop for a background colour would be a
+ * component API change for a paint job. Where `:has()` is unsupported the
+ * heading simply stays on the canvas above a dark banner — degraded, never
+ * broken.
+ */
 
-.trip-header {
-  margin-bottom: var(--space-lg);
+.page__canvas:has(> .trip-banner) > .page-heading {
+  align-items: flex-start;
+  margin-bottom: 0;
+  padding: var(--space-lg) var(--space-lg) var(--space-sm);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  background: var(--primary-deep);
+  color: var(--on-primary);
 }
 
-.trip-header p {
+/* The title: `display-lg`, which resolves to `display-lg-mobile` below 768px
+   through the token file, so nothing is restated here.
+
+   TWO LINES, THEN AN ELLIPSIS. `min-width: 0` and `overflow-wrap: anywhere`
+   are what stop a 60-character unbroken title from widening the flex row until
+   it pushes the delete action — and, below it, the readiness tile — off the
+   banner. The full title stays in the heading's `title` attribute. */
+.page__canvas:has(> .trip-banner) > .page-heading h1 {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  min-width: 0;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  font: var(--type-display-lg);
+  letter-spacing: var(--tracking-display-lg);
+}
+
+/* The focus ring on the heading half. `.on-dark` in `base.css` carries this for
+   the banner itself; the heading is the shell's element and cannot be given the
+   class from here, so the same override is repeated for its subtree — a
+   #0f3f6d ring on a #00294d fill is invisible. */
+.page__canvas:has(> .trip-banner) > .page-heading :focus-visible {
+  outline-color: var(--primary-fixed);
+}
+
+/* The delete action, on the dark fill. `--danger` (#ba1a1a) is 1.6:1 on
+   `--primary-deep` and unreadable there, so the action wears the design's
+   error-container tone instead: #ffdad6 on #00294d is 11.4:1, and it still
+   reads as danger rather than as chrome. The hover state is the recipe's own
+   pair from `components.css`. */
+.page__canvas:has(> .trip-banner) > .page-heading .button-danger {
+  flex: none;
+  border-color: var(--danger-surface);
+  color: var(--danger-surface);
+}
+
+.page__canvas:has(> .trip-banner) > .page-heading .button-danger:hover:not(:disabled) {
+  background: var(--danger-surface);
+  color: var(--on-danger-surface);
+}
+
+.trip-banner {
+  display: grid;
+  gap: var(--space-md);
+  margin-bottom: var(--space-lg);
+  padding: 0 var(--space-lg) var(--space-lg);
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+  background: var(--primary-deep);
+  color: var(--on-primary);
+}
+
+/* The readiness tile beside the meta row at ≥1280px, as the export's "STATUS
+   LOGISTYKI" tile sits; below that it drops onto its own row under the meta.
+   Explicit placement rather than flex wrapping, so the breakpoint is the
+   spec's and not whatever the title length happens to produce. */
+@media (min-width: 1280px) {
+  .trip-banner {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: end;
+  }
+}
+
+/* The icon-led meta row: the date range, the day count and the route summary.
+   Each fact is a `--meta-item` so step 6.1 can put a glyph in front of its text
+   without moving anything. */
+.trip-banner__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2xs) var(--space-md);
+  min-width: 0;
+  margin: 0;
+  color: var(--primary-fixed);
+  font: var(--type-body-md);
+  letter-spacing: var(--tracking-body-md);
+}
+
+.trip-banner__meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* The route is the fact the owner reads first, so it carries the full-strength
+   tone rather than the muted fixed one. */
+.trip-banner__meta-item--route {
+  color: var(--on-primary);
+  font-weight: 600;
+}
+
+/* The tile inside the banner: a translucent well rather than a second surface
+   colour, so it cannot drift from the fill it sits on. */
+.trip-banner .readiness {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2xs) var(--space-sm);
+  margin: 0;
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--on-primary) 10%, transparent);
+}
+
+.trip-banner .readiness__label {
+  flex-basis: 100%;
+  color: var(--primary-fixed);
+}
+
+.trip-banner .readiness__value,
+.trip-banner .readiness[data-nothing-tracked='true'] .readiness__value {
+  color: var(--on-primary);
+}
+
+/* --- /trips/:id — the dock ------------------------------------------- */
+
+.trip-dock {
+  display: contents;
+}
+
+/* Below 1280px the dock is a horizontal strip above the canvas (`chrome.css`),
+   so each block is a card that can sit beside its neighbours; at the split it
+   stacks in the column. */
+.trip-dock__block {
+  flex: 1 1 14rem;
+  min-width: 0;
+  padding: var(--space-md);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--elevation-1);
+}
+
+.trip-dock__block h2 {
+  margin-bottom: var(--space-xs);
+  color: var(--text-muted);
+  font: var(--type-label-md);
+  letter-spacing: var(--tracking-label-md);
+  text-transform: uppercase;
+}
+
+.trip-dock__list {
+  margin: 0;
+}
+
+.trip-dock__entry {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2xs) var(--space-sm);
+  padding: var(--space-2xs) 0;
+}
+
+.trip-dock__entry + .trip-dock__entry {
+  border-top: 1px solid var(--hairline);
+}
+
+.trip-dock__entry dt {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font: var(--type-label-lg);
+  letter-spacing: var(--tracking-label-lg);
+}
+
+.trip-dock__entry dd {
   margin: 0;
   color: var(--text-muted);
+  font: var(--type-body-sm);
+  letter-spacing: var(--tracking-body-sm);
+  font-variant-numeric: tabular-nums;
 }
 
-.trip-header__route {
-  font-weight: 600;
-  color: var(--text) !important;
+.trip-dock__route {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font: var(--type-body-sm);
+  letter-spacing: var(--tracking-body-sm);
 }
 
 .timeline {

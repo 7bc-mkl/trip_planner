@@ -29,7 +29,13 @@
     "deleteTitle": "Delete this trip?",
     "deleteMessage": "“{title}” and everything planned in it — every destination, every day and every item — will be deleted. This cannot be undone.",
     "deleteConfirm": "Delete trip",
-    "headerContext": "{title} · {dates}"
+    "headerContext": "{title} · {dates}",
+    "dayCount": "{count, plural, one {# day} other {# days}}",
+    "dockStages": "Destinations",
+    "dockUndated": "Dates not decided",
+    "dockTypes": "What is planned",
+    "dockCount": "{count, number}",
+    "dockRoute": "Route"
   },
   "trips": {
     "title": "Trips",

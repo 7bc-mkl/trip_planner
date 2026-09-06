@@ -31,7 +31,7 @@
 | 3 | 3.3 | The optional `dock` prop and the responsive page grid (spec step 15) | group:C | done | a552668 |
 | 3 | 3.4 | Phase-3 screenshot set, including 360px (spec step 16) | inline | done | 001e1dc |
 | 4 | 4.1 | `/login` and `/trips` restyled (spec step 17) | dispatch | done | pending |
-| 4 | 4.2 | The trip banner on `/trips/:id` (spec step 18) | group:D | todo | — |
+| 4 | 4.2 | The trip banner on `/trips/:id` (spec step 18) | group:D | done | pending |
 | 4 | 4.3 | The readiness ring behind the optional `ring` prop (spec step 19) | group:D | todo | — |
 | 4 | 4.4 | The sticky pill filter bar (spec step 20) | group:D | todo | — |
 | 4 | 4.5 | The timeline rail, day anchors and item cards (spec step 21) | group:D | todo | — |

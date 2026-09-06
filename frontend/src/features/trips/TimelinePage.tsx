@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 
 import { ApiError } from '../../api/client'
+import { ITEM_KINDS } from '../../api/items'
 import { deleteTrip, fetchTrip } from '../../api/trips'
 import type { Stage, TripDetail } from '../../api/trips'
 import { AppShell } from './AppShell'
@@ -10,8 +11,8 @@ import { ConfirmDialog } from './ConfirmDialog'
 import { FilterBar } from './FilterBar'
 import { ItemRow } from './ItemRow'
 import { ReadinessTile } from './ReadinessTile'
-import { DEFAULT_FILTER, applyFilter, isFilter } from './filter'
-import { formatDateRange, formatDayChip, routeSummary, stageLabel } from './format'
+import { DEFAULT_FILTER, applyFilter, countByKind, isFilter } from './filter'
+import { dayCount, formatDateRange, formatDayChip, routeSummary, stageLabel } from './format'
 
 /**
  * `/trips/:id` — the vertical day-by-day timeline.
@@ -88,6 +89,8 @@ export function TimelinePage() {
   const stagesById = new Map(trip.stages.map((stage) => [stage.id, stage]))
   const everyItem = trip.days.flatMap((day) => day.items)
   const hasItems = everyItem.length > 0
+  const counts = countByKind(everyItem)
+  const route = routeSummary(trip, trip.stages)
 
   return (
     <AppShell
@@ -113,12 +116,87 @@ export function TimelinePage() {
           {t('trip.delete')}
         </button>
       }
+      /*
+       * The dock (Q9): trip metadata promoted out of the main column. Every
+       * value here is already on the loaded trip — nothing new is computed and
+       * nothing is fetched.
+       *
+       * The readiness figure is deliberately NOT repeated here: it is rendered
+       * once, in the banner, where the export puts it. Two identical "x of y"
+       * text nodes on one screen would be noise, and the suite asserts the
+       * counter appears exactly once.
+       *
+       * The stage and type blocks are `<dl>`s rather than `<ul>`s: the days on
+       * the rail are the screen's list, and a second list of `<li>`s in the
+       * dock would make "the timeline has N days" unanswerable by role.
+       */
+      dock={
+        <div className="trip-dock">
+          {trip.stages.length > 0 && (
+            <section className="trip-dock__block">
+              <h2>{t('trip.dockStages')}</h2>
+              <dl className="trip-dock__list">
+                {trip.stages.map((stage) => (
+                  <div className="trip-dock__entry" key={stage.id}>
+                    <dt>{stage.place}</dt>
+                    <dd>
+                      {stage.start_date !== null && stage.end_date !== null
+                        ? formatDateRange(stage.start_date, stage.end_date, i18n.language)
+                        : /* Stage dates are optional in the creator, so a stage
+                             without them says so rather than rendering a gap. */
+                          t('trip.dockUndated')}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            </section>
+          )}
+
+          {hasItems && (
+            <section className="trip-dock__block">
+              <h2>{t('trip.dockTypes')}</h2>
+              <dl className="trip-dock__list">
+                {ITEM_KINDS.filter((kind) => counts[kind] > 0).map((kind) => (
+                  <div className="trip-dock__entry" key={kind}>
+                    <dt>{t(`item.kind.${kind}`)}</dt>
+                    <dd>{t('trip.dockCount', { count: counts[kind] })}</dd>
+                  </div>
+                ))}
+              </dl>
+            </section>
+          )}
+
+          <section className="trip-dock__block">
+            <h2>{t('trip.dockRoute')}</h2>
+            <p className="trip-dock__route">{route}</p>
+          </section>
+        </div>
+      }
     >
-      <header className="trip-header">
-        <p className="trip-header__dates">
-          {formatDateRange(trip.start_date, trip.end_date, i18n.language)}
+      {/*
+       * The banner. The export's dark header block, and it is painted across
+       * two elements: the shell's own `.page-heading` — the `<h1>` and the
+       * trip's actions — and this one, joined into a single `--primary-deep`
+       * block by `screens.css`. The title is NOT repeated here: a second copy
+       * would be a second heading with the same accessible name, and the trip
+       * is named once on the page.
+       *
+       * `.on-dark` is the focus-ring override from `base.css`: a #0f3f6d ring
+       * on a #00294d fill is invisible.
+       */}
+      <header className="trip-banner on-dark">
+        {/* The icon-led meta row. Each fact is its own element so step 6.1 can
+            put its glyph in front of the text without moving anything; no
+            sprite is invented here. */}
+        <p className="trip-banner__meta">
+          <span className="trip-banner__meta-item">
+            {formatDateRange(trip.start_date, trip.end_date, i18n.language)}
+          </span>
+          <span className="trip-banner__meta-item">
+            {t('trip.dayCount', { count: dayCount(trip.start_date, trip.end_date) })}
+          </span>
+          <span className="trip-banner__meta-item trip-banner__meta-item--route">{route}</span>
         </p>
-        <p className="trip-header__route">{routeSummary(trip, trip.stages)}</p>
         {/* The export's "STATUS LOGISTYKI" tile. Its layout is adopted; its
             arithmetic is not — the export's denominator is the all-items count,
             which includes do zaplanowania and contradicts R02. */}

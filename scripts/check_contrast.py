@@ -62,6 +62,9 @@ PAIRS: list[tuple[str, str, str]] = [
     # The danger recipes.
     ("--on-danger", "--danger", "body"),
     ("--on-danger-surface", "--danger-surface", "body"),
+    # The trip banner's delete action: `--danger` itself is 1.6:1 on the deep
+    # primary fill, so the ghost recipe wears the error-container tone there.
+    ("--danger-surface", "--primary-deep", "body"),
     # UI boundaries: the resting field border and the two focus-ring recipes.
     ("--field-border", "--surface", "large"),
     ("--primary", "--canvas", "large"),

@@ -29,7 +29,13 @@
     "deleteTitle": "Usunąć tę podróż?",
     "deleteMessage": "„{title}” i wszystko, co w niej zaplanowano — każdy cel, każdy dzień i każdy element — zostanie usunięte. Tej operacji nie można cofnąć.",
     "deleteConfirm": "Usuń podróż",
-    "headerContext": "{title} · {dates}"
+    "headerContext": "{title} · {dates}",
+    "dayCount": "{count, plural, one {# dzień} few {# dni} many {# dni} other {# dnia}}",
+    "dockStages": "Cele podróży",
+    "dockUndated": "Daty nieustalone",
+    "dockTypes": "Co jest zaplanowane",
+    "dockCount": "{count, number}",
+    "dockRoute": "Trasa"
   },
   "trips": {
     "title": "Podróże",

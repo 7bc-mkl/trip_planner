@@ -100,7 +100,13 @@ export function AppShell({
         <main className="page__canvas">
           {breadcrumb}
           <div className="page-heading">
-            <h1>{title}</h1>
+            {/* The `title` attribute is the accessible escape hatch for a
+                clamped heading: on `/trips/:id` the heading is the trip banner's
+                display-lg title and clamps to two lines, so the full string has
+                to stay reachable. It is a description, never the accessible
+                name — a heading with text content takes its name from that
+                content — so nothing an assertion queries by name moves. */}
+            <h1 title={title}>{title}</h1>
             {actions}
           </div>
           {children}
