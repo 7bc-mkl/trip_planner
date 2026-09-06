@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
 
 import type { Attachment } from '../../api/attachments'
-import { AttachmentRow } from './AttachmentRow'
+import { AttachmentRow, duplicatedSha256s } from './AttachmentRow'
 import { UploadDropzone } from './UploadDropzone'
 
 /**
@@ -47,6 +47,10 @@ export function DayAttachments({
   onDeleted: () => void
 }) {
   const { t } = useTranslation()
+  // Derived on every render from the list this panel is showing, so the
+  // duplicate hint (A14) appears on the very render that first paints the
+  // second copy — the same render that retires the upload queue's own row.
+  const duplicated = duplicatedSha256s(attachments)
 
   return (
     <section className="day-attachments">
@@ -58,7 +62,12 @@ export function DayAttachments({
         <ul className="day-attachments__list" aria-label={t('dayAttachments.list')}>
           {attachments.map((attachment) => (
             <li key={attachment.id}>
-              <AttachmentRow tripId={tripId} attachment={attachment} onDeleted={onDeleted} />
+              <AttachmentRow
+                tripId={tripId}
+                attachment={attachment}
+                duplicate={duplicated.has(attachment.sha256)}
+                onDeleted={onDeleted}
+              />
             </li>
           ))}
         </ul>

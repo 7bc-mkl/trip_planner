@@ -95,6 +95,16 @@ import { ApiError } from '../../api/client'
  * legitimate attachments, not a duplicate — each host only ever lists its own
  * parent's hashes, so the scoping falls out of that rather than needing its
  * own check here.
+ *
+ * **The hint lives wherever the file's one representation currently is.** In a
+ * composed host the queue row retires on the very commit that paints the
+ * attachment row, so the hint below is not the surface the owner normally
+ * reads — `AttachmentRow` carries it there, derived from the host's list (see
+ * `duplicatedSha256s`). This one stays for the window where the queue row *is*
+ * the file's only representation: a host that lists nothing, or one whose
+ * refetch has not caught up yet. The two are mutually exclusive by exactly the
+ * retirement rule above, which is why the hint can be in both places without
+ * ever being in both at once, and why both read the same key.
  */
 
 /** The server's per-attachment ceiling, mirrored for the pre-check only. */

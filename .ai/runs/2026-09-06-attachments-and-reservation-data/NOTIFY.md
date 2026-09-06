@@ -363,3 +363,35 @@
   advisory lock on a third, separate connection and then asks whether `/api/v1/health` still
   answers while an upload waits on it. Both tests fail without the fix; the lock-holder one fails
   for the right reason on its own.
+
+## 4.3-review-fix-1 — where the duplicate hint actually lives (scope decision)
+
+Step 4.3 put the hint on the upload queue's `done` row. In the composed app that row retires on the
+very commit that paints the attachment row (`2.2-review-fix-2`), so the hint never rendered — the
+browser walk at the final gate found it dead, and the Step's own tests had passed because they
+exercised `UploadDropzone` in isolation, where nothing ever retires.
+
+**The hint now rides on `AttachmentRow`**, derived on every render from the host's own list
+(`duplicatedSha256s`: the hashes appearing more than once in one parent's attachments). Three
+consequences worth recording, because they change the feature's shape slightly:
+
+- **It cannot become a second representation of the file.** It is a line *inside* the file's one
+  row, not a card, a banner or a surviving queue entry. There is nothing to paint when the row is
+  not painted, so neither the exactly-once nor the never-zero guarantee has a new way to break —
+  both suites pass unmodified.
+- **It is derived, not remembered.** The verdict is not carried from the upload that produced it,
+  so it cannot go stale: delete either copy and the sentence stops being shown, because it has
+  stopped being true.
+- **Therefore it also shows for duplicates that were already there** — two identical files attached
+  on an earlier visit now say so on load, where before the hint could only ever have appeared in
+  the seconds after an upload. This is a widening of 4.3 as written. It is the price of deriving it
+  from the list rather than from an event, and it is judged an improvement: A14's sentence ("a file
+  with the same contents is already attached here") is a fact about the parent, not about a click.
+
+The queue row's own hint is **kept**, unchanged, for the window where the queue row is genuinely the
+file's only representation (a dropzone with no host list; a host whose refetch has not caught up).
+The retirement rule makes the two surfaces mutually exclusive, so the hint can exist in both places
+without ever appearing twice, and both read the same `upload.duplicateHint` key.
+
+Nothing about A14's substance moved: nothing is deduplicated, nothing is refused, both copies are
+stored and listed, and the hint carries no `role="alert"`, no undo and no dismissal.

@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 
 import type { Attachment } from '../../api/attachments'
 import type { Item } from '../../api/items'
-import { AttachmentRow } from './AttachmentRow'
+import { AttachmentRow, duplicatedSha256s } from './AttachmentRow'
 import { UploadDropzone } from './UploadDropzone'
 
 /**
@@ -54,6 +54,9 @@ export function ItemAttachments({
 }) {
   const { t } = useTranslation()
   const [attachments, setAttachments] = useState<Attachment[]>(item?.attachments ?? [])
+  // Derived from this strip's own list, so the duplicate hint (A14) lands on
+  // the same commit that appends the second copy — see `AttachmentRow`.
+  const duplicated = duplicatedSha256s(attachments)
 
   function handleUploaded(attachment: Attachment) {
     setAttachments((previous) => [...previous, attachment])
@@ -78,6 +81,7 @@ export function ItemAttachments({
               <AttachmentRow
                 tripId={tripId}
                 attachment={attachment}
+                duplicate={duplicated.has(attachment.sha256)}
                 onDeleted={() => handleDeleted(attachment.id)}
               />
             </li>

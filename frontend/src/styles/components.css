@@ -742,6 +742,16 @@ textarea:disabled {
   letter-spacing: var(--tracking-label-md);
 }
 
+/* The duplicate hint (A14) — a third muted line under the size, wearing the
+   same recipe the upload queue's own hint does. Deliberately quiet: it is
+   information, not a problem, so it borrows nothing from the error or the
+   danger palette. */
+.attachment-row__duplicate-hint {
+  color: var(--text-muted);
+  font: var(--type-body-sm);
+  letter-spacing: var(--tracking-body-sm);
+}
+
 /* Download and delete, pinned to the row's far edge rather than crowding the
    name and size. Download wears the ghost recipe as an `<a>` rather than a
    `<button>` — see `AttachmentRow.tsx` for why — so its underline (the `a`

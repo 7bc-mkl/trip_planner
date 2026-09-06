@@ -32,16 +32,56 @@ import { Lightbox } from './Lightbox'
  * **Images open in `Lightbox`** (Step 4.2) when their preview is clicked; a
  * PDF's glyph is not a button at all, so clicking it does nothing — the PDF
  * action stays "Pobierz"/"Download", never a preview (A10).
+ *
+ * **The duplicate hint (A14) rides on this row, because this row *is* the
+ * file.** It is one extra muted line under the size — never a second card,
+ * never a banner of its own — so it cannot become a second representation of
+ * the attachment: there is nothing to render when the row is not rendered, and
+ * deleting the file takes its hint with it. The verdict is not remembered from
+ * the upload that produced it; it is derived on every render from the host's
+ * own list (`duplicatedSha256s` below), which is why it survives the refetch
+ * that retires the upload queue's row — the defect Step 4.3 shipped with — and
+ * why it stops being shown the moment one of the two copies is deleted.
  */
 const IMAGE_CONTENT_TYPES = new Set(['image/jpeg', 'image/png'])
+
+/**
+ * The hashes that appear **more than once** in one parent's list — i.e. the
+ * same bytes attached here twice.
+ *
+ * Scoping falls out of the caller rather than out of anything here: each host
+ * (`DayAttachments`, `ItemAttachments`) only ever passes its own parent's
+ * attachments, so the same file on two different parents is two legitimate
+ * attachments and matches nothing. Nothing is deduplicated and nothing is
+ * refused (A14): both copies are in the list that produced this set, and both
+ * keep their row, their download and their delete.
+ */
+export function duplicatedSha256s(attachments: readonly Attachment[]): ReadonlySet<string> {
+  const seen = new Set<string>()
+  const twice = new Set<string>()
+  for (const attachment of attachments) {
+    if (seen.has(attachment.sha256)) {
+      twice.add(attachment.sha256)
+    }
+    seen.add(attachment.sha256)
+  }
+  return twice
+}
 
 export function AttachmentRow({
   tripId,
   attachment,
+  duplicate = false,
   onDeleted,
 }: {
   tripId: string
   attachment: Attachment
+  /**
+   * True when the same bytes are attached to this same parent more than once —
+   * see `duplicatedSha256s`. Informational only (A14): it adds a line and
+   * nothing else, no error, no undo, no dismissal.
+   */
+  duplicate?: boolean
   /** Called once the attachment is gone server-side, so the host list can refresh. */
   onDeleted: () => void
 }) {
@@ -85,6 +125,14 @@ export function AttachmentRow({
         <span className="attachment-row__size">
           {t('attachment.size', { value: size.value, unit: size.unit })}
         </span>
+        {/* Non-blocking (A14): no `role="alert"`, no action of its own, and no
+            bearing on the row it sits in — the file exists, downloads and
+            deletes exactly like any other. The same one sentence the upload
+            queue uses while *it* is still the file's only representation, so
+            there is one key, not two that could drift apart. */}
+        {duplicate && (
+          <span className="attachment-row__duplicate-hint">{t('upload.duplicateHint')}</span>
+        )}
       </span>
 
       <span className="attachment-row__actions">
