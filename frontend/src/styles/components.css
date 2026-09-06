@@ -13,6 +13,60 @@
  * also where the bridge is deleted.
  */
 
+/* --- elevation (DESIGN.md, "Elevation & Depth") -----------------------
+ *
+ * Three utilities, and the surfaces that wear them. The design's levels are not
+ * shadows on their own: each is a *pairing* of a surface, a 1px boundary and a
+ * shadow, which is why the utility carries all three plus the radius tier the
+ * design pairs with it. `elevation-0` needs no class — it is the bare `--canvas`
+ * that `base.css` already paints on `body`.
+ *
+ * Each utility's selector list also names the surfaces in this file that are at
+ * that level, so the recipe is written once. The screen-scoped cards say the
+ * same thing at the top of `screens.css` rather than dragging screen names into
+ * the component layer.
+ */
+
+.elevation-1,
+.filter-bar,
+.item-row {
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--elevation-1);
+}
+
+/* The lift. A HOVER-ONLY LIFT IS INVISIBLE TO A KEYBOARD, so `:focus-visible`
+   is not an afterthought here — it is half the rule, and the two selectors are
+   written together so neither can be removed without the other. Only the
+   surfaces that actually do something on activation lift: a static card that
+   rises under the pointer promises an interaction it does not have. */
+.elevation-2,
+.item-row--button:hover,
+.item-row--button:focus-visible {
+  border-color: var(--hairline-strong);
+  box-shadow: var(--elevation-2);
+}
+
+/* Modals, drawers and floating sheets. The radius steps up a tier with the
+   elevation, as DESIGN.md's "Shapes" pairs them. */
+.elevation-3,
+.dialog {
+  border-radius: var(--radius-xl);
+  background: var(--surface);
+  box-shadow: var(--elevation-3);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .elevation-1,
+  .filter-bar,
+  .item-row {
+    transition:
+      border-color 150ms ease,
+      box-shadow 150ms ease;
+  }
+}
+
 /* --- the field recipe (DESIGN.md, "Input Fields & Date Pickers") ------
  *
  * One recipe for every text-entry control in the app — text, email, date, time,
@@ -451,20 +505,15 @@ textarea:disabled {
   gap: var(--space-2) var(--space-3);
   width: 100%;
   padding: var(--space-3);
-  border: 1px solid var(--colour-border);
-  border-radius: var(--radius-sm);
-  background: var(--colour-surface);
   color: inherit;
   font: inherit;
   text-align: start;
 }
 
+/* The surface, the boundary, the radius and the shadow are elevation-1's, at
+   the top of this file; the lift on hover and focus is elevation-2's. */
 .item-row--button {
   cursor: pointer;
-}
-
-.item-row--button:hover {
-  border-color: var(--colour-accent);
 }
 
 .item-row__time {
@@ -501,13 +550,17 @@ textarea:disabled {
 
 /* --- the item editor dialog --- */
 
+/* The scrim: `#0F172A` at 20% with a 12px backdrop blur, DESIGN.md's own pair
+   for anything at elevation-3. FALLBACK FIRST — the plain scrim is declared
+   outside the `@supports`, so a browser without `backdrop-filter` still gets a
+   real separating layer rather than nothing at all. */
 .dialog-overlay {
   position: fixed;
   inset: 0;
   display: grid;
   place-items: center;
   padding: var(--space-4);
-  background: rgb(27 36 48 / 45%);
+  background: var(--scrim);
   z-index: 10;
 }
 
@@ -516,9 +569,30 @@ textarea:disabled {
   max-height: 90dvh;
   overflow-y: auto;
   padding: var(--space-6);
-  border-radius: var(--radius-lg);
-  background: var(--colour-surface);
-  box-shadow: var(--shadow-card);
+}
+
+/* The frosted treatment, and only where the browser can actually frost.
+ *
+ * THE OPAQUE SURFACE IS DECLARED FIRST — it is elevation-3's, at the top of
+ * this file — and the translucent one only inside the `@supports`. Where
+ * `backdrop-filter` is unsupported or switched off, the dialog stays a solid
+ * `--surface` and every word in it is legible against it; a browser that got
+ * the translucency without the blur would be showing the page's own text
+ * through the dialog's, which is the failure this ordering exists to prevent.
+ *
+ * 96% rather than DESIGN.md's drawer figure of 95%: `color-mix` derives it from
+ * `--surface` so the frost cannot drift from the opaque fallback, and the extra
+ * percent buys back the contrast the blur does not.
+ */
+@supports (backdrop-filter: blur(12px)) {
+  .dialog-overlay {
+    backdrop-filter: blur(var(--scrim-blur));
+  }
+
+  .dialog {
+    background: color-mix(in srgb, var(--surface) 96%, transparent);
+    backdrop-filter: blur(var(--scrim-blur));
+  }
 }
 
 .dialog h2 {
@@ -595,9 +669,6 @@ textarea:disabled {
   gap: var(--space-3) var(--space-4);
   margin-bottom: var(--space-4);
   padding: var(--space-3);
-  border: 1px solid var(--colour-border);
-  border-radius: var(--radius-md);
-  background: var(--colour-surface);
 }
 
 .filter-bar__filters {
