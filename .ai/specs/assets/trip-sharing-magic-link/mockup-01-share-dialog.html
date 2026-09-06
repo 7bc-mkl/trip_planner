@@ -2,135 +2,168 @@
 <html lang="pl">
 <head>
 <meta charset="utf-8">
-<title>Mockup 01 — owner share dialog, active link (PL)</title>
-<link rel="stylesheet" href="_tokens.css">
+<title>Mockup 01 — dialog udostępniania, stan B (link aktywny)</title>
+<!-- The adopted design system's own mockup stylesheet, shared with the
+     design-system-adoption spec rather than copied: one vocabulary, one file.
+     Its @font-face rules resolve fonts/ relative to it, so Plus Jakarta Sans
+     renders here with no network request. -->
+<link rel="stylesheet" href="../design-system-adoption/_mockup.css">
 <style>
-  .hero { background: var(--primary); color: #fff; border-radius: var(--r-lg); padding: 22px 24px; }
-  .hero h1 { color: #fff; margin-bottom: 8px; }
-  .hero .meta { display: flex; gap: 20px; font-size: 14px; opacity: .85; }
-  .counter { background: rgba(255,255,255,.10); border: 1px solid rgba(255,255,255,.20); border-radius: var(--r-lg); padding: 14px 18px; min-width: 260px; }
-  .counter .lbl { font-size: 11px; letter-spacing: .02em; text-transform: uppercase; opacity: .75; font-weight: 600; }
-  .counter .big { font-size: 26px; font-weight: 700; letter-spacing: -.02em; margin: 2px 0 4px; }
-  .counter .exp { font-size: 12px; opacity: .8; }
-  .shared-chip { display: inline-flex; align-items: center; gap: 6px; background: rgba(255,255,255,.16); border: 1px solid rgba(255,255,255,.28); color: #fff; border-radius: 999px; padding: 3px 11px; font-size: 12px; font-weight: 600; margin-left: 10px; vertical-align: middle; }
-  .actions { display: flex; gap: 8px; justify-content: flex-end; margin: 18px 0 12px; }
-  .abtn { border: 1px solid var(--line); background: #fff; border-radius: var(--r); padding: 7px 14px; font-size: 13px; font-weight: 600; color: var(--ink-2); display: inline-flex; gap: 6px; align-items: center; }
-  .abtn.on { border-color: var(--primary); color: var(--primary); box-shadow: 0 0 0 3px rgba(15,63,109,.10); }
-  .filters { display: flex; gap: 8px; flex-wrap: wrap; margin: 0 0 18px; }
-  .fchip { border: 1px solid var(--line); background: #fff; border-radius: 999px; padding: 7px 14px; font-size: 13px; font-weight: 600; color: var(--ink-2); }
-  .fchip.on { background: var(--primary); border-color: var(--primary); color: #fff; }
-  .day { display: grid; grid-template-columns: 74px 1fr; gap: 16px; margin-bottom: 22px; }
-  .datechip { background: #fff; border: 1px solid var(--line); border-radius: var(--r); text-align: center; padding: 8px 0; height: fit-content; }
-  .datechip .m { font-size: 11px; font-weight: 700; letter-spacing: .04em; color: var(--ink-3); text-transform: uppercase; }
-  .datechip .d { font-size: 22px; font-weight: 700; line-height: 26px; }
-  .dayhead { display: flex; align-items: baseline; gap: 10px; margin-bottom: 10px; }
-  .item { background: #fff; border: 1px solid var(--line); border-radius: var(--r-lg); padding: 14px 16px; display: grid; grid-template-columns: 34px 1fr auto; gap: 12px; align-items: start; }
-  .item + .item { margin-top: 10px; }
-  .ico { width: 34px; height: 34px; border-radius: var(--r); background: var(--plan-bg); display: grid; place-items: center; font-size: 16px; }
-  .time { font-size: 13px; font-weight: 700; color: var(--ink); }
-  .item h3 { margin: 3px 0 2px; }
-  .scrim { position: relative; }
-  .scrim::before { content: ""; position: absolute; inset: -8px; background: rgba(15,23,42,.45); border-radius: var(--r-lg); }
-  .dialog { position: relative; z-index: 2; max-width: 560px; margin: -420px auto 0; background: #fff; border-radius: var(--r-lg); border: 1px solid var(--line); box-shadow: 0 24px 60px rgba(15,23,42,.28); padding: 24px; }
-  .dialog h2 { display: flex; align-items: center; gap: 8px; }
-  .warn { background: #f8fafc; border: 1px solid var(--line); border-left: 3px solid var(--primary); border-radius: var(--r); padding: 11px 13px; font-size: 13px; color: var(--ink-2); margin: 0 0 16px; }
-  .linkrow { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: stretch; }
-  .linkrow .input { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; background: #f8fafc; }
-  .live { font-size: 12px; color: var(--done-fg); font-weight: 600; margin: 8px 0 0; }
-  .dfoot { display: flex; align-items: center; justify-content: space-between; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--line); }
-  .danger { color: #b91c1c; background: #fff; border: 1px solid #fecaca; border-radius: var(--r); padding: 9px 14px; font-size: 14px; font-weight: 600; }
+  html, body { height: 100%; overflow: hidden; }
+  .stage-wrap { position: relative; height: calc(100% - 30px); overflow: hidden; }
+  /* A light scrim rather than the app's blurred backdrop, so the banner
+     and its `Udostepniona` chip stay legible behind the dialog. */
+  .scrim { position: absolute; inset: 0; z-index: 20; background: rgba(15,23,42,.18); }
+  .share-dialog {
+    position: absolute;
+    top: 15%;
+    right: 4%;
+    z-index: 22;
+    width: min(32rem, 52%);
+    padding: var(--space-lg);
+    border-radius: var(--radius-xl);
+    background: var(--surface);
+    box-shadow: var(--elevation-3);
+  }
+  .link-row { display: grid; grid-template-columns: 1fr auto; gap: var(--space-xs); align-items: stretch; }
+  .link-row .input {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 12px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    background: var(--surface-sunken, #f8fafc);
+  }
+  .copied { color: var(--success-text); font-weight: 600; }
+  .dialog-foot {
+    display: flex; align-items: center; justify-content: space-between; gap: var(--space-md);
+    margin-top: var(--space-lg); padding-top: var(--space-md); border-top: 1px solid var(--hairline);
+  }
 </style>
 </head>
 <body>
-<header class="top">
-  <span class="brand">Smart Trip Planner</span>
-  <nav><span>Moje podróże</span><b style="color:var(--primary)">Oś czasu</b></nav>
-  <span class="spacer"></span>
-  <span class="locale"><span class="on">PL</span><span>EN</span></span>
-  <span class="muted">michal@…&nbsp;· Wyloguj</span>
-</header>
+<p class="mockup-note">Illustrative mockup — Smart Trip Planner · dialog udostępniania, stan B · not application code</p>
 
-<div class="wrap">
-  <p class="banner">Illustrative mockup for <code>.ai/specs/2026-09-05-trip-sharing-magic-link.md</code> — the owner's share dialog in its <b>State B (active link)</b>, over the timeline of <code>g_wny_pulpit_i_o_czasu</code>. The token shown is fabricated. "Eksportuj PDF" beside "Udostępnij" in the design export is out of scope (D12).</p>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <symbol id="i-share" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a3.5 3.5 0 0 0 5.3.4l3-3A3.5 3.5 0 0 0 13.4 5.5l-1.7 1.7M14 11a3.5 3.5 0 0 0-5.3-.4l-3 3A3.5 3.5 0 0 0 10.6 18.5l1.7-1.7"/></symbol>
+  <symbol id="i-transport" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17.8 19.2 16 11l3.5-3.5a2.1 2.1 0 0 0-3-3L13 8 4.8 6.2a.5.5 0 0 0-.5.8l3.2 4.2-2.3 2.3-1.8-.4a.5.5 0 0 0-.5.8l2 2.4 2.4 2a.5.5 0 0 0 .8-.5l-.4-1.8 2.3-2.3 4.2 3.2a.5.5 0 0 0 .8-.5Z"/></symbol>
+</defs></svg>
 
-  <div class="scrim">
-    <div class="hero" style="display:flex; gap:24px; align-items:center; justify-content:space-between">
-      <div>
-        <h1>Malezja, październik 2026 <span class="shared-chip">🔗 Udostępniona</span></h1>
-        <div class="meta">
-          <span>10 – 24 października 2026 · 15 dni</span>
-          <span>Warszawa → Kuala Lumpur → Penang → Langkawi → Katowice</span>
+<div class="stage-wrap">
+  <header class="chrome" style="position:static">
+    <span class="wordmark">Smart Trip Planner</span>
+    <span class="chrome__context"><b>Malezja: Kuala Lumpur, Penang i Langkawi</b>10–24 paź 2026</span>
+    <span class="chrome__right">
+      <span class="body-sm subtle">Język</span>
+      <span class="segmented"><span data-selected>PL</span><span>EN</span></span>
+      <button class="btn btn--ghost btn--sm">Wyloguj się</button>
+    </span>
+  </header>
+
+  <div class="page page--single">
+    <main>
+      <section class="banner">
+        <div style="flex:1;min-width:0">
+          <p class="eyebrow" style="color:#b9cbe4;margin:0 0 var(--space-2xs)">Podróż wieloprzystankowa</p>
+          <h1 class="display-lg" style="font-size:32px;line-height:40px">
+            Malezja: Kuala Lumpur, Penang i Langkawi
+          </h1>
+          <p class="banner__meta" style="margin-top:var(--space-sm)">
+            <span>10–24 paź 2026 · <b>15 dni</b></span>
+            <!-- The chip screens.css reserved a slot for, naming PR #3. It is
+                 rendered here because a token can exist now. -->
+            <span class="chip" style="background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.28);color:#fff">
+              <svg width="12" height="12" aria-hidden="true"><use href="#i-share"/></svg>
+              Udostępniona
+            </span>
+          </p>
         </div>
-      </div>
-      <div class="counter">
-        <div class="lbl">Status gotowości</div>
-        <div class="big">4 z 7 załatwionych</div>
-        <div class="exp">5 pozycji jest jeszcze <i>do zaplanowania</i> — poza rachunkiem (R02).</div>
-      </div>
-    </div>
-
-    <div class="actions">
-      <span class="abtn on">🔗 Udostępnij</span>
-    </div>
-
-    <div class="filters">
-      <span class="fchip on">Wszystko (12)</span>
-      <span class="fchip">Tylko do zrobienia (8)</span>
-      <span class="fchip">Noclegi (3)</span>
-      <span class="fchip">Transport (3)</span>
-      <span class="fchip">Atrakcje (4)</span>
-    </div>
-
-    <div class="day">
-      <div class="datechip"><div class="m">PAŹ</div><div class="d">10</div></div>
-      <div>
-        <div class="dayhead"><h2 style="margin:0">Dzień 1 · Przylot do Kuala Lumpur</h2><span class="muted">Etap: Kuala Lumpur · sobota</span></div>
-        <div class="item">
-          <div class="ico">✈</div>
-          <div><div class="time">11:20</div><h3>Lot Warszawa → Kuala Lumpur</h3><p class="muted" style="margin:2px 0 0">Przesiadka w Dosze, 2h 05m. Bagaż rejestrowany do KUL.</p></div>
-          <span class="chip st-done"><span class="dot"></span>gotowe</span>
+        <div class="tile">
+          <div class="ring" style="--pct:37.5%"></div>
+          <div>
+            <span class="eyebrow tile__label">Status logistyki</span>
+            <span class="tile__value">3 z 8 załatwionych</span>
+          </div>
         </div>
-        <div class="item">
-          <div class="ico">🛏</div>
-          <div><div class="time">Cały dzień</div><h3>Nocleg: Bukit Bintang, 4 noce</h3><p class="muted" style="margin:2px 0 0">Blisko monorail; do potwierdzenia dokładny adres.</p></div>
-          <span class="chip st-done"><span class="dot"></span>gotowe</span>
-        </div>
-      </div>
-    </div>
+      </section>
 
-    <div class="day">
-      <div class="datechip"><div class="m">PAŹ</div><div class="d">11</div></div>
-      <div>
-        <div class="dayhead"><h2 style="margin:0">Dzień 2</h2><span class="muted">Etap: Kuala Lumpur · niedziela</span></div>
-        <div class="item">
-          <div class="ico">🎟</div>
-          <div><div class="time">09:30</div><h3>Petronas Towers — Skybridge</h3><p class="muted" style="margin:2px 0 0">Bilety czasowe, trzeba kupić z wyprzedzeniem.</p></div>
-          <span class="chip st-book"><span class="dot"></span>do zarezerwowania</span>
-        </div>
+      <div class="row" style="margin-top:var(--space-md);flex-wrap:wrap">
+        <button class="btn btn--ghost btn--sm">
+          <svg width="15" height="15" aria-hidden="true"><use href="#i-share"/></svg>
+          Udostępnij
+        </button>
+        <button class="btn btn--danger btn--sm">Usuń podróż</button>
+        <span class="hint" style="margin-left:var(--space-2xs)">
+          Oba przyciski są w slocie <code>actions</code>, który TimelinePage już przekazuje do AppShell.
+        </span>
       </div>
-    </div>
+
+      <div class="filter-bar">
+        <span class="filter-bar__legend">Pokaż</span>
+        <span class="pill" data-selected>Wszystko</span>
+        <span class="pill">Tylko do zrobienia</span>
+      </div>
+
+      <div class="rail">
+        <section class="day">
+          <div class="day__anchor"><span>Paź</span><b>10</b></div>
+          <div class="day__head"><h2 class="headline-sm">Sobota</h2></div>
+          <div class="day__items">
+            <div class="tl-item">
+              <span class="tl-item__dot" data-status="done"></span>
+              <article class="item-card">
+                <div class="item-card__time">14:20<small>18:05</small></div>
+                <span class="item-card__icon"><svg width="20" height="20" aria-hidden="true"><use href="#i-transport"/></svg></span>
+                <div class="item-card__body">
+                  <h3 class="headline-sm">Lot Katowice → Dubaj (EK 180)</h3>
+                  <p class="item-card__kind">Transport</p>
+                  <p class="item-card__notes">Terminal 3, bagaż 23 kg. Odprawa online otwarta 24 h wcześniej.</p>
+                </div>
+                <div class="item-card__aside"><span class="chip" data-status="done"><span class="chip__dot"></span>Gotowe</span></div>
+              </article>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
   </div>
 
-  <div class="dialog">
-    <h2>🔗 Udostępnij ten plan</h2>
-    <p class="warn"><b>Każdy, kto ma ten link, zobaczy ten plan — bez konta i bez logowania.</b><br>
-      Nie zobaczy Twoich notatek, załączników, numerów rezerwacji ani kosztów. Nie może niczego zmienić.</p>
+  <div class="scrim"></div>
 
-    <label class="f" for="l">Link do planu</label>
-    <div class="linkrow">
-      <div class="input" id="l">https://planer.example/s/8Qk3vR1sT7pLmXe2Yz0aBcD4fGhJk6NnP9wQrUv</div>
-      <span class="btn primary">Kopiuj</span>
+  <div class="share-dialog" role="dialog" aria-modal="true" aria-labelledby="sh-title">
+    <div class="row" style="align-items:flex-start;margin-bottom:var(--space-md)">
+      <span class="item-card__icon" style="flex:none"><svg width="18" height="18" aria-hidden="true"><use href="#i-share"/></svg></span>
+      <h2 class="headline-md" id="sh-title" style="flex:1">Udostępnij plan</h2>
+      <button class="btn btn--ghost btn--icon" aria-label="Zamknij">×</button>
     </div>
-    <p class="live">Skopiowano ✓ <span class="muted" style="font-style:italic">— komunikat czytany też przez czytnik ekranu (aria-live)</span></p>
-    <p class="muted" style="margin:14px 0 0">Utworzony 5 września 2026. Link nie wygasa sam — działa, dopóki go nie odwołasz (Q1).</p>
 
-    <div class="dfoot">
-      <span class="danger">Odwołaj link</span>
-      <span class="muted" style="max-width:330px; text-align:right">Wszyscy, którym wysłałeś ten link, stracą dostęp. Tego nie da się cofnąć — możesz później utworzyć nowy link.</span>
+    <p class="body-sm muted" style="margin:0 0 var(--space-md)">
+      Każdy, kto ma ten link, zobaczy ten plan — bez konta i bez logowania. Nie zobaczy Twoich
+      notatek, załączników, numerów rezerwacji ani kosztów. Nie może niczego zmienić.
+    </p>
+
+    <p class="eyebrow" style="margin:0 0 var(--space-2xs)">Link do planu</p>
+    <div class="link-row">
+      <span class="input">https://planer.example/s/8Qk3vR1sT7pLmXe2Yz0aBcD4fGhJk6NnP9wQrUv</span>
+      <button class="btn btn--primary">Kopiuj</button>
+    </div>
+    <p class="body-sm" style="margin:var(--space-2xs) 0 0">
+      <span class="copied">Skopiowano ✓</span>
+      <span class="hint">— ogłaszane też przez <code>aria-live="polite"</code>, bo samo „✓” jest niewidoczne dla czytnika ekranu.</span>
+    </p>
+
+    <p class="body-sm muted" style="margin:var(--space-md) 0 0">
+      Utworzony 6 września 2026. Link nie wygasa sam — działa, dopóki go nie odwołasz (D16).
+    </p>
+
+    <div class="dialog-foot">
+      <button class="btn btn--danger">Odwołaj link</button>
+      <span class="body-sm muted" style="max-width:20rem;text-align:right">
+        Wszyscy, którym wysłałeś ten link, stracą dostęp. Tego nie da się cofnąć — możesz później
+        utworzyć nowy link.
+      </span>
     </div>
   </div>
-
-  <p class="note" style="margin-top:22px">Stan A (plan jeszcze nieudostępniony) pokazuje to samo zdanie ostrzegawcze i jedną akcję „Utwórz link”. Po odwołaniu okno wraca do stanu A — „odwołaj” i „utwórz nowy link” to dwie osobne decyzje (Q2).</p>
 </div>
 </body>
 </html>

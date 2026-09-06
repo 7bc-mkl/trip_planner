@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex, nofollow">
+<title>Smart Trip Planner</title>
+<link rel="stylesheet" href="../design-system-adoption/_mockup.css">
+<style>
+  .state {
+    width: min(34rem, 100%); margin: 0 auto var(--space-lg);
+    padding: var(--space-xl) var(--space-lg);
+    border: 1px solid var(--hairline); border-radius: var(--radius-xl);
+    background: var(--surface); box-shadow: var(--elevation-1);
+    text-align: center;
+  }
+  .state__glyph { font-size: 30px; line-height: 1; margin: 0 0 var(--space-sm); }
+  .state p { margin: 0 auto; max-width: 26rem; }
+  .state__code {
+    display: inline-block; margin-top: var(--space-md);
+    padding: 2px var(--space-xs);
+    border: 1px solid var(--hairline); border-radius: var(--radius-sm);
+    background: #f8fafc;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px;
+    color: var(--text-subtle);
+  }
+  .state-label { text-align: center; margin: 0 0 var(--space-2xs); }
+</style>
+</head>
+<body>
+<p class="mockup-note">Illustrative mockup — Smart Trip Planner · /s/:token — dead-link states (EN) · not application code</p>
+
+<header class="chrome">
+  <span class="wordmark">Smart Trip Planner</span>
+  <span class="chrome__right">
+    <span class="body-sm subtle">Language</span>
+    <span class="segmented"><span>PL</span><span data-selected>EN</span></span>
+  </span>
+</header>
+
+<div class="page page--single">
+  <main>
+    <p class="body-sm muted" style="max-width:44rem;margin:0 auto var(--space-lg);text-align:center">
+      Three states, kept apart deliberately. <code>BACKWARD_COMPATIBILITY.md</code> §3 requires a
+      shared itinerary link to keep resolving or resolve to an explicit “no longer available”, never
+      to a wrong plan — and a deleted plan must not be reported as a sharing decision the owner
+      never took. Each is a full page with the same chrome and the same locale switch, because the
+      recipient has nowhere else to go in this application.
+    </p>
+
+    <p class="eyebrow state-label">Revoked by the owner · HTTP 410</p>
+    <section class="state">
+      <p class="state__glyph" aria-hidden="true">🔒</p>
+      <h1 class="headline-lg">This plan is no longer shared</h1>
+      <p class="body-sm muted">
+        The person who planned this trip has turned the link off. If you still need to see the plan,
+        ask them for a new link.
+      </p>
+      <span class="state__code">410 · share_link_revoked</span>
+    </section>
+
+    <p class="eyebrow state-label">Trip deleted · HTTP 410</p>
+    <section class="state">
+      <p class="state__glyph" aria-hidden="true">🗺</p>
+      <h1 class="headline-lg">This plan no longer exists</h1>
+      <p class="body-sm muted">
+        The trip this link pointed to has been deleted. The link itself was genuine — there is
+        simply nothing left to show.
+      </p>
+      <span class="state__code">410 · share_link_gone</span>
+    </section>
+
+    <p class="eyebrow state-label">Unknown or malformed link · HTTP 404</p>
+    <section class="state">
+      <p class="state__glyph" aria-hidden="true">🔗</p>
+      <h1 class="headline-lg">This link does not work</h1>
+      <p class="body-sm muted">
+        The link may have been copied incompletely. Check the message you received, or ask the
+        sender for the link again.
+      </p>
+      <span class="state__code">404 · share_link_not_found</span>
+    </section>
+
+    <p class="hint" style="text-align:center;max-width:36rem;margin:0 auto">
+      A fourth state is not pictured: when the backend is unreachable the guest sees the retry state
+      the walking skeleton already specifies — never an empty timeline, which would be
+      indistinguishable from a genuinely empty plan and would be a lie about it.
+    </p>
+  </main>
+</div>
+</body>
+</html>
