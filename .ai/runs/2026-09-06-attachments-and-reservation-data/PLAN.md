@@ -18,7 +18,7 @@
 | 1 | 1.3 | `domain/money.py` — amount/currency pairing and ISO-4217 validation | dispatch:cheap | done | `17215fb` |
 | 1 | 1.4 | `security/quota.py` — per-owner rate/volume windows and locked byte quotas | dispatch:capable | done | `8cc3dc2` |
 | 1 | 1.5 | Nine new `ErrorCode` members with both locales' keys | dispatch:cheap | done | `da84350` |
-| 1 | 1.6 | The two upload endpoints, in the fixed check order | dispatch:capable | todo | — |
+| 1 | 1.6 | The two upload endpoints, in the fixed check order | dispatch:capable | done | `9c47672` |
 | 1 | 1.7 | Attachment metadata, content download and delete routes | dispatch:capable | todo | — |
 | 1 | 1.8 | `attachment_count`, day/item `attachments` and the three reservation fields on the serialisers and `PATCH` | dispatch:capable | todo | — |
 | 1 | 1.9 | Cascade behaviour end to end | dispatch:cheap | todo | — |

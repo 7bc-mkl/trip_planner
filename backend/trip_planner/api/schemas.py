@@ -17,7 +17,7 @@ indistinguishable from "absent because there are none", which is the ambiguity
 from __future__ import annotations
 
 import uuid
-from datetime import date, time
+from datetime import date, datetime, time
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
@@ -25,6 +25,7 @@ from pydantic import BaseModel, ConfigDict
 from trip_planner.db.models import ITEM_KINDS, ITEM_STATUSES
 
 __all__ = [
+    "AttachmentRead",
     "DayDetail",
     "DayRead",
     "ItemKind",
@@ -70,6 +71,32 @@ class StageRead(BaseModel):
     place: str
     start_date: date | None
     end_date: date | None
+
+
+class AttachmentRead(BaseModel):
+    """One attachment's metadata — the shape served wherever an attachment appears.
+
+    Defined once, in the module both the upload router and the day/timeline
+    serialisers import, because the spec says this object is "identical wherever
+    an attachment is serialised" and two definitions of one wire shape drift.
+
+    `content_type` is the type **derived from the bytes** on upload, never
+    anything the client claimed, and `byte_size` is the length that was actually
+    counted while reading. Both parents are always present, exactly one of them
+    non-null, so a consumer can tell a day's document from an item's without
+    knowing which endpoint it came from.
+    """
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    filename: str
+    content_type: str
+    byte_size: int
+    sha256: str
+    created_at: datetime
+    item_id: uuid.UUID | None
+    trip_day_id: uuid.UUID | None
 
 
 class ItemRead(BaseModel):
