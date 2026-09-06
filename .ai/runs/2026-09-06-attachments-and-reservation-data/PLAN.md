@@ -21,7 +21,7 @@
 | 1 | 1.6 | The two upload endpoints, in the fixed check order | dispatch:capable | done | `9c47672` |
 | 1 | 1.7 | Attachment metadata, content download and delete routes | dispatch:capable | done | `c4d5f2a` |
 | 1 | 1.8 | `attachment_count`, day/item `attachments` and the three reservation fields on the serialisers and `PATCH` | dispatch:capable | done | `0f1cb4e` |
-| 1 | 1.9 | Cascade behaviour end to end | dispatch:cheap | todo | — |
+| 1 | 1.9 | Cascade behaviour end to end | dispatch:cheap | done | `6a820b4` |
 | 1 | 1.10 | The `days_have_attachments` guard on the shipped `PATCH /trips/{tripId}` | dispatch:capable | todo | — |
 | 2 | 2.1 | `src/api/attachments.ts` — typed client with upload progress and abort | dispatch | todo | — |
 | 2 | 2.2 | `UploadDropzone` — labelled file input, pre-check, state machine, `aria-live` | dispatch:capable | todo | — |
