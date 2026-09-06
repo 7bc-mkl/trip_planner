@@ -100,3 +100,9 @@
 - Autofix landed three Steps: `4.9-review-fix` (both majors, the anchor/filter-bar offset, the `:has()` focus fallback, the prefixed `backdrop-filter`), `6.3-review-fix` (the token check made scope-aware after proving its false negative; contrast docstring; README outlier), `6.4-review-fix` (capture scripts fail loudly on a locale mismatch, wait on `document.fonts.ready` and assert an element per screen; seed script gains a loopback guard; cut-phase leftovers cleared).
 - Two things the review had not identified, found while fixing: `--filter-bar-height` was 4px short at **every** width (the derivation omitted the pill's hairline), and the disabled-field recipe has no consumer at all now that Phase 5 is cut — its comment now says so plainly.
 - Re-verified in Chrome after the fixes: overlay z=30 above header z=20 with the overlay topmost; the 360px title one line at 230×24px; the anchor static where the bar wraps and sticky from 900px. Gate green, **149 tests**. Evidence re-captured with the hardened script.
+
+## 2026-09-06T15:36:21Z — run complete
+- PR https://github.com/7bc-mkl/trip_planner/pull/11 flipped to **ready for review**. 29 Steps landed; every Tasks row is `done`.
+- Labels: `merge-queue`, `needs-qa`, `feature`, `refactor`, `accessibility`, `dependencies`, `priority-medium`, `risk-low`. `qa-approved` is deliberately absent — it is earned by manual QA, and with `qaGate` on the PR is correctly unmergeable until then.
+- Summary comment and P0/P1/P2 manual-QA instructions posted. Lock released.
+- Two follow-ups recorded for their own issues: workstream B (cut, unbuilt, spec already merged) and the `POST /auth/login` commit-ordering race.
