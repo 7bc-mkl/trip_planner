@@ -556,15 +556,18 @@ textarea:disabled {
   gap: var(--space-xs);
 }
 
-/* The glyph slot. Empty until step 6.1 puts the item-kind sprite in it — the
-   tile is the part the layout needs now, and inventing a glyph here would put a
-   second sprite in the repository for one step. */
+/* The glyph tile, now holding the item-kind glyph from the sprite. The glyph
+   paints in `currentColor`, so the tile's own colour is the only thing that
+   sets it. */
 .item-row__icon {
+  display: inline-grid;
+  place-items: center;
   flex: none;
   width: 2rem;
   height: 2rem;
   border-radius: var(--radius-md);
   background: var(--surface-sunken);
+  color: var(--text-muted);
 }
 
 .item-row__kind {
@@ -997,4 +1000,20 @@ textarea:disabled {
   background: var(--on-danger-surface);
   border-color: var(--on-danger-surface);
   color: var(--on-danger);
+}
+
+/* --- the icon primitive (`components/Icon.tsx`) ---------------------------
+ *
+ * Every glyph in the application is one `<use>` into `src/assets/icons.svg`,
+ * drawn in `currentColor` — so the only thing this recipe has to say is how big
+ * it is. The colour comes from whatever rule the icon lands in, which is why
+ * the tile above and the day navigation need no fill of their own.
+ *
+ * A call site that wants another size adds a class and overrides these two
+ * properties; `.day-nav__icon` in `screens.css` is the one that does.
+ */
+.icon {
+  flex: none;
+  width: 1.25rem;
+  height: 1.25rem;
 }

@@ -861,11 +861,10 @@ fieldset.field-card {
   text-decoration: none;
 }
 
-/* The glyph slot: reserved, empty, and `aria-hidden` in the markup. Step 6.1
-   puts the chevron in it; nothing is invented here, and the control is already
-   usable without one because its VISIBLE name is the word beside it. */
+/* The chevron, `aria-hidden` in the markup and smaller than the `.icon`
+   default: the control's VISIBLE name is the word beside it, so the glyph is
+   the quieter half of the pair. */
 .day-nav__icon {
-  flex: none;
   width: 1rem;
   height: 1rem;
 }

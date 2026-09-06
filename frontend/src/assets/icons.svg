@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  The application's icon sprite. Seven glyphs, hand-drawn as line art on one
+  24x24 viewBox at one stroke weight, referenced through `<Icon name=… />`
+  (`src/components/Icon.tsx`).
+
+  No icon font and no icon package: a sprite this small is smaller than any
+  dependency that would supply it, and it survives with CSS disabled in a way an
+  icon font does not. It lives under `src/assets/` rather than `public/` so the
+  bundler content-hashes it — the old starter sprite in `public/` was served
+  unversioned and referenced from nowhere, and is deleted with this file's
+  arrival.
+
+  Every glyph paints with `currentColor`, so it inherits the colour of the rule
+  that consumes it and needs no per-call-site fill.
+
+  What is here and what is not:
+
+  - The five item kinds are exactly `ITEM_KINDS` in `src/api/items.ts`, which
+    mirrors the database CHECK constraint. A sixth kind gets a symbol here.
+  - The two chevrons serve the day detail's prev/next controls.
+  - The three workstream-B glyphs the source spec also lists — chat, share and
+    paperclip — are deliberately ABSENT. Their consumers are the preview
+    surfaces of Phase 5, which the owner cut from this run, and a glyph with no
+    consumer is dead weight. Phase 5 (the chat drawer, the share dialog, the
+    day-documents panel) is what brings them back.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="0" height="0">
+  <!-- accommodation — a bed: headboard, pillow, mattress, foot. -->
+  <symbol id="accommodation" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M3 18V6" />
+    <path d="M3 13.5h18" />
+    <path d="M21 18v-4a3.5 3.5 0 0 0-3.5-3.5H11v3" />
+    <circle cx="7" cy="10" r="1.75" />
+  </symbol>
+
+  <!-- transport — an aeroplane seen from above. -->
+  <symbol id="transport" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 2.5c.9 0 1.5.9 1.5 2v5l7.5 4.3v2l-7.5-2.3V17l2.5 1.8v1.7L12 19.3l-4 1.2v-1.7L10.5 17v-3.5L3 15.8v-2l7.5-4.3v-5c0-1.1.6-2 1.5-2Z" />
+  </symbol>
+
+  <!-- activity — a compass: the glyph for going out and finding something. -->
+  <symbol id="activity" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="9" />
+    <path d="m15.5 8.5-1.8 5.2-5.2 1.8 1.8-5.2Z" />
+  </symbol>
+
+  <!-- meal — a fork and a knife. -->
+  <symbol id="meal" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M6.5 3v6a2.5 2.5 0 0 0 5 0V3" />
+    <path d="M9 11.5V21" />
+    <path d="M17.5 3c-1.7 1.4-2.5 3.3-2.5 5.3 0 1.8 1 3 2.5 3.4V21" />
+  </symbol>
+
+  <!-- other — three dots: the kind that is none of the four above. -->
+  <symbol id="other" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+    <circle cx="5.5" cy="12" r="1.6" />
+    <circle cx="12" cy="12" r="1.6" />
+    <circle cx="18.5" cy="12" r="1.6" />
+  </symbol>
+
+  <!-- chevron-left — the previous day. -->
+  <symbol id="chevron-left" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M15 4.5 7.5 12l7.5 7.5" />
+  </symbol>
+
+  <!-- chevron-right — the next day. -->
+  <symbol id="chevron-right" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M9 4.5 16.5 12 9 19.5" />
+  </symbol>
+</svg>

@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../../App'
 import en from '../../locales/en.json'
 import pl from '../../locales/pl.json'
-import { ITEM_STATUSES } from '../../api/items'
+import { ITEM_KINDS, ITEM_STATUSES } from '../../api/items'
 import { applyLocale, initI18n } from '../../i18n'
 import { clearAllDrafts, readDraft } from '../auth/draftStore'
 import { SessionProvider } from '../auth/SessionContext'
@@ -673,6 +673,65 @@ describe('the item card’s rail dot', () => {
     // The colour-blindness contract: the glyph and the translated label are
     // still there, and the dot is an addition to them.
     expect(screen.getByText('Do zaplanowania')).toBeInTheDocument()
+  })
+})
+
+describe('the icon sprite', () => {
+  /**
+   * The contract, asserted per call site: every glyph is `aria-hidden`,
+   * `focusable="false"`, and an ADDITION to a translated text label that is
+   * still there. An icon that replaced its label would pass a rendering check
+   * and fail a reader.
+   */
+
+  it.each(ITEM_KINDS)('gives the %s tile its glyph without touching the label', (kind) => {
+    const { container } = render(<ItemRow item={{ ...MUSEUM, kind }} dayDate="2026-10-11" />)
+    const icon = container.querySelector('.item-row__icon svg')
+
+    expect(icon).toHaveAttribute('aria-hidden', 'true')
+    expect(icon).toHaveAttribute('focusable', 'false')
+    expect(icon?.querySelector('use')?.getAttribute('href')).toMatch(
+      new RegExp(`icons\\.svg.*#${kind}$`, 'u'),
+    )
+    // The label the sighted reader and the screen reader both get.
+    expect(screen.getByText(pl.item.kind[kind])).toBeInTheDocument()
+  })
+
+  it('points the day navigation at the two chevrons, and its links keep their names', async () => {
+    mockApi(backend())
+
+    renderApp(DAY_PATH)
+
+    const previous = await screen.findByRole('link', { name: pl.day.previous })
+    const next = screen.getByRole('link', { name: pl.day.next })
+
+    // The accessible name is the translated word alone — proof the chevron is
+    // hidden rather than merely decorative-looking.
+    for (const [link, symbol] of [
+      [previous, 'chevron-left'],
+      [next, 'chevron-right'],
+    ] as const) {
+      const icon = link.querySelector('svg')
+      expect(icon).toHaveAttribute('aria-hidden', 'true')
+      expect(icon).toHaveAttribute('focusable', 'false')
+      expect(icon?.querySelector('use')?.getAttribute('href')).toMatch(
+        new RegExp(`icons\\.svg.*#${symbol}$`, 'u'),
+      )
+    }
+
+    expect(previous).toHaveTextContent(pl.day.previous)
+    expect(next).toHaveTextContent(pl.day.next)
+  })
+
+  it('leaves the disabled boundary control readable without a chevron of its own', async () => {
+    // No previous day: the control is a span, not a link, and the word is what
+    // says so. Nothing here depends on a glyph.
+    mockApi(backend({ day: { ...DAY, previous_date: null, next_date: null } }))
+
+    renderApp(DAY_PATH)
+
+    expect(await screen.findByText(pl.day.previous)).toBeInTheDocument()
+    expect(screen.getByText(pl.day.next)).toBeInTheDocument()
   })
 })
 

@@ -89,3 +89,7 @@
 - The spec sequenced Phase 5 last precisely so cutting it would cost nothing already shipped, and its own rollback row calls it the phase most likely to be reverted. What ships is the spec's first draft: the design system adopted, no preview surfaces.
 - Phase 6 consequences: 6.1 drops the three workstream-B glyphs (chat, share, paperclip) — a glyph with no consumer is dead weight; 6.2 records the `data-preview` census test and the forced-colors preview clause as `n/a — Phase 5 cut`, since both exist only to police preview surfaces. Everything else in the final pass runs in full.
 - Workstream B stays in the brief's *Now* scope and is unbuilt rather than abandoned; a follow-up issue should carry it.
+
+## 2026-09-06T17:00Z — Step 6.1 (executor, dispatch)
+- **Decision:** the sprite is imported as `../assets/icons.svg?no-inline`. Without the suffix Vite inlines it (3.67 kB, under `assetsInlineLimit`) as a `data:image/svg+xml;base64,…` string — and browsers refuse a `data:` URL as an external `<use href>` target, so every glyph would have rendered blank while the build stayed green. The suffix forces the hashed file the spec asks for: `dist/assets/icons--Aj0shQz.svg`.
+- Two glyph slots are left as they were, deliberately: the trip banner's meta row and the creator's stage-remove control. Neither needs one of the seven glyphs this sprite carries, and no glyph was invented for them.

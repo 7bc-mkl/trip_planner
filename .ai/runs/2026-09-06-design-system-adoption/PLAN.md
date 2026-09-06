@@ -38,7 +38,7 @@
 | 4 | 4.6 | `/trips/new` — the multi-stop creator (spec step 22) | dispatch | done | 72c5aef |
 | 4 | 4.7 | `/trips/:id/days/:date` — the day detail (spec step 23) | dispatch | done | 14781cc |
 | 4 | 4.8 | Phase-4 screenshot set and the before/after pairs (spec step 24) | inline | done | 8d85675 |
-| 6 | 6.1 | The icon sprite and the `<Icon>` wrapper (spec step 32) | dispatch | todo | — |
+| 6 | 6.1 | The icon sprite and the `<Icon>` wrapper (spec step 32) | dispatch | done | pending |
 | 6 | 6.2 | Final verification pass — contrast, diacritics, locales, bundle (spec step 33) | inline | todo | — |
 
 ## Goal

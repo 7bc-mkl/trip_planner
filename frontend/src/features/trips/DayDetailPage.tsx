@@ -7,6 +7,7 @@ import { createItem, deleteItem, fetchDay, updateItem } from '../../api/items'
 import type { DayDetail, Item, ItemInput } from '../../api/items'
 import { fetchTrip } from '../../api/trips'
 import type { TripSummary } from '../../api/trips'
+import { Icon } from '../../components/Icon'
 import { AppShell } from './AppShell'
 import { ItemDialog } from './ItemDialog'
 import { ItemRow } from './ItemRow'
@@ -189,15 +190,15 @@ export function DayDetailPage() {
     >
       {/* Real prev/next links, disabled at the trip's boundaries — the server
           sends null there rather than making the SPA guess where the trip ends.
-          They wear the ghost recipe now, and each carries an empty, `aria-hidden`
-          glyph slot the chevron lands in at step 6.1 — no sprite is invented
-          here. The slot is decoration in both cases: the control's name is the
-          VISIBLE word beside it, which is why the disabled boundary still reads
-          "previous day" rather than a greyed-out arrow. */}
+          They wear the ghost recipe, and each carries its chevron from the
+          sprite. The chevron is `aria-hidden` decoration in both cases: the
+          control's name is the VISIBLE word beside it, which is why the
+          disabled boundary still reads "previous day" rather than a greyed-out
+          arrow. */}
       <nav className="day-nav" aria-label={t('day.navLabel')}>
         {day.previous_date === null ? (
           <span className="day-nav__link day-nav__disabled">
-            <span className="day-nav__icon" aria-hidden="true" />
+            <Icon name="chevron-left" className="day-nav__icon" />
             {t('day.previous')}
           </span>
         ) : (
@@ -205,14 +206,14 @@ export function DayDetailPage() {
             className="button-quiet day-nav__link"
             to={`/trips/${tripId}/days/${day.previous_date}`}
           >
-            <span className="day-nav__icon" aria-hidden="true" />
+            <Icon name="chevron-left" className="day-nav__icon" />
             {t('day.previous')}
           </Link>
         )}
         {day.next_date === null ? (
           <span className="day-nav__link day-nav__disabled">
             {t('day.next')}
-            <span className="day-nav__icon" aria-hidden="true" />
+            <Icon name="chevron-right" className="day-nav__icon" />
           </span>
         ) : (
           <Link
@@ -220,7 +221,7 @@ export function DayDetailPage() {
             to={`/trips/${tripId}/days/${day.next_date}`}
           >
             {t('day.next')}
-            <span className="day-nav__icon" aria-hidden="true" />
+            <Icon name="chevron-right" className="day-nav__icon" />
           </Link>
         )}
       </nav>

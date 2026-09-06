@@ -1,8 +1,24 @@
 import { useTranslation } from 'react-i18next'
 
-import type { Item } from '../../api/items'
+import type { Item, ItemKind } from '../../api/items'
+import { Icon } from '../../components/Icon'
+import type { IconName } from '../../components/Icon'
 import { StatusChip } from './StatusChip'
 import { formatShortDate, formatTime } from './format'
+
+/**
+ * Kind → sprite symbol. The ids happen to match the kind names, but the map is
+ * written out rather than interpolated so that a sixth kind added to
+ * `ITEM_KINDS` is a typecheck failure here — pointing at the missing glyph —
+ * instead of an empty tile nobody notices.
+ */
+const KIND_ICONS: Record<ItemKind, IconName> = {
+  accommodation: 'accommodation',
+  transport: 'transport',
+  activity: 'activity',
+  meal: 'meal',
+  other: 'other',
+}
 
 /**
  * One item, as it renders on the day detail and on a timeline day card.
@@ -55,10 +71,12 @@ export function ItemRow({
       {railDot && <span className="item-row__dot" data-status={item.status} aria-hidden="true" />}
       <span className="item-row__time">{time}</span>
       {/* The type: a rounded icon tile plus its translated label. The glyph
-          lands in step 6.1 and goes inside the tile; the label is not waiting
-          for it and is never replaced by it. */}
+          inside the tile is decoration — the translated label beside it is what
+          carries the kind, and it is never replaced by the glyph. */}
       <span className="item-row__type">
-        <span className="item-row__icon" aria-hidden="true" />
+        <span className="item-row__icon" aria-hidden="true">
+          <Icon name={KIND_ICONS[item.kind]} />
+        </span>
         <span className="item-row__kind">{t(`item.kind.${item.kind}`)}</span>
       </span>
       <span className="item-row__title">{item.title}</span>
