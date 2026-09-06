@@ -1277,7 +1277,10 @@ textarea:disabled {
  * THIS RECIPE INVENTS NOTHING. The design system reserved its three tokens
  * before the feature had any code: `--hairline-strong` is annotated "dropzone
  * border", `--surface-sunken` "drag-over dropzone", `--radius-lg` "cards, day
- * modules, dropzones". Those three are the whole visual language here.
+ * modules, dropzones". Those three are the whole visual language here —
+ * `--surface-sunken` is literally the token the drag-over state below fills to,
+ * the same one `:hover` already used, so drag-and-drop adds no new token or
+ * new pair to check.
  *
  * `--hairline-strong` is 1.48:1 on `--surface` and that is deliberate: a dashed
  * drop-zone outline is decoration around a control the `<label>`'s own words
@@ -1312,6 +1315,13 @@ textarea:disabled {
 }
 
 .upload-dropzone__label:hover {
+  background: var(--surface-sunken);
+}
+
+/* Drag-and-drop is layered on top of the same label; the outline never
+   changes, only the fill — and the hint text beside it, so the state is never
+   colour alone (see the component doc comment). */
+.upload-dropzone__label[data-drag-over='true'] {
   background: var(--surface-sunken);
 }
 

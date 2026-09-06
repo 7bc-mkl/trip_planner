@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
-import type { ChangeEvent, CSSProperties } from 'react'
+import type { ChangeEvent, CSSProperties, DragEvent } from 'react'
 import type { TFunction } from 'i18next'
 import { useTranslation } from 'react-i18next'
 
@@ -12,8 +12,14 @@ import { ApiError } from '../../api/client'
  *
  * A real `<label>` over a real `<input type="file">` — not a `<div>` with a
  * click handler. The keyboard and file-picker path is the one that always
- * exists; drag-and-drop is an enhancement layered on this same input later, and
- * nothing here depends on it.
+ * exists; drag-and-drop is an enhancement layered on this same input, and
+ * nothing here depends on it — a drop calls exactly the same `addFiles` the
+ * picker's `onChange` calls, so the two paths cannot drift apart. Dragging over
+ * the zone fills it to `--surface-sunken` (declared for exactly this before the
+ * feature had code) and swaps the hint line to a "drop it" sentence, because a
+ * background tint is not read by everyone and the state is meaningful enough
+ * that colour alone must not be the only way to notice it. The dashed
+ * `--hairline-strong` outline never changes; only the fill and the hint do.
  *
  * Three things are contracts rather than polish:
  *
@@ -205,6 +211,8 @@ export function UploadDropzone({
   const inputId = useId()
   const [rows, setRows] = useState<Row[]>([])
   const [announcement, setAnnouncement] = useState<Announcement | null>(null)
+  /** Purely presentational — which files are selected never depends on this. */
+  const [isDragOver, setIsDragOver] = useState(false)
 
   // Keyed by content, not by array identity: hosts build this list inline, so a
   // fresh array arrives on every render and only a *changed* one should re-run
@@ -221,6 +229,8 @@ export function UploadDropzone({
   const nextKey = useRef(0)
   /** The last announced quarter per row — progress is announced in steps, not per packet. */
   const announcedStep = useRef(new Map<string, number>())
+  /** Enters minus leaves for the drag-over highlight — see `handleDragLeave`. */
+  const dragDepth = useRef(0)
 
   const patch = useCallback((key: string, change: Partial<Row>) => {
     setRows((previous) => previous.map((row) => (row.key === key ? { ...row, ...change } : row)))
@@ -313,6 +323,40 @@ export function UploadDropzone({
     [onUploaded, patch, target],
   )
 
+  /**
+   * The one funnel both entry points call. `handleChange` (the picker) and
+   * `handleDrop` (the drag-and-drop enhancement) differ only in how they get a
+   * `File[]` out of the browser event — everything after that, both share:
+   * the same per-file pre-check, the same row shape, the same `start` call.
+   * There is no second upload path to drift out of sync with this one.
+   */
+  const addFiles = useCallback(
+    (files: readonly File[]) => {
+      const added: Row[] = files.map((file) => {
+        const refusal = precheck(file)
+        return {
+          key: `upload-${nextKey.current++}`,
+          file,
+          state: refusal === null ? 'selected' : 'failed',
+          loaded: 0,
+          total: file.size,
+          errorKey: refusal === null ? null : `error.${refusal}`,
+          refusedLocally: refusal !== null,
+          attachmentId: null,
+        }
+      })
+
+      setRows((previous) => [...previous, ...added])
+
+      for (const row of added) {
+        if (!row.refusedLocally) {
+          start(row.key, row.file)
+        }
+      }
+    },
+    [start],
+  )
+
   function handleChange(event: ChangeEvent<HTMLInputElement>) {
     const picked = [...(event.target.files ?? [])]
 
@@ -320,27 +364,48 @@ export function UploadDropzone({
     // `change` event the second time and the drop zone looks broken.
     event.target.value = ''
 
-    const added: Row[] = picked.map((file) => {
-      const refusal = precheck(file)
-      return {
-        key: `upload-${nextKey.current++}`,
-        file,
-        state: refusal === null ? 'selected' : 'failed',
-        loaded: 0,
-        total: file.size,
-        errorKey: refusal === null ? null : `error.${refusal}`,
-        refusedLocally: refusal !== null,
-        attachmentId: null,
-      }
-    })
+    addFiles(picked)
+  }
 
-    setRows((previous) => [...previous, ...added])
+  // `dragover` must be prevented on every event for the browser to treat the
+  // zone as a valid drop target at all — without it, `drop` never fires and
+  // the browser navigates to the file instead.
+  function handleDragOver(event: DragEvent<HTMLLabelElement>) {
+    event.preventDefault()
+  }
 
-    for (const row of added) {
-      if (!row.refusedLocally) {
-        start(row.key, row.file)
-      }
+  // Children of the label (its title, its hint, the clipped input) fire their
+  // own `dragenter`/`dragleave` as the pointer crosses them, and those bubble
+  // here too — so the pointer moving from the label's own padding onto the
+  // title text is a `dragleave` immediately followed by a `dragenter`, not a
+  // single clean exit. A plain "leave clears it" would flicker the fill off
+  // and back on for every such crossing. `dragDepth` counts enters minus
+  // leaves instead: it only reaches zero, clearing the highlight, once every
+  // nested enter has been matched by a leave — i.e. the pointer has actually
+  // left the zone, whether onto a sibling of the page or out of the window
+  // altogether (the classic "stuck highlight" bug this guards against).
+  function handleDragEnter(event: DragEvent<HTMLLabelElement>) {
+    event.preventDefault()
+    if (disabled) return
+    dragDepth.current += 1
+    setIsDragOver(true)
+  }
+
+  function handleDragLeave(event: DragEvent<HTMLLabelElement>) {
+    event.preventDefault()
+    if (disabled) return
+    dragDepth.current = Math.max(0, dragDepth.current - 1)
+    if (dragDepth.current === 0) {
+      setIsDragOver(false)
     }
+  }
+
+  function handleDrop(event: DragEvent<HTMLLabelElement>) {
+    event.preventDefault()
+    dragDepth.current = 0
+    setIsDragOver(false)
+    if (disabled) return
+    addFiles([...(event.dataTransfer?.files ?? [])])
   }
 
   function retry(row: Row) {
@@ -361,9 +426,22 @@ export function UploadDropzone({
 
   return (
     <div className="upload-dropzone">
-      <label className="upload-dropzone__label" htmlFor={inputId}>
+      <label
+        className="upload-dropzone__label"
+        htmlFor={inputId}
+        data-drag-over={isDragOver ? 'true' : undefined}
+        onDragEnter={handleDragEnter}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+      >
         <span className="upload-dropzone__title">{t('upload.add')}</span>
-        <span className="upload-dropzone__hint">{t('upload.hint')}</span>
+        {/* The fill is the primary cue, but colour is never the only one: the
+            hint's own words change too, so the state does not depend on being
+            able to see the tint. */}
+        <span className="upload-dropzone__hint">
+          {isDragOver ? t('upload.dropHint') : t('upload.hint')}
+        </span>
         <input
           id={inputId}
           className="upload-dropzone__input"

@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { act, render, screen, waitFor, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -47,6 +47,16 @@ function dropzone(locale: 'pl' | 'en' = 'pl'): HTMLInputElement {
 /** The one row for one file — the unit per-file independence is asserted on. */
 function row(filename: string): HTMLElement {
   return screen.getByText(filename).closest('li')!
+}
+
+/** The drop target itself — the `<label>` the input lives inside. */
+function dropzoneLabel(locale: 'pl' | 'en' = 'pl'): HTMLElement {
+  return dropzone(locale).closest('label')!
+}
+
+/** The smallest `DataTransfer` stand-in `dragenter`/`dragover`/`drop` need. */
+function dataTransfer(files: File[]) {
+  return { files, items: [], types: files.length > 0 ? ['Files'] : [] }
 }
 
 /**
@@ -562,5 +572,126 @@ describe('no state by colour alone', () => {
 
     FakeXhr.instances[0]!.respond(201, ATTACHMENT)
     await waitFor(() => expect(pill).toHaveTextContent(pl.upload.state.done))
+  })
+})
+
+describe('drag-and-drop', () => {
+  /**
+   * The spec's own stated verification for this Step: a drop and a picker
+   * selection must fall through the same code, not two implementations that
+   * can drift. Proven here by comparing the requests each one produces —
+   * same method, same URL, same headers, same file — rather than merely
+   * asserting both "end up uploaded", which would pass even with two forked
+   * paths that happened to agree today.
+   */
+  it('produces the identical request as a picker selection', async () => {
+    const user = userEvent.setup()
+    render(<UploadDropzone target={DAY} />)
+
+    await user.upload(dropzone(), pdf('same.pdf', 2048))
+    const picked = FakeXhr.instances[0]!
+
+    fireEvent.drop(dropzoneLabel(), { dataTransfer: dataTransfer([pdf('same.pdf', 2048)]) })
+    const dropped = FakeXhr.instances[1]!
+
+    expect(dropped.method).toBe(picked.method)
+    expect(dropped.url).toBe(picked.url)
+    expect(dropped.requestHeaders).toEqual(picked.requestHeaders)
+
+    const pickedFile = picked.sentBody?.get('file') as File
+    const droppedFile = dropped.sentBody?.get('file') as File
+    expect(droppedFile.name).toBe(pickedFile.name)
+    expect(droppedFile.type).toBe(pickedFile.type)
+    expect(droppedFile.size).toBe(pickedFile.size)
+  })
+
+  it('fills the zone and swaps the hint on dragenter, and reverts on a real dragleave', () => {
+    render(<UploadDropzone target={DAY} />)
+    const zone = dropzoneLabel()
+
+    expect(screen.getByText(pl.upload.hint)).toBeInTheDocument()
+
+    fireEvent.dragEnter(zone, { dataTransfer: dataTransfer([]) })
+    expect(zone).toHaveAttribute('data-drag-over', 'true')
+    expect(screen.getByText(pl.upload.dropHint)).toBeInTheDocument()
+    expect(screen.queryByText(pl.upload.hint)).not.toBeInTheDocument()
+
+    // Leaving the zone clears the highlight — the classic "stuck highlight"
+    // bug this guards against.
+    fireEvent.dragLeave(zone, { dataTransfer: dataTransfer([]) })
+    expect(zone).not.toHaveAttribute('data-drag-over')
+    expect(screen.getByText(pl.upload.hint)).toBeInTheDocument()
+  })
+
+  it('does not flicker off when the pointer crosses a child element on its way out', () => {
+    // A real browser fires a `dragleave` targeting the label immediately
+    // followed by a `dragenter` targeting the child the pointer landed on —
+    // both bubble to the label's own handlers, in that order. A naive
+    // "any leave clears it" would blink the fill off between those two
+    // events; asserting it here pins the depth-counting fix in place.
+    render(<UploadDropzone target={DAY} />)
+    const zone = dropzoneLabel()
+    const title = screen.getByText(pl.upload.add)
+
+    fireEvent.dragEnter(zone, { dataTransfer: dataTransfer([]) })
+    expect(zone).toHaveAttribute('data-drag-over', 'true')
+
+    fireEvent.dragLeave(zone, { dataTransfer: dataTransfer([]) })
+    fireEvent.dragEnter(title, { dataTransfer: dataTransfer([]) })
+    expect(zone).toHaveAttribute('data-drag-over', 'true')
+
+    // Now it actually leaves, with no matching re-entry.
+    fireEvent.dragLeave(title, { dataTransfer: dataTransfer([]) })
+    expect(zone).not.toHaveAttribute('data-drag-over')
+  })
+
+  it('clears the drag-over state on drop', () => {
+    render(<UploadDropzone target={DAY} />)
+    const zone = dropzoneLabel()
+
+    fireEvent.dragEnter(zone, { dataTransfer: dataTransfer([]) })
+    expect(zone).toHaveAttribute('data-drag-over', 'true')
+
+    fireEvent.drop(zone, { dataTransfer: dataTransfer([pdf()]) })
+    expect(zone).not.toHaveAttribute('data-drag-over')
+  })
+
+  it('prevents the browser default on dragover and drop, so it never navigates to the file', () => {
+    render(<UploadDropzone target={DAY} />)
+    const zone = dropzoneLabel()
+
+    expect(fireEvent.dragOver(zone, { dataTransfer: dataTransfer([]) })).toBe(false)
+    expect(fireEvent.drop(zone, { dataTransfer: dataTransfer([]) })).toBe(false)
+  })
+
+  it('refuses a dropped file the pre-check would refuse, issuing no request, exactly like a picked one', () => {
+    render(<UploadDropzone target={DAY} />)
+
+    fireEvent.drop(dropzoneLabel(), { dataTransfer: dataTransfer([pdf('archive.zip')]) })
+
+    expect(FakeXhr.instances).toHaveLength(0)
+    expect(screen.getByRole('alert')).toHaveTextContent(pl.error.unsupported_file_type)
+    expect(screen.queryByRole('button', { name: pl.upload.retry })).not.toBeInTheDocument()
+  })
+
+  it('keeps several dropped files independent, exactly like a multi-file pick', async () => {
+    render(<UploadDropzone target={DAY} />)
+
+    fireEvent.drop(dropzoneLabel(), {
+      dataTransfer: dataTransfer([pdf('a.pdf'), pdf('b.pdf'), pdf('c.pdf')]),
+    })
+
+    expect(screen.getAllByRole('listitem')).toHaveLength(3)
+    expect(FakeXhr.instances).toHaveLength(3)
+
+    FakeXhr.instances[1]!.respond(429, { error: { code: 'rate_limited' } })
+    FakeXhr.instances[0]!.respond(201, { ...ATTACHMENT, filename: 'a.pdf' })
+    FakeXhr.instances[2]!.respond(201, { ...ATTACHMENT, filename: 'c.pdf' })
+
+    await waitFor(() =>
+      expect(within(row('b.pdf')).getByText(pl.upload.state.failed)).toBeInTheDocument(),
+    )
+    expect(within(row('a.pdf')).getByText(pl.upload.state.done)).toBeInTheDocument()
+    expect(within(row('c.pdf')).getByText(pl.upload.state.done)).toBeInTheDocument()
   })
 })

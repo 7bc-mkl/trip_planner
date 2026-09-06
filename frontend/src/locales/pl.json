@@ -149,6 +149,7 @@
   "upload": {
     "add": "Dodaj plik / zdjęcie / bilet",
     "hint": "PDF, JPEG lub PNG, do 10 MB",
+    "dropHint": "Upuść tutaj, aby wysłać",
     "list": "Wybrane pliki",
     "cancel": "Anuluj",
     "retry": "Spróbuj ponownie",

@@ -149,6 +149,7 @@
   "upload": {
     "add": "Add file, photo or ticket",
     "hint": "PDF, JPEG or PNG, up to 10 MB",
+    "dropHint": "Drop it here to upload",
     "list": "Selected files",
     "cancel": "Cancel",
     "retry": "Try again",

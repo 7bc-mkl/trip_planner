@@ -42,7 +42,7 @@
 | 3 | 3.6 | Assert the absence of nagging | dispatch:cheap | done | `99bf220` |
 | 3 | 3.7 | End-to-end verification of the brief's own flow | inline | done | `25e9826` |
 | 3 | 3.4-review-fix-1 | The saved cost is actually rendered through `Intl`, giving the rule a call site | dispatch | done | `8d21299` |
-| 4 | 4.1 | Drag-and-drop layered on the existing input | dispatch | todo | — |
+| 4 | 4.1 | Drag-and-drop layered on the existing input | dispatch | done | `051f618` |
 | 4 | 4.2 | The image lightbox — focus-trapped, `Escape` to close | dispatch | todo | — |
 | 4 | 4.3 | The non-blocking duplicate hint | dispatch:cheap | todo | — |
 

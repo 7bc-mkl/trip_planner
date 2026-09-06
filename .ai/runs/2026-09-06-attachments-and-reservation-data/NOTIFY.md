@@ -315,3 +315,17 @@
   halves silently. Outside ordinary use, but real.
 - Environment: `agent-browser` cannot drive `input[type=date]` **or** `input[type=time]` at all.
 - Tasks-table SHAs for all Phase 3 rows reconciled to their post-amend values.
+
+## 2026-09-07T00:40:00Z — Step 4.1 scope decision: one new locale key for the drag-over hint
+- Situation: AGENTS.md's accessibility rule ("no state conveyed by colour alone") is called out by
+  name for this Step's drag-over fill, and the spec's own recipe comment says the fill to
+  `--surface-sunken` is the *whole* visual change — no new token, no border-style change (the dashed
+  `--hairline-strong` outline "stays").
+- Decision: rather than leave the state colour-only, the zone's existing hint line (`upload.hint`)
+  swaps to a new translated sentence (`upload.dropHint`, both locales) while a drag is over it,
+  reverting on drag-leave/drop. This adds one locale key pair, not present in the spec's own
+  "Uploading" bullet list, but no CSS token and no new contrast pair (the fill still resolves to the
+  one token `check_contrast.py`/`check_css_tokens.py` already know about).
+- Not a blocker: `check_locales.py` passes with the new keys in sync; flagging for the record since
+  a future reader comparing the diff against the spec's literal bullet list would otherwise wonder
+  where the extra string came from.
