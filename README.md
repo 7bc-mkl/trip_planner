@@ -63,6 +63,7 @@ frontend/                React SPA
 deploy/                  Dockerfile, entrypoint, compose files
 scripts/check_locales.py Locale parity gate (plain python3, no deps)
 scripts/check_css_tokens.py  CSS token completeness gate (plain python3, no deps)
+scripts/check_contrast.py    WCAG contrast gate over tokens.css (plain python3, no deps)
 .ai/                     Specs, agent pipeline config, generated run artifacts
 ```
 

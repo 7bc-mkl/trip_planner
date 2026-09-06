@@ -83,10 +83,20 @@ VAR_REFERENCE = re.compile(r"^var\(\s*(--[A-Za-z0-9_-]+)\s*\)$")
 def parse_tokens(text: str) -> dict[str, str]:
     """Every `--name: value;` declaration in the token file, first-wins.
 
-    First-wins matters for `--radius-md`, which the bridge section re-declares
-    with a different meaning under the same name (a colour token is never
-    re-declared like that, so this only matters for non-colour tokens this
-    script never looks up).
+    First-wins is the rule because the token file re-declares names on purpose:
+    the `@media (max-width: 767px)` block at its foot restates the type roles at
+    their mobile sizes, and a `prefers-*` block would restate colours the same
+    way. The canonical `:root` block comes first, so first-wins takes the
+    default — which
+    is the value every pair below is asserted against. Last-wins would silently
+    switch this script to auditing whatever the narrowest viewport happens to
+    define.
+
+    The parser is a regex over the whole file, so it would also read a
+    `--name: value;` written inside a comment as a declaration. No comment in
+    the token file contains one today; one easily could, and it would shadow the
+    real token for this script alone. If that ever happens, skip comments here
+    rather than rewording the comment.
     """
     tokens: dict[str, str] = {}
     for name, value in DECLARATION.findall(text):

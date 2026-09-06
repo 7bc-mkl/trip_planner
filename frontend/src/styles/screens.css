@@ -644,6 +644,13 @@ fieldset.field-card {
    #00294d, so the track is derived from the fill's own foreground instead. The
    filled arc keeps the success tone it carries everywhere. */
 .trip-banner .readiness__ring {
+  /* The same initial value `.readiness__ring` declares in `components.css`, on
+     the same element. It is restated because the token check is scope-aware —
+     a `var()` resolves against `tokens.css` or against its own file, and
+     nothing else — and because a default that lives only in the other file is a
+     dependency this rule cannot see. The component sets the real arc inline. */
+  --readiness-arc: 0turn;
+
   background: conic-gradient(
     var(--success) 0 var(--readiness-arc),
     color-mix(in srgb, var(--on-primary) 25%, transparent) var(--readiness-arc) 1turn
