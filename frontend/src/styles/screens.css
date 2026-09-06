@@ -447,14 +447,6 @@ fieldset.field-card {
   color: var(--on-danger-surface);
 }
 
-/* The glyph slot, reserved and empty until step 6.1 ships the sprite. It holds
-   its space so adding the icon later moves nothing. */
-.stage-card__remove-icon {
-  display: inline-block;
-  width: 1rem;
-  height: 1rem;
-}
-
 .stage-card__fields {
   display: grid;
   grid-template-columns: 2fr 1fr 1fr;
@@ -587,9 +579,12 @@ fieldset.field-card {
   }
 }
 
-/* The icon-led meta row: the date range, the day count and the route summary.
-   Each fact is a `--meta-item` so step 6.1 can put a glyph in front of its text
-   without moving anything. */
+/* The meta row: the date range, the day count and the route summary. Each fact
+   is a `__meta-item` — an inline flex box with a gap, so a glyph can be put in
+   front of its text without moving anything. The slot is deliberately still
+   empty: step 6.1 shipped a sprite of the five item kinds and the two chevrons,
+   and a calendar or a route glyph would have had to be invented to fill it. The
+   box costs nothing and the row reads without one. */
 .trip-banner__meta {
   display: flex;
   flex-wrap: wrap;

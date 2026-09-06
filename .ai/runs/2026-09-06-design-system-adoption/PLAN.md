@@ -42,7 +42,7 @@
 | 6 | 6.2 | Final verification pass — contrast, diacritics, locales, bundle (spec step 33) | inline | done | d0dc40d |
 | 4 | 4.9-review-fix | Dialog layering and the 360px timeline title | inline | done | pending |
 | 6 | 6.3-review-fix | Harden the two gate scripts and fix the README outlier | inline | done | pending |
-| 6 | 6.4-review-fix | Harden the QA scripts and clear the cut-phase leftovers | inline | todo | — |
+| 6 | 6.4-review-fix | Harden the QA scripts and clear the cut-phase leftovers | inline | done | pending |
 
 ## Goal
 
@@ -112,7 +112,7 @@ deletes the compatibility bridge, so Phase 2 may only be reverted together with 
 
 ## Risks
 
-- **Silent visual regression.** None of the six gate commands can see. Mitigated by the per-phase
+- **Silent visual regression.** None of the eight gate commands can see. Mitigated by the per-phase
   screenshot sets (Steps 1.6, 2.6, 3.4, 4.8, 5.7) and the two machine checks the spec invents: the
   token-completeness check (Step 1.3, re-run at 2.5 and 6.1) and the contrast script (Step 1.5).
 - **An undefined `var()` surviving the bridge deletion.** CSS fails silently; the token-completeness

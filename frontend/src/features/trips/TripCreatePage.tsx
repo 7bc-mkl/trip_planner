@@ -269,12 +269,13 @@ export function TripCreatePage() {
                     )
                   }
                 >
-                  {/* The glyph slot. Empty until step 6.1 puts the sprite in it —
-                      no sprite is invented here — and `aria-hidden` because the
-                      button's name is the VISIBLE word beside it, not an icon.
-                      An icon button whose label is only a tooltip is exactly what
-                      this screen does not ship. */}
-                  <span className="stage-card__remove-icon" aria-hidden="true" />
+                  {/* No glyph. This slot used to hold an empty `<span>` waiting
+                      for step 6.1's sprite; 6.1 shipped, and the sprite it
+                      shipped carries the five item kinds and the two chevrons
+                      and nothing else, so there is no remove glyph to put here
+                      and none was invented. The button's name is the visible
+                      word — an icon button whose label is only a tooltip is
+                      exactly what this screen does not ship. */}
                   {t('tripCreate.removeStage')}
                 </button>
               </div>

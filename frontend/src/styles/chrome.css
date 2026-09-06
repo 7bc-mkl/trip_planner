@@ -1,8 +1,10 @@
 /**
  * chrome.css — the frame around every authenticated screen.
  *
- * The header, the page grid, the dock and (from Phase 5) the drawer: the things
- * that are not a screen and not a component, but the shell both live inside.
+ * The header, the page grid and the dock: the things that are not a screen and
+ * not a component, but the shell both live inside. There is no drawer — the
+ * assistant drawer was Phase 5's, and the owner cut Phase 5 (`PLAN.md`, "Scope
+ * change").
  *
  * Its `@import` sits between `base.css` and `components.css` in `index.css`, and
  * that position is the contract: the chrome frames the page, so a component

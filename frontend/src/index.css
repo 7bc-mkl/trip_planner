@@ -7,8 +7,8 @@
  *
  *   tokens      the vocabulary — custom properties only, no selector but :root
  *   base        the element layer — reset, body, headings, links, focus ring
- *   chrome      the header, the page grid, the dock, the drawer  (Phase 3)
- *   components  buttons, fields, chips, cards, rows, dialogs, previews
+ *   chrome      the header, the page grid, the dock
+ *   components  buttons, fields, chips, cards, rows, the item dialog
  *   screens     the login card, the trip list, the timeline, the day detail
  *
  * `chrome.css` sits between `base` and `components`, exactly there — the chrome

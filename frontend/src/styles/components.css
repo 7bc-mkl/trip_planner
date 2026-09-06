@@ -8,26 +8,27 @@
  *
  * Rule order inside this file is the skeleton's original order from
  * `index.css`, unchanged — the split must not move anything in the cascade.
- * Recipes are rewritten in place, phase by phase; the ones still reading the
- * compatibility-bridge names in `tokens.css` are migrated in step 2.5, which is
- * also where the bridge is deleted.
+ * Recipes were rewritten in place, phase by phase, and the compatibility bridge
+ * they were migrated off is gone: every name here is a token in `tokens.css`.
  */
 
 /* --- elevation (DESIGN.md, "Elevation & Depth") -----------------------
  *
- * Three utilities, and the surfaces that wear them. The design's levels are not
+ * Three levels, and the surfaces that wear them. The design's levels are not
  * shadows on their own: each is a *pairing* of a surface, a 1px boundary and a
- * shadow, which is why the utility carries all three plus the radius tier the
- * design pairs with it. `elevation-0` needs no class — it is the bare `--canvas`
+ * shadow, which is why each recipe carries all three plus the radius tier the
+ * design pairs with it. `elevation-0` needs no rule — it is the bare `--canvas`
  * that `base.css` already paints on `body`.
  *
- * Each utility's selector list also names the surfaces in this file that are at
- * that level, so the recipe is written once. The screen-scoped cards say the
+ * THERE ARE NO `.elevation-N` UTILITY CLASSES. They were carried here for the
+ * Phase 5 surfaces, which the owner cut (`PLAN.md`, "Scope change"); no element
+ * in the app ever applied one, and a class nothing wears is a claim about a
+ * surface that does not exist. Each level is instead written once as the
+ * selector list of the surfaces at that level. The screen-scoped cards say the
  * same thing at the top of `screens.css` rather than dragging screen names into
  * the component layer.
  */
 
-.elevation-1,
 .filter-bar,
 .item-row {
   border: 1px solid var(--hairline);
@@ -41,16 +42,16 @@
    written together so neither can be removed without the other. Only the
    surfaces that actually do something on activation lift: a static card that
    rises under the pointer promises an interaction it does not have. */
-.elevation-2,
 .item-row--button:hover,
 .item-row--button:focus-visible {
   border-color: var(--hairline-strong);
   box-shadow: var(--elevation-2);
 }
 
-/* Modals, drawers and floating sheets. The radius steps up a tier with the
-   elevation, as DESIGN.md's "Shapes" pairs them. */
-.elevation-3,
+/* Elevation 3. The item editor is the app's only surface at this level — the
+   drawer and the floating sheets DESIGN.md pairs with it belong to Phase 5,
+   which the owner cut (`PLAN.md`, "Scope change"). The radius steps up a tier
+   with the elevation, as DESIGN.md's "Shapes" pairs them. */
 .dialog {
   border-radius: var(--radius-xl);
   background: var(--surface);
@@ -58,7 +59,6 @@
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .elevation-1,
   .filter-bar,
   .item-row {
     transition:
@@ -124,8 +124,12 @@ textarea:where([aria-invalid='true'], :user-invalid) {
   border-color: var(--danger);
 }
 
-/* Defined now because Phase 5's preview fields need it: a preview control is
-   readable, obviously inert, and still has a boundary. `--text-subtle` rather
+/* The disabled field. It was written for Phase 5's preview controls, which the
+   owner cut (`PLAN.md`, "Scope change"), so nothing in the app is a disabled
+   field today. It stays because `:disabled` is a native state of every control
+   the recipe above styles — the first one that uses it must not fall back to
+   the user-agent's grey — and unlike the `.elevation-N` classes it is a state,
+   not a claim that a surface exists. `--text-subtle` rather
    than `--field-border` on the boundary — #84919F drops to 2.93:1 against the
    sunken fill, while #64748B holds 4.34:1, so the disabled field is the one
    place the subtle tone is the *stronger* choice. */
@@ -446,6 +450,14 @@ textarea:disabled {
   height: 6px;
   border-radius: var(--radius-full);
   background: currentcolor;
+}
+
+/* The glyph beside it, held at its own size for the same reason
+   `.status-choice__glyph` is: a flex item's default `flex-shrink: 1` would let
+   a squeezed chip narrow the mark rather than the text around it, and a
+   half-width glyph is not a smaller glyph, it is a distorted one. */
+.status-chip__glyph {
+  flex: none;
 }
 
 /* Colour is an addition to the glyph and the label, never a replacement:

@@ -12,7 +12,10 @@ that talks to the running app's own API exactly as the SPA does — same origin,
 same session cookie, same CSRF double-submit. It fabricates nothing the product
 would not accept through its own forms.
 
-    python3 .ai/scripts/qa-seed.py [--base-url URL]
+    python3 .ai/scripts/qa-seed.py [--base-url URL] [--allow-remote]
+
+The base URL must be loopback unless `--allow-remote` is passed: this script
+writes, and an ambient `QA_BASE_URL` pointed at a real origin would write there.
 
 Idempotent: a trip with the same title is left alone rather than duplicated, so
 re-running it after a warm `test-env-up.sh` is a no-op. The data is the brief's
@@ -30,6 +33,7 @@ import os
 import sys
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from datetime import date, timedelta
 from pathlib import Path
@@ -69,6 +73,25 @@ ITEMS = [
 def fail(message: str) -> None:
     print(f"qa-seed: {message}", file=sys.stderr)
     raise SystemExit(1)
+
+
+def require_loopback(base_url: str) -> None:
+    """Refuse to seed anything that is not the local QA environment.
+
+    The base URL can come from `--base-url` or from an ambient `QA_BASE_URL`,
+    both of which override the descriptor silently. This script logs in with the
+    credentials sitting next to it and then CREATES a trip and thirteen items; if
+    the URL ever pointed at a real deployment, it would write fabricated QA data
+    into somebody's actual plan. The guard is a hostname check, and the opt-out
+    is explicit rather than an environment variable, so it cannot be inherited.
+    """
+    host = (urllib.parse.urlsplit(base_url).hostname or "").lower()
+    if host in {"localhost", "127.0.0.1", "::1"}:
+        return
+    fail(
+        f"refusing to seed '{base_url}': host '{host or base_url}' is not loopback. "
+        f"Pass --allow-remote if you genuinely mean to write test data there."
+    )
 
 
 def read_base_url() -> str:
@@ -144,9 +167,16 @@ class Client:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--base-url", default=None, help="defaults to .ai/qa/test-env.json")
+    parser.add_argument(
+        "--allow-remote",
+        action="store_true",
+        help="permit a non-loopback base URL; off by default, and never taken from the environment",
+    )
     args = parser.parse_args()
 
     base_url = args.base_url or os.environ.get("QA_BASE_URL") or read_base_url()
+    if not args.allow_remote:
+        require_loopback(base_url)
     email, password = read_credentials()
 
     client = Client(base_url)

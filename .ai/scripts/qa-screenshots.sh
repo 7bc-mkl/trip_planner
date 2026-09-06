@@ -13,9 +13,11 @@
 # `.ai/qa/test-env.json`; `.ai/scripts/qa-seed.py` supplies the plan being
 # photographed. Nothing here writes to the repository outside the output directory.
 #
-# Exit codes: 0 captured, 1 an operational failure (no environment, no browser).
-# A caller that cannot run it records the reason and carries on — a screenshot
-# set is evidence, not a gate.
+# Exit codes: 0 captured, 1 an operational failure (no environment, no browser)
+# OR a capture that could not be trusted — the wrong locale applied, the expected
+# element missing, the webfont not yet loaded. A caller that cannot RUN it records
+# the reason and carries on — a screenshot set is evidence, not a gate — but a
+# capture that runs and lies is not evidence, so those stop the script.
 
 set -eu
 
@@ -36,8 +38,23 @@ CREDENTIALS="$REPO_ROOT/.ai/qa/test-env.env"
 [ -f "$CREDENTIALS" ] || { echo "No $CREDENTIALS — run .ai/scripts/test-env-up.sh first." >&2; exit 1; }
 
 BASE_URL=$(sed -n 's/.*"baseUrl"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$DESCRIPTOR" | head -1)
-# shellcheck disable=SC1090
-. "$CREDENTIALS"
+
+# The credentials file is DATA, PARSED — not a script, sourced. `.` would run
+# whatever it contains with this shell's privileges, and it is a generated file
+# holding a password; `qa-seed.py` reads the same file as plain `KEY=value` and
+# this is the same parser in `awk`.
+read_credential() {
+  awk -v key="$1" -F= '
+    /^[[:space:]]*#/ { next }
+    $1 == key { sub(/^[^=]*=/, ""); gsub(/^[[:space:]]+|[[:space:]]+$/, ""); print; exit }
+  ' "$CREDENTIALS"
+}
+TEST_OWNER_EMAIL=$(read_credential TEST_OWNER_EMAIL)
+TEST_OWNER_PASSWORD=$(read_credential TEST_OWNER_PASSWORD)
+if [ -z "$TEST_OWNER_EMAIL" ] || [ -z "$TEST_OWNER_PASSWORD" ]; then
+  echo "$CREDENTIALS does not define TEST_OWNER_EMAIL and TEST_OWNER_PASSWORD." >&2
+  exit 1
+fi
 
 # The seed is idempotent: a warm environment already holding the trip is a no-op.
 SEED_OUT=$(python3 "$REPO_ROOT/.ai/scripts/qa-seed.py")
@@ -63,8 +80,49 @@ trap cleanup EXIT INT TERM
 
 ab() { "$AB" --session "$SESSION" "$@" --json >/dev/null; }
 
+# The value of an `eval` that returns a string, and the number of matches for a
+# selector. Both read the provider's own JSON, which is how the descriptor's
+# "assert" operation says to compare an observed value.
+ab_eval() {
+  "$AB" --session "$SESSION" eval "$1" --json | sed -n 's/.*"result":"\([^"]*\)".*/\1/p'
+}
+
+ab_count() {
+  "$AB" --session "$SESSION" get count "$1" --json | sed -n 's/.*"count":\([0-9]*\).*/\1/p'
+}
+
+# `<html lang>` is set by `frontend/src/i18n/index.ts` on every locale change, so
+# it is the applied locale rather than the one that was asked for. A capture
+# named `-en` whose page is still Polish is worse than a missing capture: it is
+# evidence for a claim nothing checked, and this run produced exactly that once.
+require_locale() {
+  applied=$(ab_eval "document.documentElement.lang")
+  [ "$applied" = "$1" ] || {
+    echo "Locale switch failed: asked for '$1', page reports '${applied:-<none>}'." >&2
+    exit 1
+  }
+}
+
+# Every capture asserts the screen it claims to show, then waits for the webfont.
+#
+# `test -s` alone passes on a blank page, an error boundary and a redirect to
+# /login — a non-empty PNG is not evidence of a screen. And the headline claim of
+# this PR is Plus Jakarta Sans's glyph coverage, including Polish diacritics: a
+# capture raced against the font load would show the fallback face and prove the
+# opposite of what the filename says.
 shoot() {
   path="$OUT_DIR/$1"
+  expect=$2
+  count=$(ab_count "$expect")
+  [ "${count:-0}" -ge 1 ] || {
+    echo "Expected element '$expect' is absent — not capturing $(basename "$path")." >&2
+    exit 1
+  }
+  status=$(ab_eval "document.fonts.ready.then(() => document.fonts.status)")
+  [ "$status" = "loaded" ] || {
+    echo "Webfonts are '${status:-<unknown>}', not loaded — $(basename "$path") would show the fallback face." >&2
+    exit 1
+  }
   "$AB" --session "$SESSION" screenshot --full "$path" --json >/dev/null
   test -s "$path" || { echo "Empty screenshot: $path" >&2; exit 1; }
   echo "  captured $(basename "$path")"
@@ -78,11 +136,12 @@ for LOCALE in pl en; do
 
   # Signed out, and on the login screen, so the locale switch is the one on /login.
   ab open "$BASE_URL/login"
-  "$AB" --session "$SESSION" eval "localStorage.setItem('locale', '$LOCALE')" --json >/dev/null 2>&1 || true
+  ab eval "localStorage.setItem('locale', '$LOCALE')"
   ab open "$BASE_URL/login"
-  "$AB" --session "$SESSION" select "select" "$LOCALE" --json >/dev/null 2>&1 || true
+  ab select "select" "$LOCALE"
   ab wait 400
-  shoot "01-login-${LOCALE}${SUFFIX}.png"
+  require_locale "$LOCALE"
+  shoot "01-login-${LOCALE}${SUFFIX}.png" ".login form"
 
   "$AB" --session "$SESSION" fill "input[type=email]" "$TEST_OWNER_EMAIL" --json >/dev/null
   "$AB" --session "$SESSION" fill "input[type=password]" "$TEST_OWNER_PASSWORD" --json >/dev/null
@@ -95,21 +154,25 @@ for LOCALE in pl en; do
   # /login leaves every authenticated screen in the persisted language.
   ab open "$BASE_URL/trips"
   ab wait 800
-  "$AB" --session "$SESSION" select "header select" "$LOCALE" --json >/dev/null 2>&1 || true
+  ab select "header select" "$LOCALE"
   ab wait 800
-  shoot "02-trips-${LOCALE}${SUFFIX}.png"
+  require_locale "$LOCALE"
+  shoot "02-trips-${LOCALE}${SUFFIX}.png" ".trip-list a"
 
   ab open "$BASE_URL/trips/new"
   ab wait 800
-  shoot "03-trip-create-${LOCALE}${SUFFIX}.png"
+  require_locale "$LOCALE"
+  shoot "03-trip-create-${LOCALE}${SUFFIX}.png" ".trip-form"
 
   ab open "$BASE_URL/trips/$TRIP_ID"
   ab wait 1200
-  shoot "04-timeline-${LOCALE}${SUFFIX}.png"
+  require_locale "$LOCALE"
+  shoot "04-timeline-${LOCALE}${SUFFIX}.png" ".timeline__day"
 
   ab open "$BASE_URL/trips/$TRIP_ID/days/2026-10-11"
   ab wait 1200
-  shoot "05-day-detail-${LOCALE}${SUFFIX}.png"
+  require_locale "$LOCALE"
+  shoot "05-day-detail-${LOCALE}${SUFFIX}.png" ".day-nav"
 
   # Back to a signed-out browser so the next locale starts from /login.
   "$AB" --session "$SESSION" cookies clear --json >/dev/null 2>&1 || true

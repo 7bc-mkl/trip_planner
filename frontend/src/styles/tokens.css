@@ -212,11 +212,6 @@
   /* The spec's desktop cap: the page grid is capped at 90rem and centred, so
      the dock is 22/90 of the width at the cap. Not a DESIGN.md token. */
   --page-max: 90rem;
-
-  /* The right-edge assistant drawer takes the export's `sidebar-width`; it is
-     the same column, docked rather than in flow. Aliased rather than repeated
-     so the two can never drift. */
-  --drawer-width: var(--sidebar-width);
 }
 
 /* The two `-mobile` type roles exist because DESIGN.md declares them; below the
