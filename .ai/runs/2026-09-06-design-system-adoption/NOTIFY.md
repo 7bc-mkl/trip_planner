@@ -39,3 +39,12 @@
 - **Evidence defect found and fixed in-checkpoint:** the first pass photographed one locale twice, because signed in the owner's stored locale wins over the one chosen on `/login` (R01). The capture script now switches locale again through the header switch after sign-in; the set was re-captured.
 - **Observation, out of scope:** `POST /auth/login` answers 204 before its transaction commits (FastAPI exits the `get_db` yield dependency after the response is sent), so a fast client is answered 401 by a server that already accepted it. `qa-seed.py` polls for session visibility. `backend/` is an explicit non-goal of this spec, so this is surfaced on the PR rather than fixed here.
 - Decision: executors write the literal `pending` into the Tasks table's `Commit` cell and the main session fills the real short SHA at each checkpoint — writing a commit's own SHA into itself is a regress, and amend-chasing produced one wrong cell at Step 1.1 before the convention was set.
+
+## 2026-09-06T13:49:55Z — checkpoint 2 (Steps 2.1–2.6)
+- Phase 2 complete; the compatibility bridge is deleted and one token vocabulary remains. Gate green: locales, css-tokens (257 refs, run immediately after the bridge deletion), contrast (15/15), typecheck, **131 tests** (+4 from Step 2.3), build (CSS 20.94 kB).
+- Step review (`checkpoint`) over `160167c..6ac2230`: no blocker. One **major fixed in place** — `.app-shell button` was an element catch-all outranking every `.button-*` recipe, so the rewritten primary was invisible on authenticated screens; narrowed to `:not([class])`. Four minors and one nit recorded in `checkpoint-2-checks.md` and deferred to the final review.
+- Decision: `/login`'s unclassed submit keeps duplicated primary declarations in `screens.css` until Step 4.1 rebuilds that card — Step 2.1 forbids TSX changes, and a class cannot be added without one.
+- Decision: the 96%-opaque frost fallback is derived with `color-mix` from `--surface` rather than adding a token, since it has exactly one consumer.
+- Recorded, left as specified: the disabled-field pair is 4.34:1 (WCAG exempts inactive components, and spec step 8 prescribes it). Named for the UX review because Phase 5's preview fields are its main consumer.
+- Relayed from Step 2.5: the spec's own verification grep for that Step is too loose — `--space-[0-9]` also matches the canonical `--space-2xs`/`2xl`/`3xl`. The boundary-guarded form is empty.
+- UI verification ran: ten PNGs in `checkpoint-2-artifacts/`, five routes × two locales.

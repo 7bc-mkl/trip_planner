@@ -20,12 +20,12 @@
 | 1 | 1.4 | Split the base layer into `styles/base.css` (spec step 4) | dispatch | done | 8fe1d89 |
 | 1 | 1.5 | Contrast script over the token file (spec step 5) | dispatch:cheap | done | ec3851b |
 | 1 | 1.6 | Phase-1 screenshot set — five routes × two locales (spec step 6) | inline | done | 5722517 |
-| 2 | 2.1 | Split `components.css` and rewrite the button recipes (spec step 7) | group:B | done | pending |
-| 2 | 2.2 | Rewrite the input, select, textarea and date recipes (spec step 8) | group:B | done | pending |
-| 2 | 2.3 | Rewrite the status chip recipes and add the dot (spec step 9) | group:B | done | pending |
-| 2 | 2.4 | Elevation utilities, cards, dialogs and the frosted backdrop (spec step 10) | group:B | done | pending |
-| 2 | 2.5 | Migrate off the bridge aliases and delete the bridge (spec step 11) | dispatch | done | pending |
-| 2 | 2.6 | Phase-2 screenshot set (spec step 12) | inline | done | pending |
+| 2 | 2.1 | Split `components.css` and rewrite the button recipes (spec step 7) | group:B | done | 9a7d802 |
+| 2 | 2.2 | Rewrite the input, select, textarea and date recipes (spec step 8) | group:B | done | 1f26ad4 |
+| 2 | 2.3 | Rewrite the status chip recipes and add the dot (spec step 9) | group:B | done | 7e2151c |
+| 2 | 2.4 | Elevation utilities, cards, dialogs and the frosted backdrop (spec step 10) | group:B | done | 87acf35 |
+| 2 | 2.5 | Migrate off the bridge aliases and delete the bridge (spec step 11) | dispatch | done | 9a7c625 |
+| 2 | 2.6 | Phase-2 screenshot set (spec step 12) | inline | done | 6ac2230 |
 | 3 | 3.1 | Rebuild the header in `styles/chrome.css` and `AppShell` (spec step 13) | group:C | todo | — |
 | 3 | 3.2 | The optional `context` prop on trip-scoped routes (spec step 14) | group:C | todo | — |
 | 3 | 3.3 | The optional `dock` prop and the responsive page grid (spec step 15) | group:C | todo | — |
