@@ -530,6 +530,52 @@ describe('the readiness counter', () => {
 
     expect(await screen.findByText('1 z 2 załatwionych')).toBeInTheDocument()
   })
+
+  /**
+   * The R02 regression guard for the readiness ring (spec step 19).
+   *
+   * The ring is the one thing on this tile that could quietly re-introduce the
+   * failure the zero state exists to prevent: a disc drawn at a zero
+   * denominator is a 0% reading of an undefined percentage, and it says "you
+   * are failing" where the truth is "you have not decided anything yet".
+   */
+  it('draws the ring above a zero denominator, beside the untouched text', async () => {
+    mockApi(backend())
+
+    const { container } = renderApp('/trips/trip-1')
+    await screen.findByText('1 z 2 załatwionych')
+
+    const ring = container.querySelector('.readiness__ring')
+
+    expect(ring).not.toBeNull()
+    // Decoration only: no text node, and hidden from the accessibility tree.
+    expect(ring).toHaveAttribute('aria-hidden', 'true')
+    expect(ring?.textContent).toBe('')
+  })
+
+  it('renders no ring and no percentage at a zero denominator', async () => {
+    mockApi(backend({ trip: { ...TRIP, readiness: { arranged: 0, tracked: 0 } } }))
+
+    const { container } = renderApp('/trips/trip-1')
+    await screen.findByText('Nic jeszcze nie załatwione')
+
+    expect(container.querySelector('.readiness__ring')).toBeNull()
+    expect(screen.queryByText(/%/u)).not.toBeInTheDocument()
+
+    // The state hook and the text node are exactly what they were before the
+    // ring existed — the tile still says it in words, and says only that.
+    const tile = container.querySelector('.readiness[data-nothing-tracked="true"]')
+    expect(tile?.querySelector('.readiness__value')?.textContent).toBe('Nic jeszcze nie załatwione')
+  })
+
+  it('keeps the compact list row ringless — only the banner asks for one', async () => {
+    mockApi(backend())
+
+    const { container } = renderApp('/trips')
+    await screen.findByText('1 z 2 załatwionych')
+
+    expect(container.querySelector('.readiness__ring')).toBeNull()
+  })
 })
 
 describe('items on the timeline', () => {

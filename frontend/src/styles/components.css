@@ -364,6 +364,40 @@ textarea:disabled {
   font-weight: 600;
 }
 
+/* The ring (Q8), rendered only when the tile is asked for one AND the
+ * denominator is above zero — the component decides that, not this file.
+ *
+ * A TWO-STOP CONIC GRADIENT ON A MASKED DISC: no SVG, no library, no element
+ * per segment. The mask punches the middle out, so what is left is an annulus
+ * whose filled arc is `--readiness-arc` — set inline by the component as a
+ * fraction of a turn, and defaulted here so the disc has a defined value even
+ * without it.
+ *
+ * NOTHING HERE TRANSITIONS. The ring paints at its final value on first render,
+ * which is what `prefers-reduced-motion: reduce` asks for and what every other
+ * reader gets too: a counter that animates to its own value tells the owner
+ * nothing he did not already know.
+ *
+ * The colour is an addition to the "x of y" text beside it, never a
+ * replacement: the disc is `aria-hidden` and carries no text node at all.
+ */
+.readiness__ring {
+  --readiness-arc: 0turn;
+
+  flex: none;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: var(--radius-full);
+  background: conic-gradient(
+    var(--success) 0 var(--readiness-arc),
+    var(--hairline) var(--readiness-arc) 1turn
+  );
+  /* The hole. `#0000` and `#000` are alpha stops for the mask, not palette —
+     a mask reads only the alpha channel. */
+  -webkit-mask: radial-gradient(farthest-side, #0000 calc(100% - 6px), #000 calc(100% - 5px));
+  mask: radial-gradient(farthest-side, #0000 calc(100% - 6px), #000 calc(100% - 5px));
+}
+
 /* --- status chips (DESIGN.md, "Status Chips & Badges") ----------------
  *
  * Three states, three token triples, and the same three words the skeleton

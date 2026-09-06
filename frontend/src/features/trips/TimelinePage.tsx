@@ -200,7 +200,7 @@ export function TimelinePage() {
         {/* The export's "STATUS LOGISTYKI" tile. Its layout is adopted; its
             arithmetic is not — the export's denominator is the all-items count,
             which includes do zaplanowania and contradicts R02. */}
-        <ReadinessTile readiness={trip.readiness} />
+        <ReadinessTile readiness={trip.readiness} ring />
       </header>
 
       <FilterBar
