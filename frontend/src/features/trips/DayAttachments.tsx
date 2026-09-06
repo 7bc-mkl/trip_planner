@@ -64,7 +64,15 @@ export function DayAttachments({
         </ul>
       )}
 
-      <UploadDropzone target={{ kind: 'day', tripId, date }} onUploaded={onUploaded} />
+      {/* The list this panel is showing, handed back to the drop zone so a
+          finished upload's queue row retires once the refetched list carries
+          it — the file is shown once, as an attachment row, and the queue
+          cannot outlive a later delete. See `UploadDropzone`'s own note. */}
+      <UploadDropzone
+        target={{ kind: 'day', tripId, date }}
+        onUploaded={onUploaded}
+        listedAttachmentIds={attachments.map((attachment) => attachment.id)}
+      />
     </section>
   )
 }

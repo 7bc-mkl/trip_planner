@@ -91,6 +91,11 @@ export function ItemAttachments({
         <UploadDropzone
           target={{ kind: 'item', tripId, itemId: item.id }}
           onUploaded={handleUploaded}
+          // The strip's own list, handed back so a finished upload's queue row
+          // retires the moment the attachment row above appears. Here the
+          // append and the upload's own state settle in the same commit, so
+          // the file is never rendered twice even for one frame.
+          listedAttachmentIds={attachments.map((attachment) => attachment.id)}
         />
       )}
     </section>

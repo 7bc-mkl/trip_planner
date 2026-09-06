@@ -1,11 +1,14 @@
-import { render, screen } from '@testing-library/react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { useState } from 'react'
+import { render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { Attachment } from '../../api/attachments'
 import { attachmentContentUrl } from '../../api/attachments'
 import en from '../../locales/en.json'
 import pl from '../../locales/pl.json'
 import { applyLocale, initI18n } from '../../i18n'
+import { FakeXhr } from '../../test/fakeXhr'
 import { DayAttachments } from './DayAttachments'
 
 /**
@@ -40,6 +43,10 @@ const PHOTO: Attachment = {
 beforeEach(async () => {
   initI18n('pl')
   await applyLocale('pl')
+})
+
+afterEach(() => {
+  vi.unstubAllGlobals()
 })
 
 describe('the day documents panel', () => {
@@ -164,6 +171,46 @@ describe('the day documents panel', () => {
     // 1024 bytes and 2 * 1024 * 1024 bytes: exactly one KB and one MB.
     expect(screen.getByText('1 KB')).toBeInTheDocument()
     expect(screen.getByText('2 MB')).toBeInTheDocument()
+  })
+
+  describe('the upload queue against the list it sits under', () => {
+    /**
+     * `DayDetailPage` refetches the day after an upload, so this panel's
+     * `attachments` prop is what eventually carries the new file. The panel has
+     * to hand those ids back to the drop zone, or the finished upload keeps
+     * showing its own "✓ Dodany" row beside the attachment row and the file is
+     * on screen twice. The wrapper below is that refetch, at its smallest.
+     */
+    function HostedPanel() {
+      const [attachments, setAttachments] = useState<Attachment[]>([])
+      return (
+        <DayAttachments
+          tripId="trip-1"
+          date="2026-10-11"
+          attachments={attachments}
+          onUploaded={(attachment) => setAttachments((previous) => [...previous, attachment])}
+          onDeleted={vi.fn()}
+        />
+      )
+    }
+
+    beforeEach(() => {
+      FakeXhr.reset()
+      vi.stubGlobal('XMLHttpRequest', FakeXhr as unknown as typeof XMLHttpRequest)
+    })
+
+    it('shows an uploaded file exactly once, as an attachment row', async () => {
+      const user = userEvent.setup()
+      render(<HostedPanel />)
+
+      const file = new File(['%PDF-1.4 …'], 'bilet.pdf', { type: 'application/pdf' })
+      Object.defineProperty(file, 'size', { value: 4096 })
+      await user.upload(screen.getByLabelText(new RegExp(pl.upload.add)), file)
+      FakeXhr.instances[0]!.respond(201, { ...PDF, id: 'attachment-fresh', filename: 'bilet.pdf' })
+
+      await waitFor(() => expect(screen.getAllByText('bilet.pdf')).toHaveLength(1))
+      expect(screen.queryByRole('list', { name: pl.upload.list })).not.toBeInTheDocument()
+    })
   })
 
   it("hosts the dropzone with the export's verbatim label, kept as-is", () => {

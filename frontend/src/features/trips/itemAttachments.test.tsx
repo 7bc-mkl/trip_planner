@@ -1,11 +1,13 @@
-import { render, screen } from '@testing-library/react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { render, screen, waitFor, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { Attachment } from '../../api/attachments'
 import type { Item } from '../../api/items'
 import en from '../../locales/en.json'
 import pl from '../../locales/pl.json'
 import { applyLocale, initI18n } from '../../i18n'
+import { FakeXhr } from '../../test/fakeXhr'
 import { ItemAttachments } from './ItemAttachments'
 
 /**
@@ -57,6 +59,10 @@ function item(overrides: Partial<Item> = {}): Item {
 beforeEach(async () => {
   initI18n('pl')
   await applyLocale('pl')
+})
+
+afterEach(() => {
+  vi.unstubAllGlobals()
 })
 
 describe('the item attachment strip', () => {
@@ -153,6 +159,80 @@ describe('the item attachment strip', () => {
     expect(screen.getByText(en.itemAttachments.heading)).toBeInTheDocument()
     expect(screen.getByText(VOUCHER.filename)).toBeInTheDocument()
     expect(screen.getByText(en.upload.add)).toBeInTheDocument()
+  })
+
+  describe('the upload queue against the strip it sits under', () => {
+    /**
+     * The strip is the host that appends locally, so the attachment row and
+     * the finished upload settle in the same commit. That is the window where
+     * showing the file twice would be a bug, and it is the window the browser
+     * walk found: "✓ Dodany" under a dropzone whose file was already listed
+     * above it. Counts, not presence — presence passes with the bug.
+     */
+    const UPLOADED: Attachment = { ...VOUCHER, id: 'attachment-fresh', filename: 'nowy.pdf' }
+
+    function uploadable(): File {
+      const file = new File(['%PDF-1.4 …'], 'nowy.pdf', { type: 'application/pdf' })
+      Object.defineProperty(file, 'size', { value: 2048 })
+      return file
+    }
+
+    beforeEach(() => {
+      FakeXhr.reset()
+      vi.stubGlobal('XMLHttpRequest', FakeXhr as unknown as typeof XMLHttpRequest)
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(() => Promise.resolve(new Response(null, { status: 204 }))),
+      )
+      document.cookie = 'csrf_token=test-csrf-token; path=/'
+    })
+
+    it('shows an uploaded file exactly once — as an attachment row, not also as a queue entry', async () => {
+      const user = userEvent.setup()
+      render(
+        <ItemAttachments
+          tripId="trip-1"
+          item={item({ attachments: [] })}
+          onUploaded={vi.fn()}
+          onDeleted={vi.fn()}
+        />,
+      )
+
+      await user.upload(screen.getByLabelText(new RegExp(pl.upload.add)), uploadable())
+      FakeXhr.instances[0]!.respond(201, UPLOADED)
+
+      await waitFor(() => expect(screen.getAllByText('nowy.pdf')).toHaveLength(1))
+      expect(screen.queryByRole('list', { name: pl.upload.list })).not.toBeInTheDocument()
+      expect(screen.queryByText(pl.upload.state.done)).not.toBeInTheDocument()
+    })
+
+    it('leaves no queue entry behind once the uploaded file is deleted', async () => {
+      const user = userEvent.setup()
+      render(
+        <ItemAttachments
+          tripId="trip-1"
+          item={item({ attachments: [] })}
+          onUploaded={vi.fn()}
+          onDeleted={vi.fn()}
+        />,
+      )
+
+      await user.upload(screen.getByLabelText(new RegExp(pl.upload.add)), uploadable())
+      FakeXhr.instances[0]!.respond(201, UPLOADED)
+      await waitFor(() => expect(screen.getAllByText('nowy.pdf')).toHaveLength(1))
+
+      await user.click(screen.getByRole('button', { name: pl.attachment.delete }))
+      // The confirm button carries the same word as the trigger, so it is
+      // reached through the dialog rather than by name alone.
+      const dialog = within(screen.getByRole('dialog'))
+      await user.click(dialog.getByRole('button', { name: pl.attachment.deleteConfirm }))
+
+      // The row goes, and nothing in the queue is left asserting a file that
+      // no longer exists.
+      await waitFor(() => expect(screen.queryByText('nowy.pdf')).not.toBeInTheDocument())
+      expect(screen.getByText(pl.itemAttachments.empty)).toBeInTheDocument()
+      expect(screen.queryByRole('list', { name: pl.upload.list })).not.toBeInTheDocument()
+    })
   })
 
   it('renders the English empty state and the new-item message too', async () => {

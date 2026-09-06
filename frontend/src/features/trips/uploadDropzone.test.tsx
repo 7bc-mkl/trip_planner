@@ -1,3 +1,4 @@
+import { useRef, useState } from 'react'
 import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -6,71 +7,17 @@ import type { Attachment } from '../../api/attachments'
 import en from '../../locales/en.json'
 import pl from '../../locales/pl.json'
 import { applyLocale, initI18n } from '../../i18n'
+import { FakeXhr } from '../../test/fakeXhr'
 import { UploadDropzone, precheck } from './UploadDropzone'
 
 /**
- * The drop zone's own contract, asserted without a screen around it.
+ * The drop zone's own contract, asserted without a screen around it — except
+ * where the contract *is* about the host, in which case `HostedDropzone` below
+ * plays the host with the smallest thing that behaves like one.
  *
- * Uploads run on `XMLHttpRequest` (see `api/attachments.ts`), so `fetch` cannot
- * be stubbed the way the screen suites stub it. This is the same fake
- * `api/attachments.test.ts` uses, kept deliberately minimal: open/send, the
- * three events the client listens for, and enough inspection to prove *which*
- * requests were issued — and, for the pre-check, that none was.
+ * `FakeXhr` (shared, `src/test/fakeXhr.ts`) stands in for `XMLHttpRequest`,
+ * which the upload path uses instead of `fetch` so it can report progress.
  */
-
-type Listener = () => void
-
-class FakeXhr {
-  static instances: FakeXhr[] = []
-
-  method = ''
-  url = ''
-  status = 0
-  responseText = ''
-  withCredentials = false
-  requestHeaders: Record<string, string> = {}
-  sentBody: FormData | null = null
-  aborted = false
-
-  upload: { onprogress: ((event: ProgressEvent) => void) | null } = { onprogress: null }
-  onload: Listener | null = null
-  onerror: Listener | null = null
-  onabort: Listener | null = null
-
-  constructor() {
-    FakeXhr.instances.push(this)
-  }
-
-  open(method: string, url: string): void {
-    this.method = method
-    this.url = url
-  }
-
-  setRequestHeader(name: string, value: string): void {
-    this.requestHeaders[name] = value
-  }
-
-  send(body: FormData): void {
-    this.sentBody = body
-  }
-
-  abort(): void {
-    this.aborted = true
-    this.onabort?.()
-  }
-
-  /** Test helper: the server answering. */
-  respond(status: number, body: unknown): void {
-    this.status = status
-    this.responseText = JSON.stringify(body)
-    this.onload?.()
-  }
-
-  /** Test helper: an upload-progress tick. */
-  progress(loaded: number, total: number): void {
-    this.upload.onprogress?.({ lengthComputable: true, loaded, total } as ProgressEvent)
-  }
-}
 
 const DAY = { kind: 'day', tripId: 'trip-1', date: '2026-10-11' } as const
 
@@ -102,8 +49,75 @@ function row(filename: string): HTMLElement {
   return screen.getByText(filename).closest('li')!
 }
 
+/**
+ * The smallest thing that behaves like a host panel: it lists the attachments
+ * it knows about, it hands those ids back to the drop zone, and each entry can
+ * be deleted. That is exactly the shape of `DayAttachments` and
+ * `ItemAttachments`, minus their markup.
+ *
+ * `deferred` is the difference between the two real hosts. The item strip
+ * appends the attachment in the same batch the upload settles in; the day
+ * panel refetches, so its list catches up a moment later. Both windows matter:
+ * the first must never show the file twice, the second must never hide it.
+ */
+function HostedDropzone({ deferred = false }: { deferred?: boolean }) {
+  const [listed, setListed] = useState<Attachment[]>([])
+  const pending = useRef<Attachment[]>([])
+
+  function publish() {
+    const arrived = pending.current
+    pending.current = []
+    setListed((previous) => [...previous, ...arrived])
+  }
+
+  return (
+    <>
+      <ul aria-label="host list">
+        {listed.map((attachment) => (
+          <li key={attachment.id}>
+            <span>{attachment.filename}</span>
+            <button
+              type="button"
+              onClick={() => setListed((previous) => previous.filter((e) => e.id !== attachment.id))}
+            >
+              {`delete ${attachment.filename}`}
+            </button>
+          </li>
+        ))}
+      </ul>
+
+      {deferred && (
+        <button type="button" onClick={publish}>
+          refresh
+        </button>
+      )}
+
+      <UploadDropzone
+        target={DAY}
+        listedAttachmentIds={listed.map((attachment) => attachment.id)}
+        onUploaded={(attachment) => {
+          pending.current = [...pending.current, attachment]
+          if (!deferred) {
+            publish()
+          }
+        }}
+      />
+    </>
+  )
+}
+
+/** Every place the file's name is written on screen — the count that matters. */
+function representationsOf(filename: string): HTMLElement[] {
+  return screen.queryAllByText(filename)
+}
+
+/** The drop zone's queue, or null when it has nothing to show. */
+function queue(): HTMLElement | null {
+  return screen.queryByRole('list', { name: pl.upload.list })
+}
+
 beforeEach(async () => {
-  FakeXhr.instances = []
+  FakeXhr.reset()
   vi.stubGlobal('XMLHttpRequest', FakeXhr as unknown as typeof XMLHttpRequest)
   initI18n('pl')
   await applyLocale('pl')
@@ -409,6 +423,130 @@ describe('per-file independence', () => {
     expect(FakeXhr.instances).toHaveLength(1)
     expect(within(row('ok.pdf')).getByText(pl.upload.state.selected)).toBeInTheDocument()
     expect(within(row('nope.zip')).getByText(pl.upload.state.failed)).toBeInTheDocument()
+  })
+})
+
+describe('retiring a completed upload', () => {
+  /**
+   * The defects these exist for, both found by a browser walk and invisible to
+   * every gate command: a finished upload stayed in the queue as "✓ Dodany"
+   * while the same file was already listed above as a real attachment row (two
+   * files uploaded, four entries on screen), and the queue then outlived a
+   * delete, asserting a file that no longer existed.
+   *
+   * Note the counts. "The file is present" passes with the bug — the assertion
+   * has to be that it is present exactly *once*.
+   */
+
+  it('leaves the file exactly one representation once the host lists it', async () => {
+    const user = userEvent.setup()
+    render(<HostedDropzone />)
+
+    await user.upload(dropzone(), pdf())
+    FakeXhr.instances[0]!.respond(201, ATTACHMENT)
+
+    await waitFor(() => expect(representationsOf('voucher.pdf')).toHaveLength(1))
+    // …and the one that remains is the attachment row, not the queue entry.
+    expect(queue()).toBeNull()
+    expect(screen.queryByText(pl.upload.state.done)).not.toBeInTheDocument()
+  })
+
+  it('does not double up when several files are uploaded in a row', async () => {
+    const user = userEvent.setup()
+    render(<HostedDropzone />)
+
+    await user.upload(dropzone(), [pdf('a.pdf'), pdf('b.pdf')])
+    FakeXhr.instances[0]!.respond(201, { ...ATTACHMENT, id: 'attachment-a', filename: 'a.pdf' })
+    FakeXhr.instances[1]!.respond(201, { ...ATTACHMENT, id: 'attachment-b', filename: 'b.pdf' })
+
+    // Two files means two entries on screen, not four.
+    await waitFor(() => expect(queue()).toBeNull())
+    expect(representationsOf('a.pdf')).toHaveLength(1)
+    expect(representationsOf('b.pdf')).toHaveLength(1)
+  })
+
+  it('keeps the finished file on screen while the host list is still catching up', async () => {
+    // The day panel refetches, so its list arrives a moment after the upload
+    // settles. Retiring on completion alone would blink the file out of
+    // existence in that gap; retiring on the host's list cannot.
+    const user = userEvent.setup()
+    render(<HostedDropzone deferred />)
+
+    await user.upload(dropzone(), pdf())
+    FakeXhr.instances[0]!.respond(201, ATTACHMENT)
+
+    await waitFor(() =>
+      expect(within(row('voucher.pdf')).getByText(pl.upload.state.done)).toBeInTheDocument(),
+    )
+    // Shown, and shown once: as the queue's own done row, because the host has
+    // nothing to show yet.
+    expect(representationsOf('voucher.pdf')).toHaveLength(1)
+
+    await user.click(screen.getByRole('button', { name: 'refresh' }))
+
+    await waitFor(() => expect(queue()).toBeNull())
+    expect(representationsOf('voucher.pdf')).toHaveLength(1)
+  })
+
+  it('leaves no stale queue entry behind when the attachment is deleted', async () => {
+    const user = userEvent.setup()
+    render(<HostedDropzone />)
+
+    await user.upload(dropzone(), pdf())
+    FakeXhr.instances[0]!.respond(201, ATTACHMENT)
+    await waitFor(() => expect(queue()).toBeNull())
+
+    await user.click(screen.getByRole('button', { name: 'delete voucher.pdf' }))
+
+    // Gone means gone: the queue must not resurrect the row and claim a file
+    // that no longer exists.
+    expect(representationsOf('voucher.pdf')).toHaveLength(0)
+    expect(queue()).toBeNull()
+  })
+
+  it('keeps a failed entry and its retry action — only successes retire', async () => {
+    const user = userEvent.setup()
+    render(<HostedDropzone />)
+
+    await user.upload(dropzone(), pdf())
+    FakeXhr.instances[0]!.respond(429, { error: { code: 'rate_limited' } })
+
+    await waitFor(() =>
+      expect(within(row('voucher.pdf')).getByText(pl.upload.state.failed)).toBeInTheDocument(),
+    )
+    expect(screen.getByRole('button', { name: pl.upload.retry })).toBeInTheDocument()
+    expect(screen.getByRole('alert')).toHaveTextContent(pl.error.rate_limited)
+  })
+
+  it('retires the success and keeps the failure, in the same mixed batch', async () => {
+    const user = userEvent.setup()
+    render(<HostedDropzone />)
+
+    await user.upload(dropzone(), [pdf('ok.pdf'), pdf('bad.pdf')])
+    expect(FakeXhr.instances).toHaveLength(2)
+
+    FakeXhr.instances[1]!.respond(400, { error: { code: 'malformed_upload' } })
+    FakeXhr.instances[0]!.respond(201, { ...ATTACHMENT, id: 'attachment-ok', filename: 'ok.pdf' })
+
+    await waitFor(() => expect(representationsOf('ok.pdf')).toHaveLength(1))
+    // One row left in the queue, and it is the failure — with its retry.
+    expect(within(queue()!).getAllByRole('listitem')).toHaveLength(1)
+    expect(within(row('bad.pdf')).getByText(pl.upload.state.failed)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: pl.upload.retry })).toBeInTheDocument()
+  })
+
+  it('retires a row that only succeeded on its retry', async () => {
+    const user = userEvent.setup()
+    render(<HostedDropzone />)
+
+    await user.upload(dropzone(), pdf())
+    FakeXhr.instances[0]!.respond(429, { error: { code: 'rate_limited' } })
+
+    await user.click(await screen.findByRole('button', { name: pl.upload.retry }))
+    FakeXhr.instances[1]!.respond(201, ATTACHMENT)
+
+    await waitFor(() => expect(queue()).toBeNull())
+    expect(representationsOf('voucher.pdf')).toHaveLength(1)
   })
 })
 

@@ -1,4 +1,4 @@
-import { useCallback, useId, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import type { ChangeEvent, CSSProperties } from 'react'
 import type { TFunction } from 'i18next'
 import { useTranslation } from 'react-i18next'
@@ -51,6 +51,32 @@ import { ApiError } from '../../api/client'
  * The same shape is what lets a terminal failure replace a progress claim the
  * row has moved past, rather than announcing "100 %" for an upload the server
  * refused.
+ *
+ * **The queue is about work in flight, never about files that exist.** The
+ * attachment row in the host panel is a file's one representation; a queue row
+ * that outlives the upload is a second one. A successful row therefore
+ * *retires* the moment the host's list is observed to contain the attachment
+ * the server created — `listedAttachmentIds` is that observation, and it is the
+ * host's already-existing refresh, not a second notification path.
+ *
+ * The retirement is timed so that neither bad window exists:
+ *
+ * - **Never twice.** The hiding happens during *render*, from
+ *   `listedAttachmentIds` as it is on that render. The commit that first paints
+ *   the attachment row is the same commit that stops painting the queue row —
+ *   there is no in-between frame showing both, not even one.
+ * - **Never invisible.** Nothing retires on completion alone. A row that has
+ *   finished but is not in the host's list yet — a day panel refetching, a host
+ *   that keeps no list at all — keeps showing its "done" row, so the file is on
+ *   screen continuously.
+ *
+ * Retirement is also *permanent*: the effect below prunes retired rows out of
+ * state, so deleting the attachment afterwards (its id leaves the list) cannot
+ * resurrect a queue row asserting a file that no longer exists.
+ *
+ * **Only successful rows retire.** A failed or cancelled row is the only record
+ * of what went wrong and it carries the retry action, so it stays until the
+ * owner dismisses it.
  */
 
 /** The server's per-attachment ceiling, mirrored for the pre-check only. */
@@ -79,6 +105,9 @@ type Row = {
   /** True when the pre-check refused it: no request was issued, and retrying it
       would refuse identically, so the row offers no retry. */
   refusedLocally: boolean
+  /** The attachment the server created. Non-null only once `state` is `done`,
+      and the handle the row retires by once the host's list carries it. */
+  attachmentId: string | null
 }
 
 /**
@@ -155,17 +184,36 @@ function announcementText(t: TFunction, announcement: Announcement | null): stri
 export function UploadDropzone({
   target,
   onUploaded,
+  listedAttachmentIds = [],
   disabled = false,
 }: {
   target: UploadTarget
   /** Called once per successful upload, with the attachment the server created. */
   onUploaded?: (attachment: Attachment) => void
+  /**
+   * The ids the host panel is listing right now — its own refreshed list, not a
+   * second notification channel. A successful row whose attachment appears here
+   * retires, because the attachment row above is already showing that file. A
+   * host that lists nothing (the drop zone rendered on its own) passes nothing
+   * and no row ever retires, which is right: there is nowhere else the file
+   * would be shown.
+   */
+  listedAttachmentIds?: readonly string[]
   disabled?: boolean
 }) {
   const { t } = useTranslation()
   const inputId = useId()
   const [rows, setRows] = useState<Row[]>([])
   const [announcement, setAnnouncement] = useState<Announcement | null>(null)
+
+  // Keyed by content, not by array identity: hosts build this list inline, so a
+  // fresh array arrives on every render and only a *changed* one should re-run
+  // the prune below. Attachment ids are UUIDs, so the separator is unambiguous.
+  const listedKey = listedAttachmentIds.join(',')
+  const listed = useMemo(
+    () => new Set(listedKey === '' ? [] : listedKey.split(',')),
+    [listedKey],
+  )
 
   /** One controller per in-flight row, so cancelling one cannot abort another. */
   const controllers = useRef(new Map<string, AbortController>())
@@ -183,6 +231,26 @@ export function UploadDropzone({
     announcedStep.current.delete(key)
     setRows((previous) => previous.filter((row) => row.key !== key))
   }, [])
+
+  /**
+   * A row whose attachment the host is now listing is *hidden* by this, during
+   * the very render that first shows the attachment row — so the file is never
+   * on screen twice.
+   */
+  const retired = useCallback(
+    (row: Row) => row.attachmentId !== null && listed.has(row.attachmentId),
+    [listed],
+  )
+
+  // …and dropped from state right after, so it stays retired. Without this, the
+  // id leaving the list on a delete would bring the queue row back, asserting a
+  // file that no longer exists.
+  useEffect(() => {
+    setRows((previous) => {
+      const remaining = previous.filter((row) => !retired(row))
+      return remaining.length === previous.length ? previous : remaining
+    })
+  }, [retired])
 
   const start = useCallback(
     (key: string, file: File) => {
@@ -217,7 +285,12 @@ export function UploadDropzone({
       upload.then(
         (attachment) => {
           controllers.current.delete(key)
-          patch(key, { state: 'done', loaded: attachment.byte_size, total: attachment.byte_size })
+          patch(key, {
+            state: 'done',
+            loaded: attachment.byte_size,
+            total: attachment.byte_size,
+            attachmentId: attachment.id,
+          })
           setAnnouncement({ kind: 'done', filename: file.name })
           onUploaded?.(attachment)
         },
@@ -257,6 +330,7 @@ export function UploadDropzone({
         total: file.size,
         errorKey: refusal === null ? null : `error.${refusal}`,
         refusedLocally: refusal !== null,
+        attachmentId: null,
       }
     })
 
@@ -270,7 +344,7 @@ export function UploadDropzone({
   }
 
   function retry(row: Row) {
-    patch(row.key, { state: 'selected', loaded: 0, errorKey: null })
+    patch(row.key, { state: 'selected', loaded: 0, errorKey: null, attachmentId: null })
     start(row.key, row.file)
   }
 
@@ -279,6 +353,11 @@ export function UploadDropzone({
     drop(row.key)
     setAnnouncement({ kind: 'cancelled', filename: row.file.name })
   }
+
+  // The rows still worth showing: everything except the successes the host list
+  // has taken over. Computed here rather than in the effect above so that the
+  // takeover is seamless — see the note on the component.
+  const visibleRows = rows.filter((row) => !retired(row))
 
   return (
     <div className="upload-dropzone">
@@ -303,9 +382,9 @@ export function UploadDropzone({
         {announcementText(t, announcement)}
       </p>
 
-      {rows.length > 0 && (
+      {visibleRows.length > 0 && (
         <ul className="upload-dropzone__list" aria-label={t('upload.list')}>
-          {rows.map((row) => (
+          {visibleRows.map((row) => (
             <li className="upload-row" data-state={row.state} key={row.key}>
               <span className="upload-row__name">{row.file.name}</span>
 
