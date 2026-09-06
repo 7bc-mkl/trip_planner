@@ -135,3 +135,28 @@
   button and `ConfirmDialog` stay mounted in the row regardless of what a host does with `onDeleted`
   (confirmed by `attachmentRow.test.tsx`'s focus-return-on-confirm test), so a lightbox trigger on
   the image preview can coexist without fighting this row's own confirm-dialog lifecycle.
+
+## 2026-09-06T20:45:00Z — checkpoint 3 (first real browser walk)
+- Steps covered: 2.1..2.5 (`59ff245..d83e6eb`). The whole attachment UI now exists.
+- Gate outcome: PASS — **all eight commands green**, including `npm run build` and 213 frontend
+  tests (up from 149). Backend unchanged at 600 passed / 0 skipped.
+- UI verification: **RAN**, against `.ai/scripts/test-env-up.sh` (production app factory, built SPA,
+  one origin, fresh database), driven with `agent-browser` v0.34.0 in **both locales**.
+  Verdict **PARTIAL** — everything Steps 2.1–2.5 were asked to build works end to end, and the walk
+  still found four major defects plus one nit that **no gate command could see**. That gap is the
+  argument for doing the walk at all, and it is why this entry exists.
+- Defects → two fix Steps appended to the Tasks table (blocker/major fix now, minor/nit defer):
+  - `2.2-review-fix-1` — the `aria-live` announcement is formatted at event time and never
+    re-renders, so Polish leaks into the English UI (R01/R09) and a rejected upload still announces
+    "100%" to a screen reader. `check_locales.py` cannot catch this: both keys exist and are in
+    sync; what is wrong is *when* the string was formatted.
+  - `2.2-review-fix-2` — a completed upload stays in the dropzone queue while also appearing as a
+    real attachment row, so every file shows twice and the queue goes stale after a delete.
+  - Deferred nit: a long filename wraps mid-word in the narrow item modal.
+- Process deviation recorded: Step 2.4 produced a second, docs-only commit (`96fa3a7`) against the
+  one-Step-one-commit rule. Not force-fixed — it changes no code, so bisect-by-Step is unaffected,
+  and rewriting pushed history to tidy a docs commit would cost more than the deviation. Later
+  executor prompts carry an explicit instruction not to repeat it; Step 2.5 produced exactly one.
+- Environment: `agent-browser` is not on `PATH` (cached binary used), and Chrome will not launch
+  unless `TMPDIR` is `/tmp` — this worktree path exceeds Chromium's singleton-socket length limit.
+- Tasks-table SHAs for rows 2.1..2.5 reconciled to their post-amend values.

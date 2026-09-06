@@ -23,11 +23,13 @@
 | 1 | 1.8 | `attachment_count`, day/item `attachments` and the three reservation fields on the serialisers and `PATCH` | dispatch:capable | done | `eb423a8` |
 | 1 | 1.9 | Cascade behaviour end to end | dispatch:cheap | done | `5bec2c5` |
 | 1 | 1.10 | The `days_have_attachments` guard on the shipped `PATCH /trips/{tripId}` | dispatch:capable | done | `2ab94c6` |
-| 2 | 2.1 | `src/api/attachments.ts` — typed client with upload progress and abort | dispatch | done | `191a252` |
-| 2 | 2.2 | `UploadDropzone` — labelled file input, pre-check, state machine, `aria-live` | dispatch:capable | done | `0ea137f` |
-| 2 | 2.3 | The day documents panel on `/trips/:id/days/:date` | dispatch | done | `68b2025` |
-| 2 | 2.4 | The item attachment strip inside the item editor | dispatch | done | `ad07639` |
-| 2 | 2.5 | Download and delete, with a confirmation dialog naming the file | dispatch | done | `553651f` |
+| 2 | 2.1 | `src/api/attachments.ts` — typed client with upload progress and abort | dispatch | done | `276d5f4` |
+| 2 | 2.2 | `UploadDropzone` — labelled file input, pre-check, state machine, `aria-live` | dispatch:capable | done | `f3f898e` |
+| 2 | 2.3 | The day documents panel on `/trips/:id/days/:date` | dispatch | done | `95aac47` |
+| 2 | 2.4 | The item attachment strip inside the item editor | dispatch | done | `2672e2f` |
+| 2 | 2.5 | Download and delete, with a confirmation dialog naming the file | dispatch | done | `d83e6eb` |
+| 2 | 2.2-review-fix-1 | The upload announcement re-renders on locale change and tells the truth about failures | dispatch:capable | todo | — |
+| 2 | 2.2-review-fix-2 | The completed upload queue clears instead of shadowing the attachment list | dispatch:capable | todo | — |
 | 2 | 2.6 | The attachment-count ICU plural key in both locales | dispatch:cheap | todo | — |
 | 2 | 2.7 | The paperclip badge on the timeline's item cards | dispatch:cheap | todo | — |
 | 2 | 2.8 | Preview-surface reconciliation (no-op unless `features/preview/` exists) | inline | todo | — |
@@ -320,3 +322,30 @@ management and keyboard dismissal.
 **4.3 The non-blocking duplicate hint.** Shown when an upload's `sha256` matches an existing
 attachment on the same parent. Verify: a component test that the hint appears and that the upload
 still succeeds.
+
+### Phase 2 — fix Steps appended at checkpoint 3
+
+These two Steps were appended after checkpoint 3's browser walk found defects that every automated
+gate had passed. They are recorded here rather than folded silently into a later Step, because the
+fact that the gate could not see them is itself worth a reader's attention.
+
+**2.2-review-fix-1 The upload announcement re-renders on locale change and tells the truth about
+failures.** `UploadDropzone`'s `aria-live` region stores a string formatted at upload time and never
+re-renders, so two things go wrong. Uploading in Polish and then switching to English leaves the
+announcement reading "Wysyłanie …: 100%" on an otherwise fully English page — a direct violation of
+R01/R09, and one `check_locales.py` structurally cannot catch because both keys exist and are in
+sync; what is wrong is *when* the string was formatted. And a server-side rejection leaves the region
+still announcing "100%", so a screen-reader user is told a failed upload succeeded. Fix: derive the
+announcement from state at render time, not at event time, and make a terminal failure announce the
+failure. Verify: a component test that changes the language after an upload and asserts the region
+follows, and one asserting a rejected upload never announces completion.
+
+**2.2-review-fix-2 The completed upload queue clears instead of shadowing the attachment list.**
+A finished upload stays in the dropzone's queue as a "✓ Dodany / Uploaded" row while *also* appearing
+as a real attachment row in the panel above, so every successful upload shows the file twice and the
+duplication grows with each one until a reload. Worse, the queue does not track reality: deleting an
+attachment removes the real row and leaves the queue asserting a file that no longer exists. Fix: a
+successful upload's queue entry retires once the host list has refreshed — the attachment row is the
+file's one representation, and the queue is only about work in flight. Verify: component tests that
+a successful upload leaves exactly one representation of the file, and that deleting an attachment
+leaves no stale queue entry behind.
