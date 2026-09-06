@@ -1,34 +1,38 @@
 # Handoff — 2026-09-06-attachments-and-reservation-data
 
-**Last updated:** 2026-09-06T16:27:06Z
+**Last updated:** 2026-09-06T17:05:00Z
 **Branch:** feat/attachments-and-reservation-data
-**PR:** not yet opened
-**Current phase/step:** Phase 1 Step 1.1
-**Last commit:** — (run folder commit pending)
+**PR:** https://github.com/7bc-mkl/trip_planner/pull/12 (draft, claimed by @7bc-mkl)
+**Current phase/step:** Phase 1 Step 1.6
+**Last commit:** da84350 — feat(errors): add attachment and reservation error codes
 
 ## What just happened
-- The spec resolved by path and was found merged on `main` at `4ef73d9` (spec PR #4). Local `main`
-  was fast-forwarded first, as the user asked.
-- The plan was drafted at 28 Steps, which exceeds `engine.loopStepThreshold` (20), so
-  `om-auto-create-pr` routed the run to `om-auto-create-pr-loop` before anything was written.
+- Steps 1.1–1.5 landed, one commit each, and checkpoint 1 passed: seven of the eight gate commands
+  green, `pytest` at **520 passed / 0 skipped** against the live PostgreSQL.
+- The feature's whole backend *vocabulary* now exists with no endpoint wired to it yet: the three
+  tables and their migration, the pure `domain/uploads.py` validator, `domain/money.py`, the
+  `security/quota.py` limiter, and the nine `ErrorCode` members with both locales' copy.
+- `frontend/npm ci` was run in this worktree — it had no `node_modules`, which is why the first
+  typecheck attempt failed on missing global types rather than on anything in the diff.
 
 ## Next concrete action
-- Step 1.1 — add `Attachment`, `AttachmentBlob` and `UploadEvent` to `backend/trip_planner/db/models.py`
-  and the Alembic revision `0005_attachment.py` that creates them.
+- Step 1.6 — the two upload endpoints in a new `backend/trip_planner/api/attachments.py`, in the
+  fixed check order (rate window → `Content-Length` → read and count → one part → sniff → structural
+  check → transaction → advisory lock → re-check → insert). This Step also adds `python-multipart`
+  via `uv add` and commits `uv.lock` with it.
 
 ## Blockers / open questions
-- none. The spec's two ⚠ assumptions (A2 — bytes in `BYTEA`; A6 — reservation data on `item`) were
-  both confirmed by Michal Klosinski on 2026-09-06, so nothing in this run is gated on a decision.
+- none.
 
 ## Environment caveats
-- Dev runtime runnable: yes — PostgreSQL is up on `localhost:55432` (`deploy-db-1`, from
-  `deploy/compose.dev.yml`). Without it `pytest` **skips** the database layer instead of failing, so
-  every gate run must be read for skips rather than only for a zero exit code.
-- Browser / UI checks: enabled — `.ai/browsers/agent-browser.md` is the configured provider; UI
-  verification runs at the Phase 2 checkpoint and again in Step 3.7.
-- Database/migration state: clean — head is `0004_item`; this run adds `0005_attachment` (Phase 1)
-  and `0006_item_reservation` (Phase 3), deliberately split so Phase 3 rolls back alone.
+- Dev runtime runnable: yes — PostgreSQL on `localhost:55432` (`deploy-db-1`). `pytest` reports
+  **0 skips**, so the database layer is genuinely being exercised; keep reading the summary for
+  skips rather than trusting the exit code alone.
+- Frontend deps: installed in this worktree via `npm ci`. A fresh worktree needs that again.
+- Browser / UI checks: enabled but not yet exercised — no UI has been built. First UI verification
+  is the Phase 2 checkpoint; the full flow walk is Step 3.7.
+- Database/migration state: clean. Head is now `0005_attachment`; Phase 3 adds `0006_item_reservation`.
 
 ## Worktree
 - Path: /home/mkl/cezar/projects/trip_planner/.ai/cezar/worktrees/2223e7fe-07b0-43b2-962a-a6d3db36f6f0
-- Created this run: no — this is the invoking linked worktree, reused per the worktree contract.
+- Created this run: no — the invoking linked worktree, reused per the worktree contract.

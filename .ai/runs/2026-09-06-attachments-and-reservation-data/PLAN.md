@@ -13,11 +13,11 @@
 
 | Phase | Step | Title | Exec | Status | Commit |
 |-------|------|-------|------|--------|--------|
-| 1 | 1.1 | Attachment, AttachmentBlob and UploadEvent models with their Alembic revision | dispatch:capable | done | `78dda22` |
-| 1 | 1.2 | `domain/uploads.py` — byte sniffing, structural checks, dimensions, filename normalisation | dispatch:capable | done | `4c4d115` |
-| 1 | 1.3 | `domain/money.py` — amount/currency pairing and ISO-4217 validation | dispatch:cheap | done | `69d0356` |
-| 1 | 1.4 | `security/quota.py` — per-owner rate/volume windows and locked byte quotas | dispatch:capable | done | `d1d8ded` |
-| 1 | 1.5 | Nine new `ErrorCode` members with both locales' keys | dispatch:cheap | done | `0d13dfb` |
+| 1 | 1.1 | Attachment, AttachmentBlob and UploadEvent models with their Alembic revision | dispatch:capable | done | `a76361d` |
+| 1 | 1.2 | `domain/uploads.py` — byte sniffing, structural checks, dimensions, filename normalisation | dispatch:capable | done | `223399b` |
+| 1 | 1.3 | `domain/money.py` — amount/currency pairing and ISO-4217 validation | dispatch:cheap | done | `17215fb` |
+| 1 | 1.4 | `security/quota.py` — per-owner rate/volume windows and locked byte quotas | dispatch:capable | done | `8cc3dc2` |
+| 1 | 1.5 | Nine new `ErrorCode` members with both locales' keys | dispatch:cheap | done | `da84350` |
 | 1 | 1.6 | The two upload endpoints, in the fixed check order | dispatch:capable | todo | — |
 | 1 | 1.7 | Attachment metadata, content download and delete routes | dispatch:capable | todo | — |
 | 1 | 1.8 | `attachment_count`, day/item `attachments` and the three reservation fields on the serialisers and `PATCH` | dispatch:capable | todo | — |
