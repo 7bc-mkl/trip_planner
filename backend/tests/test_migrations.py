@@ -7,6 +7,9 @@ actually be reversed, so this walks the whole chain down to base and back up.
 
 from __future__ import annotations
 
+import uuid
+from datetime import date
+
 import sqlalchemy as sa
 from alembic import command
 from alembic.config import Config
@@ -98,3 +101,100 @@ def test_models_and_migrations_do_not_drift(alembic_config: Config, engine: sa.E
         "The models and the migrations disagree. Generate a revision for this diff:\n"
         + "\n".join(repr(entry) for entry in diff)
     )
+
+
+def test_the_reservation_revision_round_trips_over_existing_rows(
+    alembic_config: Config, engine: sa.Engine
+) -> None:
+    """`0006_item_reservation` must unwind without taking attachments with it.
+
+    This is the reason the reservation columns are a second revision rather than
+    part of `0005_attachment` (A1), and the only way to prove it is to step down
+    exactly one revision on a database that is **not** empty: an owner, a trip, a
+    day, an item and an attachment, all committed, exactly as a real installation
+    would have them when an operator rolls Phase 3 back at 02:00.
+
+    What must survive the round trip: every one of those rows, and the attachment
+    tables themselves. What must not: the three `item` columns, which are dropped
+    with the data in them — which is what downgrading a feature migration means.
+    """
+    head = _current_revision(engine)
+    owner_id, item_id = uuid.uuid4(), uuid.uuid4()
+
+    try:
+        with engine.begin() as connection:
+            connection.execute(
+                sa.text(
+                    "INSERT INTO owner (id, email, password_hash) "
+                    "VALUES (:id, :email, 'x')"
+                ),
+                {"id": owner_id, "email": f"rollback-{owner_id.hex}@example.com"},
+            )
+            trip_id, day_id, attachment_id = uuid.uuid4(), uuid.uuid4(), uuid.uuid4()
+            connection.execute(
+                sa.text(
+                    "INSERT INTO trip (id, owner_id, title, start_date, end_date, "
+                    "departure_place, return_place) VALUES (:id, :owner_id, 'Malezja', "
+                    "'2026-10-10', '2026-10-24', 'Warszawa', 'Katowice')"
+                ),
+                {"id": trip_id, "owner_id": owner_id},
+            )
+            connection.execute(
+                sa.text("INSERT INTO trip_day (id, trip_id, date) VALUES (:id, :trip_id, :date)"),
+                {"id": day_id, "trip_id": trip_id, "date": date(2026, 10, 10)},
+            )
+            connection.execute(
+                sa.text(
+                    "INSERT INTO item (id, trip_day_id, position, kind, status, title, "
+                    "confirmation_number, cost_amount, cost_currency) "
+                    "VALUES (:id, :day_id, 0, 'accommodation', 'to_book', 'Memmo Alfama', "
+                    "'SX-9912L', 249.00, 'PLN')"
+                ),
+                {"id": item_id, "day_id": day_id},
+            )
+            connection.execute(
+                sa.text(
+                    "INSERT INTO attachment (id, item_id, filename, content_type, byte_size, "
+                    "sha256) VALUES (:id, :item_id, 'voucher.pdf', 'application/pdf', 2048, :sha)"
+                ),
+                {"id": attachment_id, "item_id": item_id, "sha": "a" * 64},
+            )
+
+        command.downgrade(alembic_config, "0005_attachment")
+        assert _current_revision(engine) == "0005_attachment"
+
+        columns = {column["name"] for column in sa.inspect(engine).get_columns("item")}
+        assert columns & {"confirmation_number", "cost_amount", "cost_currency"} == set()
+        # The attachment phase is untouched by the reservation phase's rollback.
+        assert {"attachment", "attachment_blob", "upload_event"} <= set(
+            sa.inspect(engine).get_table_names()
+        )
+
+        with engine.connect() as connection:
+            assert connection.execute(
+                sa.text("SELECT count(*) FROM attachment WHERE id = :id"),
+                {"id": attachment_id},
+            ).scalar() == 1
+            assert connection.execute(
+                sa.text("SELECT title FROM item WHERE id = :id"), {"id": item_id}
+            ).scalar() == "Memmo Alfama"
+
+        command.upgrade(alembic_config, "head")
+        assert _current_revision(engine) == head
+
+        with engine.connect() as connection:
+            row = connection.execute(
+                sa.text(
+                    "SELECT confirmation_number, cost_amount, cost_currency "
+                    "FROM item WHERE id = :id"
+                ),
+                {"id": item_id},
+            ).one()
+        # The item survived; its reservation data did not, and the columns come
+        # back nullable so the row is valid without a backfill.
+        assert row == (None, None, None)
+    finally:
+        with engine.begin() as connection:
+            connection.execute(
+                sa.text("DELETE FROM owner WHERE id = :id"), {"id": owner_id}
+            )

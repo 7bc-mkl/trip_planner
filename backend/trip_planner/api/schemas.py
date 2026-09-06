@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import date, datetime, time
+from decimal import Decimal
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
@@ -133,6 +134,23 @@ class ItemRead(BaseModel):
     #: serialiser overrides it with the counted value via `api.items.item_read`,
     #: and the count is always aggregated in one query for the whole payload.
     attachment_count: int = 0
+    #: The reservation data R04 keeps when it arrives — on **both** item shapes.
+    #:
+    #: The timeline does not render any of the three. They are here anyway,
+    #: because omitting them from one item serialiser and not the other is exactly
+    #: how two shapes of the same object appear, which this module exists to
+    #: prevent: a consumer holding an `item` would have to know which payload it
+    #: came from before it could ask whether a cost was recorded.
+    #:
+    #: `null` throughout means "not recorded", and every item starts there.
+    confirmation_number: str | None = None
+    #: A `Decimal`, never a `float` — this is money. It reaches the wire as a JSON
+    #: **string** (`"249.00"`), which is Pydantic's default for `Decimal` and the
+    #: right one here: a JSON number would be parsed back as a binary float by
+    #: every client that reads it, reintroducing at the last hop the imprecision
+    #: `NUMERIC(12,2)` was chosen to avoid.
+    cost_amount: Decimal | None = None
+    cost_currency: str | None = None
 
 
 class ItemDetail(ItemRead):

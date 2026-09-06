@@ -34,7 +34,7 @@
 | 2 | 2.7 | The paperclip badge on the timeline's item cards | dispatch:cheap | done | `4a2c751` |
 | 2 | 2.8 | Preview-surface reconciliation (no-op unless `features/preview/` exists) | inline | done | `cd52db1` |
 | 2 | 2.3-review-fix-1 | The day panel's post-upload refresh cannot be overwritten by a stale in-flight response | dispatch:capable | done | `02339d2` |
-| 3 | 3.1 | The `item` reservation columns on their own Alembic revision | dispatch:capable | todo | — |
+| 3 | 3.1 | The `item` reservation columns on their own Alembic revision | dispatch:capable | done | `9935173` |
 | 3 | 3.2 | The `ReservationPanel` disclosure inside the item editor | dispatch | todo | — |
 | 3 | 3.3 | The disclosure's placement and its never-auto-expanded guarantee | dispatch | todo | — |
 | 3 | 3.4 | Currency defaulting to `PLN` and `Intl.NumberFormat` rendering | dispatch:cheap | todo | — |

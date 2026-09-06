@@ -12,6 +12,7 @@ import uuid
 from collections.abc import Sequence
 from datetime import date as date_type
 from datetime import time
+from decimal import Decimal
 
 import sqlalchemy as sa
 from fastapi import APIRouter, Response, status
@@ -30,6 +31,7 @@ from trip_planner.api.schemas import (
 )
 from trip_planner.db.models import Attachment, Item, Trip, TripDay
 from trip_planner.domain.items import sorted_items, validate_span
+from trip_planner.domain.money import validate_cost
 from trip_planner.domain.stages import stages_for_day
 from trip_planner.errors import ApiError, ErrorCode
 
@@ -37,6 +39,9 @@ router = APIRouter(prefix="/trips/{trip_id}", tags=["items"])
 
 TITLE_MAX = 200
 NOTES_MAX = 5000
+#: The bound the `ck_item_confirmation_number` CHECK also states. Far beyond any
+#: real voucher code; it exists because this is the one otherwise-unbounded input.
+CONFIRMATION_NUMBER_MAX = 500
 
 #: The nullable fields a PATCH can either clear or leave alone.
 #:
@@ -44,7 +49,19 @@ NOTES_MAX = 5000
 #: untouched — two different intentions. Pydantic v2's `model_fields_set` records
 #: which keys the request actually carried, which distinguishes them exactly. A
 #: string sentinel default would not: a client could send that very string.
-NULLABLE_FIELDS = ("start_time", "end_time", "end_date", "notes")
+#:
+#: The three reservation fields join the list rather than getting a mechanism of
+#: their own: clearing a confirmation number is the same question as clearing a
+#: note, and a second sentinel scheme beside this one would be two answers to it.
+NULLABLE_FIELDS = (
+    "start_time",
+    "end_time",
+    "end_date",
+    "notes",
+    "confirmation_number",
+    "cost_amount",
+    "cost_currency",
+)
 
 
 class ItemCreate(BaseModel):
@@ -80,6 +97,22 @@ class ItemUpdate(BaseModel):
     notes: str | None = Field(default=None, max_length=NOTES_MAX)
     #: The day to move the item to, within the same trip.
     date: date_type | None = None
+    #: The reservation fields. Optional, like everything else here — **none is
+    #: required**, which is R04 expressed in the contract rather than only in the
+    #: UI. Adding optional request fields is non-breaking; adding required ones
+    #: would not be.
+    #:
+    #: There is deliberately no `reservation_start` / `reservation_end`: a
+    #: reservation's dates are the item's own `start_time` / `end_time` /
+    #: `end_date`, written through the fields a few lines above and validated by
+    #: the same `validate_span`.
+    confirmation_number: str | None = None
+    #: A `Decimal`, never a `float`: `float` cannot represent `10.10`, and a
+    #: third decimal place `NUMERIC(12,2)` cannot hold would slip past a naive
+    #: float comparison. `domain/money.py` decides what a valid amount is; no
+    #: `max_digits` here, so there is one place that rule is written.
+    cost_amount: Decimal | None = None
+    cost_currency: str | None = None
 
 
 def days_by_date(trip: Trip) -> dict[date_type, TripDay]:
@@ -224,6 +257,51 @@ def item_detail(item: Item, attachments: Sequence[Attachment]) -> ItemDetail:
     )
 
 
+def cleared_when_blank(confirmation_number: str | None) -> str | None:
+    """`""` — and any all-whitespace string — means *clear the field*, not store it.
+
+    The `ck_item_confirmation_number` CHECK refuses `''`, so an empty string has
+    to become something. `NULL` is the only honest choice: a field the user
+    emptied is a field with no confirmation number, which is exactly what `NULL`
+    already means everywhere else. Answering `422` instead would make clearing a
+    field the user *can* clear an error, and storing `''` would give "not
+    recorded" two representations that every reader would then have to test for.
+
+    Whitespace is not stripped from a value that survives — a voucher code is
+    stored verbatim — only used to decide whether anything was typed at all.
+    """
+    if confirmation_number is None or not confirmation_number.strip():
+        return None
+    return confirmation_number
+
+
+def validate_reservation(
+    *,
+    confirmation_number: str | None,
+    cost_amount: Decimal | None,
+    cost_currency: str | None,
+) -> None:
+    """Refuse a reservation the `item` row could not hold, before trying to store it.
+
+    The cost rules are **not** restated here: `domain/money.py` owns what a valid
+    cost is, so the two halves cannot be judged differently by two callers, and
+    the paired-nullability rule is stated once in the domain and once by the
+    database's own `ck_item_cost_paired`.
+
+    Both are checked against the *resolved* row — the fields the item will have
+    after the patch, not just the keys the request carried. That is the same
+    question the CHECK asks. It also means `{"cost_amount": "80.00"}` on an item
+    that already has a currency is a legitimate price correction rather than a
+    refusal, while the same key alone on an item with no cost is the `422` the
+    spec's Edge Cases table calls for.
+    """
+    if confirmation_number is not None and len(confirmation_number) > CONFIRMATION_NUMBER_MAX:
+        raise ApiError(ErrorCode.INVALID_RESERVATION_FIELD, field="confirmation_number")
+
+    if validate_cost(cost_amount=cost_amount, cost_currency=cost_currency) is not None:
+        raise ApiError(ErrorCode.INVALID_COST, field="cost_amount")
+
+
 def next_position(db: OrmSession, day: TripDay) -> int:
     """`max(position) + 1` within the day.
 
@@ -342,12 +420,19 @@ def update_item(
         for field in NULLABLE_FIELDS
     }
 
+    resolved["confirmation_number"] = cleared_when_blank(resolved["confirmation_number"])
+
     validate_span(
         start_date=target_day.date,
         start_time=resolved["start_time"],
         end_time=resolved["end_time"],
         end_date=resolved["end_date"],
         trip_end=trip.end_date,
+    )
+    validate_reservation(
+        confirmation_number=resolved["confirmation_number"],
+        cost_amount=resolved["cost_amount"],
+        cost_currency=resolved["cost_currency"],
     )
 
     if target_day.id != item.trip_day_id:

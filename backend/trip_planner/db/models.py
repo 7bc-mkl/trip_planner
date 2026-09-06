@@ -14,6 +14,7 @@ from __future__ import annotations
 import uuid
 from datetime import date as date_type
 from datetime import datetime, time
+from decimal import Decimal
 
 from sqlalchemy import (
     CHAR,
@@ -25,6 +26,7 @@ from sqlalchemy import (
     Index,
     Integer,
     LargeBinary,
+    Numeric,
     String,
     Text,
     Time,
@@ -412,6 +414,16 @@ class Item(Base):
     way to change it, so the column that is an ordinary migration to alter is the
     right one. The constraint itself is what makes R02 structural rather than
     conventional — a fourth status cannot be written even by a path that forgets.
+
+    **Reservation data lives here**, as three nullable columns rather than in a
+    one-to-one `reservation` table or on the `attachment` row it typically arrives
+    with. On the item, because deleting a voucher PDF during a tidy-up must not
+    silently delete the confirmation number with it, and because two documents
+    evidencing one booking (a voucher and a receipt) would otherwise give one
+    hotel stay two costs with no rule for which one wins. The reservation's
+    *dates* are the item's own `start_time` / `end_time` / `end_date` span and are
+    deliberately not stored a second time: there is exactly one answer in this
+    system to "when is this booked for".
     """
 
     __tablename__ = "item"
@@ -419,6 +431,22 @@ class Item(Base):
         CheckConstraint(_in_list("kind", ITEM_KINDS), name="ck_item_kind"),
         CheckConstraint(_in_list("status", ITEM_STATUSES), name="ck_item_status"),
         CheckConstraint("position >= 0", name="ck_item_position"),
+        # The one otherwise-unbounded free-text input in the feature. `''` is
+        # refused so that "cleared" has exactly one representation — NULL.
+        CheckConstraint(
+            "confirmation_number <> '' AND length(confirmation_number) <= 500",
+            name="ck_item_confirmation_number",
+        ),
+        # Zero is allowed on purpose: a free museum day is a real, arranged item
+        # with a real, arranged cost of zero, which is not "no cost recorded".
+        CheckConstraint("cost_amount >= 0", name="ck_item_cost_amount"),
+        # ISO 4217's *shape*, not an allow-list — see `domain/money.py`.
+        CheckConstraint("cost_currency ~ '^[A-Z]{3}$'", name="ck_item_cost_currency"),
+        # An amount never exists without its unit. A bare number whose currency
+        # lives in someone's head is BACKWARD_COMPATIBILITY.md's named worst case.
+        CheckConstraint(
+            "(cost_amount IS NULL) = (cost_currency IS NULL)", name="ck_item_cost_paired"
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(
@@ -444,6 +472,19 @@ class Item(Base):
     end_date: Mapped[date_type | None] = mapped_column(Date, nullable=True)
     title: Mapped[str] = mapped_column(Text, nullable=False)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    #: The booking reference copied off a voucher. Free text, because vendors have
+    #: no common format — `SX-9912L`, `#9842103`, `TP1205/PNR` — and any format we
+    #: imposed would be wrong for something the user is transcribing. NULL means
+    #: "not recorded", which is where every item starts and where most stay: R04
+    #: says this data is kept when it arrives, never demanded.
+    confirmation_number: Mapped[str | None] = mapped_column(Text, nullable=True)
+    #: NUMERIC, never a float. `float` cannot hold `10.10`, and money that is
+    #: almost right is wrong. Two decimal places: money has cents.
+    cost_amount: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
+    #: The amount's unit, always stored with it. No conversion, no totals and no
+    #: sums exist in this version (A7), so the code is never interpreted — only
+    #: displayed beside the amount it belongs to.
+    cost_currency: Mapped[str | None] = mapped_column(CHAR(3), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
