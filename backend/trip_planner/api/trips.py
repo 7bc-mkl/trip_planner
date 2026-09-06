@@ -27,7 +27,7 @@ from trip_planner.api.schemas import (
     TripDetail,
     TripSummary,
 )
-from trip_planner.db.models import Item, Trip, TripDay, TripStage
+from trip_planner.db.models import Attachment, Item, Trip, TripDay, TripStage
 from trip_planner.domain.days import generate_days
 from trip_planner.domain.items import sorted_items
 from trip_planner.domain.readiness import readiness
@@ -230,12 +230,14 @@ def update_trip(trip: OwnedTrip, payload: TripUpdate, db: DbSession) -> TripDeta
     Two rules do the work here, and both exist to stop an edit from destroying
     something the owner did not ask to lose.
 
-    **No item is ever destroyed by a date edit.** Shortening the range past a day
-    that carries items answers `409 days_have_items` listing those dates and
-    changes *nothing*; shortening past a stage answers `409
-    stages_outside_new_range` naming the stages. Days that are empty are removed
-    silently, because an empty day carries no decision. Both checks run before
-    any mutation, so a refusal cannot leave the trip half-edited.
+    **Nothing the owner put on a day is ever destroyed by a date edit.**
+    Shortening the range past a day that carries items answers `409
+    days_have_items` listing those dates and changes *nothing*; past a day that
+    carries documents, `409 days_have_attachments`; past a stage, `409
+    stages_outside_new_range` naming the stages. Days that are *genuinely* empty
+    — no items and no attachments — are still removed silently, because such a
+    day carries no decision. Every check runs before any mutation, so a refusal
+    cannot leave the trip half-edited.
 
     **The mode-stability rule.** The route mode is derived from `return_place`, so
     editing `departure_place` on a round trip would silently convert it to
@@ -253,6 +255,10 @@ def update_trip(trip: OwnedTrip, payload: TripUpdate, db: DbSession) -> TripDeta
 
     if start != trip.start_date or end != trip.end_date:
         _refuse_if_days_would_be_lost(trip, wanted_dates)
+        # Deliberately *after* the item rule: a day carrying both items and
+        # documents keeps answering `days_have_items`, the code an existing
+        # client already branches on. See that function's docstring.
+        _refuse_if_attachments_would_be_lost(db, trip, wanted_dates)
         _refuse_if_stages_would_escape(trip, start, end)
         _refuse_if_item_spans_would_escape(trip, wanted_dates, end)
 
@@ -291,6 +297,64 @@ def _refuse_if_days_would_be_lost(trip: Trip, wanted: set[date]) -> None:
         # told "somewhere in this trip there is a problem".
         raise ApiError(
             ErrorCode.DAYS_HAVE_ITEMS,
+            field=", ".join(day.isoformat() for day in losing),
+        )
+
+
+def _refuse_if_attachments_would_be_lost(
+    db: DbSession, trip: Trip, wanted: set[date]
+) -> None:
+    """409 when a day that would be dropped still carries documents.
+
+    **Symmetric with `days_have_items`, and the attachments spec's reason for
+    adding it.** The rule above was written when a day held nothing but items, so
+    an itemless day could be removed silently — "an empty day carries no
+    decision". A day now also holds attachments, and a day holding a voucher PDF
+    and no items is not empty: without this guard, moving a trip's end date one
+    day earlier would delete a reservation document, with no warning and no undo.
+    Foundation assumption A10 says a date edit never destroys data, and this is
+    what keeps that true now that a day can hold a document.
+
+    It **narrows** a shipped branch rather than loosening one: a request that used
+    to succeed can now be refused, which `BACKWARD_COMPATIBILITY.md` §1 treats as
+    a change to think about. The direction is what makes it acceptable — the
+    behaviour it removes is silent data loss, the refusal is explicit and names
+    what to fix, and no existing code path that *preserved* data changes at all.
+
+    Runs before any mutation, with its three siblings, so a refusal cannot leave
+    the trip half-edited. Both parents count: an attachment pinned to the day
+    itself and one pinned to an item on it are equally destroyed by the delete
+    that cascades from `trip_day`. In practice a day with items has already
+    answered `days_have_items` by the time this runs, so the item leg is a
+    belt-and-braces check that does not depend on the sibling's ordering.
+
+    One statement for the whole edit, in the idiom of `attachment_counts`:
+    `get_owned_trip` eager-loads days and items but not their files, and a
+    per-day existence query would be a statement per removed day.
+    """
+    doomed = {day.id: day.date for day in trip.days if day.date not in wanted}
+    if not doomed:
+        return
+
+    day_ids = list(doomed)
+    carrying = db.execute(
+        sa.select(Attachment.trip_day_id)
+        .where(Attachment.trip_day_id.in_(day_ids))
+        .union(
+            sa.select(Item.trip_day_id)
+            .join(Attachment, Attachment.item_id == Item.id)
+            .where(Item.trip_day_id.in_(day_ids))
+        )
+    ).scalars()
+
+    losing = sorted({doomed[day_id] for day_id in carrying})
+
+    if losing:
+        # The dates are named exactly as `days_have_items` names them, so the
+        # owner knows which day's documents to move rather than being told
+        # "somewhere in this trip there is a problem".
+        raise ApiError(
+            ErrorCode.DAYS_HAVE_ATTACHMENTS,
             field=", ".join(day.isoformat() for day in losing),
         )
 
@@ -354,8 +418,8 @@ def _refuse_if_item_spans_would_escape(trip: Trip, wanted: set[date], end: date)
 def _resize_days(db: DbSession, trip: Trip, wanted: set[date]) -> None:
     """Add the days the new range gained and drop the empty ones it lost.
 
-    Only reached once the two refusals above have passed, so every day removed
-    here is known to be empty.
+    Only reached once the refusals above have passed, so every day removed here
+    is known to be empty in the full sense: no items *and* no attachments.
     """
     existing = {day.date for day in trip.days}
 

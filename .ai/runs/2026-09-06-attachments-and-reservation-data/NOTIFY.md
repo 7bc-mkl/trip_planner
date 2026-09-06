@@ -53,3 +53,22 @@
   second copy of the reservation's dates. The cost/confirmation tests move with it.
 - Step ids, `Exec` cells and the Tasks table's shape are unchanged; only the two Step descriptions
   and row 1.8's `Status`/`Commit` were touched.
+
+## 2026-09-06T19:40:00Z — Step 1.10 contract decision: a day with BOTH items and attachments answers `days_have_items`
+- Situation: `PATCH /trips/{tripId}` gains `409 days_have_attachments` for a dropped day carrying
+  documents. A day can carry items *and* documents, and the spec leaves the code for that case open.
+- Decision: **`days_have_items` wins.** `_refuse_if_attachments_would_be_lost` runs immediately
+  *after* `_refuse_if_days_would_be_lost`, so a day with both answers the older code; only a day
+  with documents and no items answers `days_have_attachments`.
+- Why: both codes are truthful and both lead the owner to the same fix (clear that day), so the tie
+  is broken on compatibility. A client shipped before this feature already branches on
+  `days_have_items`; keeping it means no existing client meets an unknown code for a case it already
+  handles, and the new code appears only for a case that previously did not exist as a refusal at
+  all. Reversing the order would re-label a refusal an existing client understands —
+  `BACKWARD_COMPATIBILITY.md` §1's "changing an error code for an existing condition".
+- Scope note: this Step **narrows** shipped behaviour — a shortening that used to succeed can now be
+  refused. That direction is the point: the behaviour it removes is silent deletion of a voucher by
+  a date edit (foundation A10). No path that preserved data changes. The whole `days_have_items`
+  suite passes unmodified as the regression guard; the backend suite is 600 passed / 0 skipped.
+- The guard also covers attachments pinned to an *item* on a dropped day, in one `UNION`ed statement
+  for the whole edit (no query per day), so it does not depend on the sibling's ordering to be safe.
