@@ -2,142 +2,150 @@
 <html lang="pl">
 <head>
 <meta charset="utf-8">
-<title>Mockup 01 — /trips/:id/days/:date, załączniki (PL)</title>
-<link rel="stylesheet" href="_tokens.css">
+<title>Mockup 01 — /trips/:id/days/:date, załączniki dnia (PL)</title>
+<link rel="stylesheet" href="_mockup.css">
 <style>
-  .crumbs { font-size: 13px; color: var(--ink-3); margin-bottom: 10px; }
-  .crumbs b { color: var(--ink-2); }
-  .dayhead { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-bottom: 20px; }
-  .nav { display: flex; gap: 8px; }
-  .item { background: #fff; border: 1px solid var(--line); border-radius: var(--r-lg); padding: 14px 16px; display: grid; grid-template-columns: 26px 34px 1fr auto; gap: 12px; align-items: start; }
-  .item + .item { margin-top: 10px; }
-  .n { width: 22px; height: 22px; border-radius: 999px; background: var(--plan-bg); color: var(--ink-2); font-size: 12px; font-weight: 700; display: grid; place-items: center; margin-top: 4px; }
-  .ico { width: 34px; height: 34px; border-radius: var(--r); background: var(--plan-bg); display: grid; place-items: center; font-size: 16px; }
-  .time { font-size: 13px; font-weight: 700; }
-  .item h3 { margin: 3px 0 2px; }
-  .clip { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 600; color: var(--ink-3); border: 1px solid var(--line); border-radius: 999px; padding: 2px 9px; margin-top: 6px; }
-  .files { display: grid; gap: 10px; }
-  .file { display: grid; grid-template-columns: 42px 1fr auto; gap: 12px; align-items: center; border: 1px solid var(--line); border-radius: var(--r); padding: 10px 12px; background: #fff; }
-  .thumb { width: 42px; height: 42px; border-radius: var(--r); display: grid; place-items: center; font-size: 17px; background: var(--plan-bg); color: var(--ink-2); overflow: hidden; }
-  .thumb.img { background: linear-gradient(135deg,#bfdbfe,#93c5fd 55%,#fcd34d); }
-  .file .fn { font-size: 14px; font-weight: 600; word-break: break-all; }
-  .file .meta { font-size: 12px; color: var(--ink-3); }
-  .file .acts { display: flex; gap: 10px; font-size: 13px; font-weight: 600; color: var(--primary); white-space: nowrap; }
-  .file .acts .del { color: #b60205; }
-  .drop { margin-top: 12px; border: 2px dashed var(--line-strong); border-radius: var(--r-lg); padding: 20px; text-align: center; background: #fff; }
-  .drop .big { font-weight: 600; font-size: 15px; }
-  .drop .hint { font-size: 12px; color: var(--ink-3); margin-top: 4px; }
-  .side h3 { margin-bottom: 8px; }
-  .kv { display: flex; justify-content: space-between; font-size: 13px; padding: 6px 0; border-bottom: 1px solid var(--line); }
-  .kv:last-child { border-bottom: 0; }
+  .file-row {
+    display: grid; grid-template-columns: 2.75rem minmax(0,1fr) auto;
+    gap: var(--space-sm); align-items: center;
+    padding: var(--space-sm); border: 1px solid var(--hairline);
+    border-radius: var(--radius-lg); background: var(--surface);
+  }
+  .file-row + .file-row { margin-top: var(--space-xs); }
+  .file-thumb {
+    width: 2.75rem; height: 2.75rem; border-radius: var(--radius);
+    display: grid; place-items: center; font-size: 18px;
+    background: var(--draft-bg); color: var(--primary); overflow: hidden;
+  }
+  .file-thumb--img { background: linear-gradient(135deg,#bfdbfe,#93c5fd 55%,#fcd34d); }
+  .file-name { font-size: 14px; font-weight: 600; word-break: break-all; }
+  .file-acts { display: flex; gap: var(--space-xs); }
+  .breadcrumb { margin: 0 0 var(--space-xs); font-size: 12px; font-weight: 600; letter-spacing: .015em; color: var(--text-subtle); }
+  .dock .row { justify-content: space-between; }
+  .dock__list { display: grid; gap: var(--space-2xs); margin-top: var(--space-xs); font-size: 13px; }
+  .item-card__span { display: block; }
+  .clip {
+    display: inline-flex; align-items: center; gap: 4px; margin-top: var(--space-2xs);
+    height: 22px; padding: 0 var(--space-2xs); border-radius: 9999px;
+    background: var(--draft-bg); color: var(--draft-text);
+    font-size: 11px; font-weight: 600;
+  }
 </style>
 </head>
 <body>
-<header class="top">
-  <span class="brand">Smart Trip Planner</span>
-  <nav><span>Moje podróże</span><span>Oś czasu</span><b style="color:var(--primary)">Dzień</b></nav>
-  <span class="spacer"></span>
-  <span class="locale"><span class="on">PL</span><span>EN</span></span>
-  <span class="muted">michal@…&nbsp;· Wyloguj</span>
+<header class="chrome">
+  <span class="wordmark">Smart Trip Planner</span>
+  <span class="chrome__context">Malezja, październik 2026</span>
+  <span style="flex:1"></span>
+  <span class="chrome__right">
+    <span class="segmented"><span class="pill" style="background:var(--primary);color:var(--on-primary);border-color:var(--primary)">PL</span><span class="pill">EN</span></span>
+    <span class="muted">michal@… · Wyloguj</span>
+  </span>
 </header>
 
-<div class="wrap">
-  <p class="banner">Ilustracyjny mockup do <code>.ai/specs/2026-09-05-attachments-and-reservation-data.md</code> — układ i przepływ, nie projekt graficzny. Zaadaptowany z eksportu <code>szczeg_y_dnia_i_aktywno_ci</code>; asystent dnia, „Zadania &amp; Przygotowanie”, podgląd trasy, ceny i porównywarki dostawców są poza zakresem (A05; D04/R07; brief Q02). Podgląd PDF w aplikacji jest świadomie wycięty (A10) — dokumenty się pobiera.</p>
+<p class="mockup-note">Ilustracyjny mockup do <code>.ai/specs/2026-09-05-attachments-and-reservation-data.md</code>. Rysowany <b>na wdrożonym systemie projektowym</b> (<code>_mockup.css</code> skopiowany z <code>assets/design-system-adoption/</code>), więc rozjazd między mockupem a aplikacją jest widocznym błędem, a nie kwestią gustu. Panel dokumentów stoi <b>pod listą pozycji</b> — w pozycji, którą zadeklarowała specyfikacja systemu projektowego. Podgląd PDF w aplikacji jest świadomie wycięty (A10): dokumenty się pobiera. Spinacz na kartach pojawia się tylko przy <code>attachment_count &gt; 0</code>.</p>
 
-  <p class="crumbs">Moje podróże&nbsp; / &nbsp;<b>Malezja, październik 2026</b>&nbsp; / &nbsp;<b>Dzień 2 — 11 października 2026</b></p>
+<div class="page">
+  <main>
+    <p class="breadcrumb">Moje podróże / Malezja, październik 2026 / Dzień 2</p>
+    <p class="eyebrow">Etap: Kuala Lumpur</p>
+    <h1 class="headline-xl">Dzień 2 — niedziela, 11 października 2026</h1>
+    <p class="hint" style="margin-bottom:var(--space-lg)">3 pozycje · 2 z 2 załatwione tego dnia</p>
 
-  <div class="dayhead">
-    <div>
-      <h1>Dzień 2 — niedziela, 11 października 2026</h1>
-      <p class="sub" style="margin:0">Etap: Kuala Lumpur · 3 pozycje · 2 z 2 załatwione tego dnia</p>
-    </div>
-    <div class="nav">
-      <span class="btn ghost">← Dzień 1</span>
-      <span class="btn ghost">Dzień 3 →</span>
-      <span class="btn primary">+ Dodaj pozycję</span>
-    </div>
-  </div>
-
-  <div class="grid">
-    <div>
-      <div class="item">
-        <div class="n">1</div>
-        <div class="ico">🎟</div>
-        <div>
-          <div class="time">09:30</div>
-          <h3>Petronas Towers — Skybridge</h3>
-          <p class="muted" style="margin:2px 0 0">Bilety czasowe, kupione z wyprzedzeniem.</p>
+    <div class="stack">
+      <article class="item-card">
+        <div class="item-card__time">09:30</div>
+        <div class="item-card__icon" aria-hidden="true">🎟</div>
+        <div class="item-card__body">
+          <h3 class="headline-sm">Petronas Towers — Skybridge</h3>
+          <p class="item-card__notes">Bilety czasowe, kupione z wyprzedzeniem.</p>
           <span class="clip">📎 2 pliki</span>
         </div>
-        <span class="chip st-done"><span class="dot"></span>gotowe</span>
-      </div>
+        <div class="item-card__aside"><span class="chip" data-status="done"><span class="chip__glyph" aria-hidden="true">●</span>gotowe</span></div>
+      </article>
 
-      <div class="item">
-        <div class="n">2</div>
-        <div class="ico">🏨</div>
-        <div>
-          <div class="time">15:00 → 14.10</div>
-          <h3>Nocleg: The Chow Kit</h3>
-          <p class="muted" style="margin:2px 0 0">Pokój Deluxe, 3 noce, śniadanie wliczone.</p>
+      <article class="item-card">
+        <div class="item-card__time">15:00<span class="item-card__span">→ 14.10</span></div>
+        <div class="item-card__icon" aria-hidden="true">🏨</div>
+        <div class="item-card__body">
+          <h3 class="headline-sm">Nocleg: The Chow Kit</h3>
+          <p class="item-card__notes">Pokój Deluxe, 3 noce, śniadanie wliczone.</p>
           <span class="clip">📎 1 plik</span>
         </div>
-        <span class="chip st-done"><span class="dot"></span>gotowe</span>
+        <div class="item-card__aside"><span class="chip" data-status="done"><span class="chip__glyph" aria-hidden="true">●</span>gotowe</span></div>
+      </article>
+
+      <article class="item-card">
+        <div class="item-card__time">cały dzień</div>
+        <div class="item-card__icon" aria-hidden="true">🍜</div>
+        <div class="item-card__body">
+          <h3 class="headline-sm">Kolacja na Jalan Alor</h3>
+          <p class="item-card__notes">Bez rezerwacji, wybór na miejscu.</p>
+        </div>
+        <div class="item-card__aside"><span class="chip" data-status="to_plan"><span class="chip__glyph" aria-hidden="true">○</span>do zaplanowania</span></div>
+      </article>
+    </div>
+
+    <section class="card" style="margin-top:var(--space-xl)">
+      <div class="section-title">
+        <h2 class="headline-md">Załączniki i dokumenty dnia</h2>
+        <p class="hint">Materiały, które dotyczą całego dnia, a nie pojedynczej pozycji.</p>
       </div>
 
-      <div class="item">
-        <div class="n">3</div>
-        <div class="ico">🍜</div>
+      <div class="file-row">
+        <div class="file-thumb" aria-hidden="true">📄</div>
         <div>
-          <div class="time">cały dzień</div>
-          <h3>Kolacja na Jalan Alor</h3>
-          <p class="muted" style="margin:2px 0 0">Bez rezerwacji, wybór na miejscu.</p>
+          <div class="file-name">Transfer_lotnisko_KLIA_Ekspres.pdf</div>
+          <p class="hint">PDF · 412 kB · dodano 6 września 2026</p>
         </div>
-        <span class="chip st-plan"><span class="dot"></span>do zaplanowania</span>
+        <div class="file-acts">
+          <span class="btn btn--ghost btn--sm">Pobierz</span>
+          <span class="btn btn--danger btn--sm">Usuń</span>
+        </div>
+      </div>
+      <div class="file-row">
+        <div class="file-thumb file-thumb--img" aria-hidden="true"></div>
+        <div>
+          <div class="file-name">mapa_okolicy_screenshot.png</div>
+          <p class="hint">PNG · 1,8 MB · dodano 6 września 2026</p>
+        </div>
+        <div class="file-acts">
+          <span class="btn btn--ghost btn--sm">Pobierz</span>
+          <span class="btn btn--danger btn--sm">Usuń</span>
+        </div>
       </div>
 
-      <div class="card" style="margin-top:20px">
-        <h2>Załączniki i dokumenty dnia</h2>
-        <p class="sub" style="margin:-6px 0 14px">Materiały, które dotyczą całego dnia, a nie pojedynczej pozycji.</p>
-        <div class="files">
-          <div class="file">
-            <div class="thumb">📄</div>
-            <div>
-              <div class="fn">Transfer_lotnisko_KLIA_Ekspres.pdf</div>
-              <div class="meta">PDF · 412 kB · dodano 5 września 2026</div>
-            </div>
-            <div class="acts"><span>Pobierz</span><span class="del">Usuń</span></div>
-          </div>
-          <div class="file">
-            <div class="thumb img"></div>
-            <div>
-              <div class="fn">mapa_okolicy_screenshot.png</div>
-              <div class="meta">PNG · 1,8 MB · dodano 5 września 2026</div>
-            </div>
-            <div class="acts"><span>Pobierz</span><span class="del">Usuń</span></div>
-          </div>
-        </div>
-        <div class="drop">
-          <div class="big">📎 Dodaj plik / zdjęcie / bilet</div>
-          <div class="hint">Przeciągnij tutaj albo wybierz z dysku. PDF, JPEG lub PNG, do 10 MB.</div>
-        </div>
-        <p class="note" style="margin-top:10px">Pole wyboru pliku jest zwykłym <code>&lt;input type="file"&gt;</code> z etykietą; przeciąganie to tylko dodatek (ogon do wycięcia).</p>
+      <div class="dropzone" style="margin-top:var(--space-md);cursor:pointer">
+        <strong>📎 Dodaj plik / zdjęcie / bilet</strong>
+        <span class="body-sm">Przeciągnij tutaj albo wybierz z dysku. PDF, JPEG lub PNG, do 10 MB.</span>
       </div>
-    </div>
+      <p class="hint" style="margin-top:var(--space-xs)"><em>Kropkowana obwódka to <code>--hairline-strong</code> w <code>--radius-lg</code>, wypełnienie przy przeciąganiu to <code>--surface-sunken</code> — trzy tokeny, które system projektowy opisał jako „dropzone” jeszcze przed powstaniem tej funkcji.</em></p>
+    </section>
+  </main>
 
-    <div class="side">
-      <div class="card">
-        <h3>Ten dzień</h3>
-        <div class="kv"><span class="muted">Pozycje</span><b>3</b></div>
-        <div class="kv"><span class="muted">Załatwione</span><b>2 z 2</b></div>
-        <div class="kv"><span class="muted">Załączniki dnia</span><b>2 pliki</b></div>
-        <div class="kv"><span class="muted">Załączniki pozycji</span><b>3 pliki</b></div>
-      </div>
-      <div class="card">
-        <h3>Licznik gotowości</h3>
-        <p class="muted" style="margin:6px 0 0">Licznik liczy wyłącznie statusy (R02). Dane rezerwacji — numer i koszt — nigdy na niego nie wpływają i nigdy nie są wymagane.</p>
+  <aside class="dock">
+    <div class="dock__card">
+      <p class="eyebrow">Ten dzień</p>
+      <div class="dock__list">
+        <div class="row"><span class="muted">Pozycje</span><b>3</b></div>
+        <div class="row"><span class="muted">Załatwione</span><b>2 z 2</b></div>
+        <div class="row"><span class="muted">Załączniki dnia</span><b>2 pliki</b></div>
+        <div class="row"><span class="muted">Załączniki pozycji</span><b>3 pliki</b></div>
       </div>
     </div>
-  </div>
+    <div class="dock__card">
+      <p class="eyebrow">Licznik gotowości</p>
+      <p class="hint" style="margin-top:var(--space-2xs)">Licznik liczy wyłącznie statusy (R02). Dane rezerwacji — numer i koszt — nigdy na niego nie wpływają i nigdy nie są wymagane.</p>
+    </div>
+    <div class="dock__card">
+      <p class="eyebrow">Limity</p>
+      <div class="dock__list">
+        <div class="row"><span class="muted">Na plik</span><b>10 MB</b></div>
+        <div class="row"><span class="muted">Na dzień / pozycję</span><b>20</b></div>
+        <div class="row"><span class="muted">Na podróż</span><b>250 MB</b></div>
+      </div>
+    </div>
+  </aside>
 </div>
 </body>
 </html>

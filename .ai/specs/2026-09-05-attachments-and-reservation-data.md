@@ -2,7 +2,8 @@
 
 - Date: 2026-09-05 · Author: `om-auto-write-spec` (autonomous) · Status: draft, gated on the two ⚠ assumptions below
 - Source brief: `.ai/specs/product-brief.md` (signed 2026-09-05)
-- Foundation spec: `.ai/specs/2026-09-05-walking-skeleton.md` — **settled and not reopened here.** Its stack, `/api/v1` conventions, `ErrorCode` enum, `get_owned_trip` dependency and the `trip` / `trip_stage` / `trip_day` / `item` tables are the ground this spec builds on. Its assumptions **A2** (the multi-stop shape) and **A4** (the item time span) are owner-confirmed and this spec relies on both.
+- Foundation spec: `.ai/specs/2026-09-05-walking-skeleton.md` — **settled, shipped and not reopened here.** Merged as PRs #2 and #6, so its stack, `/api/v1` conventions, `ErrorCode` enum, `get_owned_trip` dependency and the `trip` / `trip_stage` / `trip_day` / `item` tables are not a plan any more, they are running code. Its assumptions **A2** (the multi-stop shape) and **A4** (the item time span) are owner-confirmed and this spec relies on both.
+- Visual authority: `.ai/specs/2026-09-06-design-system-adoption.md`, implemented in PR #11 — **also settled.** The design system is now the app's real visual layer, and this feature is styled out of its shipped tokens and component recipes rather than out of the raw design export. See *Ground this spec now stands on* below, which is the part a reader of the first draft must re-read.
 - Visual reference: `.ai/specs/research/design/stitch_inteligentny_planer_podr_y/`, chiefly `szczeg_y_dnia_i_aktywno_ci` and `centrum_rezerwacji_i_dokument_w` — a preliminary mockup labelled by the owner "wstępny design, do dostosowania w trakcie prac", not a contract
 - Mode: `om-spec-writing --autonomous`. Every question this spec answered on its own is listed under **Resolved assumptions (autonomous defaults)** and is open to override before merge.
 
@@ -91,6 +92,66 @@ Nothing clever, for the same reason the foundation spec gave: the risk here is c
 
 Brief **Q01** is open and this session had no network access, so what follows is recollection, labelled as such, and does not close it. **TripIt**'s answer to "never demand the data" is a forwarding address that parses confirmation e-mails — the genuinely better product answer, and precisely what D12 defers; our optional capture panel is the honest manual stand-in until that lands, and the data it writes is the same shape a parser would later fill. **Wanderlog** attaches files per plan item and carries an expense ledger with currency conversion — the attachment half matches this design, the ledger half is D12's "cost accounting as a real feature". **Google Travel** derives everything from Gmail and stores nothing the user pins by hand, which is a different product. The complexity all three carry and this spec skips: OCR, currency conversion, per-traveller expense splitting, and a document hub as a first-class screen. The thing they get right that this spec accepts as a real gap: an attachment the user has to remember to upload is an attachment that sometimes does not get uploaded — which is A03's risk, and it is not solved here.
 
+## 📝 Ground this spec now stands on
+
+This spec was drafted against a repository that held no product code. That is no longer true, and
+four of the first draft's factual claims were overtaken by what has since merged. They are corrected
+here rather than quietly edited away, because the difference changes what the implementation PR does.
+
+**1. The application exists and runs.** The walking skeleton shipped in PRs #2 (auth, the gate) and
+#6 (the timeline, items, the counter, the filter), and the design system shipped in PR #11. The
+first draft said there was "no running application to photograph" and therefore no current-state
+screenshots; that is now wrong, and the UI/UX section carries them.
+
+**2. `PATCH /trips/{tripId}` is real, so this spec's data-loss guard is a concrete change and not a
+contingency.** `backend/trip_planner/api/trips.py` implements the range edit today, including the
+`409 days_have_items` refusal and the branch that removes an itemless day silently. The first draft
+hedged that the endpoint "may not exist when this feature ships". It does. Narrowing that branch to
+"no items **and** no attachments" is therefore an edit to shipped code, and it is a numbered step.
+
+**3. The design system is the visual authority, and it already reserved this feature's tokens.**
+`frontend/src/styles/tokens.css` carries three comments written before this feature had any code:
+`--surface-sunken` is annotated *"drag-over dropzone"*, `--hairline-strong` *"dropzone border"*, and
+`--radius-lg` *"cards, day modules, dropzones"*. `scripts/check_contrast.py` documents in prose why
+`--hairline-strong` is deliberately left below the 3:1 floor — *"neither of which WCAG 1.4.11
+requires to identify a component"*, naming the dashed dropzone outline as one of the two. **This
+feature therefore invents no colour, no radius and no border style.** It uses `.empty-state` for the
+day-documents empty state, `.dialog` and `.dialog--confirm` for the delete confirmation, the field
+recipe for the reservation inputs, `.button-primary` / `.button-quiet` / `.button-danger` for the
+actions, and the draft-badge recipe (`components.css`) for the upload-state pills.
+
+**4. Two validation-gate commands did not exist when this spec was written, and both bind it.** The
+gate is now eight commands, and the two new ones are house-built and dependency-free in the style of
+`check_locales.py`:
+
+| Command | What it demands of this feature |
+|---|---|
+| `python3 scripts/check_css_tokens.py` | every `var(--x)` this feature's CSS references must resolve in `tokens.css`. This is not a style rule — an undefined `var()` drops the property silently, with no error anywhere — so a dropzone referencing an invented token would ship as an unstyled div and pass every other check |
+| `python3 scripts/check_contrast.py` | any **new** foreground/background pair this feature renders behind text must be added to that script's declared table and clear its floor (4.5:1 body, 3:1 large and non-text boundaries). The upload-error pill is the one new text-on-colour pair this feature introduces, so it is a numbered step rather than an afterthought |
+
+**5. The inert preview surfaces for this feature were specified and then cut, so this spec builds
+the real thing directly.** The design-system spec's workstream B specified exactly two of this
+feature's surfaces as previews — the day-documents panel with a disabled file input, and the
+collapsed reservation disclosure with three disabled fields — and its Phase 5 **was cut by the owner
+mid-run** (PR #11: *"Phase 5 was cut by the owner at the engine's safety checkpoint"*). Nothing
+inert exists in the codebase today: there is no `frontend/src/features/preview/`, no
+`data-preview` attribute and no census test. Two consequences, and they are the reason this section
+exists at all:
+
+- **This spec's UI/UX section is a first build, not an activation.** Every surface it describes is
+  new markup.
+- **If workstream B is ever built before this feature** — it remains in the *Now* scope and PR #11
+  asks for a follow-up issue — then this feature's implementation additionally deletes those two
+  `<PreviewNotice>` blocks, removes the `disabled` attributes and the `data-preview` markers, and
+  **updates that spec's `data-preview` census test from four surfaces to two**, since chat and
+  sharing would still be inert. That test is designed to fail rather than let a preview outlive its
+  feature, so it is a deliberate part of this feature's diff and not collateral damage.
+
+Two smaller corrections of the same kind: the day detail lives at
+`frontend/src/features/trips/DayDetailPage.tsx`, not in a `features/day/` folder the first draft
+invented, and the style layer is five ordered files under `frontend/src/styles/` rather than one
+`index.css`. The Architecture sketch below reflects the real tree.
+
 ## 📝 Architecture
 
 Additive throughout. No module the foundation spec created changes shape; four are extended and two are new.
@@ -108,11 +169,19 @@ backend/
     security/quota.py          NEW  DB-backed per-owner upload rate + volume limiter
     errors.py                  EXTENDED  eight new ErrorCode members
 frontend/
-  src/api/attachments.ts       NEW  typed client, upload with progress
-  src/features/day/            EXTENDED  DayAttachments, ItemAttachments, ReservationPanel,
-                                         UploadDropzone, Lightbox
-  src/features/timeline/       EXTENDED  the paperclip badge on item cards
-  src/locales/{en,pl}.json     EXTENDED  new keys, both locales, ICU plurals
+  src/api/attachments.ts             NEW  typed client, upload with progress
+  src/features/trips/                EXTENDED  the real tree — there is no features/day/
+    DayAttachments.tsx               NEW  the day-documents panel
+    ItemAttachments.tsx              NEW  the strip inside the item editor
+    ReservationPanel.tsx             NEW  the optional disclosure
+    UploadDropzone.tsx               NEW  labelled file input + state machine
+    Lightbox.tsx                     NEW  (Phase 4, slippable)
+    ItemDialog.tsx                   EXTENDED  hosts the two components above
+    DayDetailPage.tsx                EXTENDED  hosts the documents panel
+    ItemRow.tsx                      EXTENDED  one optional prop: attachmentCount?
+  src/styles/components.css          EXTENDED  attachment row, dropzone, upload pills
+  src/locales/{en,pl}.json           EXTENDED  new keys, both locales, ICU plurals
+scripts/check_contrast.py            EXTENDED  one new declared pair (the error pill)
 migrations/                    NEW  one revision (see Migrations)
 ```
 
@@ -381,28 +450,40 @@ Two notes on that set. `Content-Disposition: attachment` is applied **universall
 
 One screen is completed and one is lightly touched. Everything here is `szczeg_y_dnia_i_aktywno_ci` adapted, with the parts serving out-of-scope features dropped.
 
-Mockups of the proposed screens live beside this spec and are attached to this spec's PR. They are illustrative statics — layout and flow, not pixel-perfect design — rendered from self-contained HTML with no application code behind them. **There are no current-state screenshots**: the walking skeleton's implementation is still on an open PR and nothing is deployed, so there is no running application to photograph.
+Everything below is expressed in the design system PR #11 shipped: its component recipes, its tokens, its dock-and-rail layout. **This feature introduces no new visual language** — where a recipe exists it is used, and the three tokens the design system already annotated for a dropzone are the dropzone's.
+
+Mockups of the proposed screens live beside this spec and are attached to this spec's PR. They are illustrative statics — layout and flow, not pixel-perfect design — rendered from self-contained HTML that **imports the application's own shipped `tokens.css` and `components.css`**, so a divergence between a mockup and the running app is a visible error rather than a matter of taste. Current-state screenshots of the running application are attached alongside them; unlike the first draft of this spec, there is now an application to photograph.
+
+**The application today**, captured from the running QA environment at `03975d9`:
+
+| Screen | Current state |
+|---|---|
+| `/trips/:id/days/:date`, Polish — the day detail as it ships: an item list and nothing below it. **This is the gap this feature fills**, and it is worth looking at before the mockups: there is no documents panel, no attachment affordance anywhere, and no way to reach a voucher from a plan | [`current-01-day-detail-pl.png`](assets/attachments-and-reservation-data/current-01-day-detail-pl.png) |
+| the same screen, English | [`current-02-day-detail-en.png`](assets/attachments-and-reservation-data/current-02-day-detail-en.png) |
+| `/trips/:id`, Polish — the timeline whose item cards gain the paperclip badge | [`current-03-timeline-pl.png`](assets/attachments-and-reservation-data/current-03-timeline-pl.png) |
+
+**Proposed:**
 
 | Screen | Mockup |
 |---|---|
-| `/trips/:id/days/:date` — the day detail with day-level documents and per-item attachments, Polish locale | [`assets/attachments-and-reservation-data/mockup-01-day-detail.png`](assets/attachments-and-reservation-data/mockup-01-day-detail.png) |
-| The item editor: attachments, the optional reservation panel, and the move to *done*, **English locale** | [`assets/attachments-and-reservation-data/mockup-02-item-editor.png`](assets/attachments-and-reservation-data/mockup-02-item-editor.png) |
-| Upload states — in progress, refused type, too large, quota — Polish locale | [`assets/attachments-and-reservation-data/mockup-03-upload-states.png`](assets/attachments-and-reservation-data/mockup-03-upload-states.png) |
+| `/trips/:id/days/:date` — the day detail with day-level documents and per-item attachments, Polish locale | [`mockup-01-day-detail.png`](assets/attachments-and-reservation-data/mockup-01-day-detail.png) |
+| The item editor: attachments, the optional reservation disclosure, and the move to *done*, **English locale** | [`mockup-02-item-editor.png`](assets/attachments-and-reservation-data/mockup-02-item-editor.png) |
+| Upload states — in progress, done, and the four refusals — Polish locale | [`mockup-03-upload-states.png`](assets/attachments-and-reservation-data/mockup-03-upload-states.png) |
 
-Two locales across three mockups, for the same reason the foundation spec gave: R01 makes both first-class and a spec that only ever pictures one is not showing the product it describes.
+Two locales across the set, for the same reason the foundation spec gave: R01 makes both first-class and a spec that only ever pictures one is not showing the product it describes. The mockups' stylesheet, `assets/attachments-and-reservation-data/_mockup.css`, is a **verbatim copy** of the design-system spec's own, plus one clearly-marked block of tokens taken from the application's shipped `tokens.css` — including its two corrected contrast values. That is deliberate: it means a mockup here cannot drift from the running app without the drift being visible.
 
 ### `/trips/:id/days/:date` — the day detail, completed
 
-- **Day documents.** A panel headed "Załączniki i dokumenty dnia" / "Day files and documents", carrying the day's own attachments and one action, "Dodaj plik / zdjęcie / bilet" / "Add file, photo or ticket". Kept verbatim from the export because the export got this one right.
+- **Day documents.** A panel headed "Załączniki i dokumenty dnia" / "Day files and documents", **below the item list** — the position the design-system spec already declared for it, so the two specs do not disagree about where it goes — carrying the day's own attachments and one action, "Dodaj plik / zdjęcie / bilet" / "Add file, photo or ticket". Kept verbatim from the export because the export got this one right. Its empty state is the shipped `.empty-state` recipe, not a bespoke one.
 - **Item attachments.** Each item row gains a paperclip with a count when it has any; the attachments themselves live inside the item editor, next to the fields they evidence. This is the split the export implies with its per-item ticket pills and its separate day panel, and it is the split the data model enforces.
-- **An attachment renders as**: a preview for images — **the original file, lazy-loaded and scaled by the browser in CSS, never a server-generated thumbnail** (A12), which is a real cost at these caps and is why images are lazy-loaded and why the pixel bound exists — a document glyph for PDFs; the filename; the size, formatted through `Intl` and never concatenated; a download action; a delete action behind a confirmation that names the file. Images open in a lightbox; PDFs download (see the cut above — the button says "Pobierz" / "Download", not "Preview", because saying "Preview" and delivering a download is the kind of small lie that makes an owner stop trusting his own tool).
+- **An attachment renders as** a row on the card recipe at `--radius-lg`: a preview for images — **the original file, lazy-loaded and scaled by the browser in CSS, never a server-generated thumbnail** (A12), which is a real cost at these caps and is why images are lazy-loaded and why the pixel bound exists — or a document glyph from the shipped `<Icon>` sprite for PDFs; the filename; the size, formatted through `Intl` and never concatenated; a download action on `.button-quiet`; a delete action on `.button-danger` behind the shipped `.dialog--confirm` treatment, naming the file. Images open in a lightbox; PDFs download (see the cut above — the button says "Pobierz" / "Download", not "Preview", because saying "Preview" and delivering a download is the kind of small lie that makes an owner stop trusting his own tool).
 - **Dropped from the export, in this screen**: "Inteligentny Asystent Dnia" and "Sugerowana optymalizacja czasowa" (A05, chat first); "Zadania & Przygotowanie" (brief Q02 undecided); "Podgląd trasy" and "Otwórz GPS" (D12); "Eksportuj do Google Calendar" and "Optymalizuj trasę z AI" (D12); vendor comparison cards, per-item ratings and live prices (D04, R07).
 
 ### Uploading
 
-- The drop zone is **a real `<label>` over a real `<input type="file">`**. Drag-and-drop is an enhancement layered on top and is the first thing in the slippable tail; the keyboard and file-picker path is the one that always exists.
+- The drop zone is **a real `<label>` over a real `<input type="file">`**, styled from the three tokens the design system reserved for exactly this before it existed: a dashed `--hairline-strong` outline at `--radius-lg`, filling to `--surface-sunken` on drag-over. Drag-and-drop is an enhancement layered on top and is the first thing in the slippable tail; the keyboard and file-picker path is the one that always exists.
 - `accept=".pdf,.jpg,.jpeg,.png"` on the input is a **convenience for the picker dialog and nothing else** — the client-side extension and size pre-check exists so the user gets an instant answer instead of a wasted upload, and it is never the reason a file is refused. The server repeats every check.
-- States: idle → selected → uploading with a determinate progress bar → done (the row appears in the list) → failed, showing the translated message for the server's error code with a retry action. Progress and completion are announced through an `aria-live="polite"` region.
+- States: idle → selected → uploading with a determinate progress bar → done (the row appears in the list) → failed, showing the translated message for the server's error code with a retry action. Progress and completion are announced through an `aria-live="polite"` region. The state pills wear the existing status-chip triple (background, text, border) rather than new colours — **with one exception that has to be declared, not assumed**: the failure pill is the only text-on-colour pair this feature adds that the design system does not already ship, so it reuses `--danger-surface` / `--on-danger-surface`, which `scripts/check_contrast.py` already has in its table. If a variant ever needs a pair outside that table, adding the row to the script is part of the same PR, because a pair that is not declared is not checked.
 - One file per request; selecting five files produces five rows, five progress bars, five independent outcomes. A failure of one never rolls back the others.
 - Cancelling mid-upload aborts the request; nothing is stored, because the row and the bytes are written in one transaction only after the whole body has been read and validated.
 
@@ -427,7 +508,7 @@ Day-level attachments get **no** reservation panel — a day is not booked; an i
 
 ### `/trips/:id` — the timeline, lightly touched
 
-One addition only: a paperclip glyph with a count on any item card that has attachments, driven by `attachment_count`. **Costs, currencies and confirmation numbers are not shown on the timeline.** The export's PLN/EUR toggle, "SZACOWANY BUDŻET" tile and per-item prices all belong to totals and conversion, which are D12's, and putting a money column on the product's central screen would quietly make it a budget tracker, which D04 and the owner's own "przede wszystkim planowanie" say it is not.
+One addition only: a paperclip glyph with a count on any item card that has attachments, driven by `attachment_count`. It reaches `ItemRow` as one **optional** prop, `attachmentCount?`, in the same additive idiom the design-system spec used for `railDot?` and `ring?` — nothing is removed, renamed or given a new meaning. The design-system spec deliberately did *not* render this glyph in its cut preview phase, and its reasoning is worth preserving rather than overriding: *"the count would have to be zero for everything, and a zero-count affordance on every card is noise."* That objection dissolves once counts are real — the glyph appears only when `attachment_count > 0` — and it is exactly why the badge belongs to this spec and not to that one. **Costs, currencies and confirmation numbers are not shown on the timeline.** The export's PLN/EUR toggle, "SZACOWANY BUDŻET" tile and per-item prices all belong to totals and conversion, which are D12's, and putting a money column on the product's central screen would quietly make it a budget tracker, which D04 and the owner's own "przede wszystkim planowanie" say it is not.
 
 ### Cross-cutting
 
@@ -456,7 +537,7 @@ One addition only: a paperclip glyph with a count on any item card that has atta
 | The 31st upload in ten minutes | `429 rate_limited`, counted in `upload_event` |
 | Upload cancelled or the connection dropped mid-body | nothing is written; the row and the bytes are one transaction after full validation |
 | Two tabs uploading to the same item at once | both succeed and both appear; there is no ordering claim beyond `created_at` |
-| **A trip's date range is shortened past a day that carries attachments but no items** | `409 days_have_attachments`, listing the dates — **symmetric with the foundation spec's `409 days_have_items`, and this spec's reason for adding it.** The foundation spec removes an itemless day *silently* when a range shrinks, which was safe when a day held nothing but items; a day now holds documents too, so "silently" would mean deleting a voucher PDF by editing a date. Foundation assumption A10 says a date edit never destroys data, and this row is what keeps that true. **Interaction to be explicit about:** `PATCH /trips/{tripId}` lives in the *foundation* spec's slippable Phase 4 tail, so it may not exist when this feature ships — if it does not, this row is a requirement on whoever builds it, not dead prose |
+| **A trip's date range is shortened past a day that carries attachments but no items** | `409 days_have_attachments`, listing the dates — **symmetric with the foundation spec's `409 days_have_items`, and this spec's reason for adding it.** The foundation spec removes an itemless day *silently* when a range shrinks, which was safe when a day held nothing but items; a day now holds documents too, so "silently" would mean deleting a voucher PDF by editing a date. Foundation assumption A10 says a date edit never destroys data, and this row is what keeps that true. **This is an edit to shipped code:** `PATCH /trips/{tripId}` and its silent-removal branch are live in `backend/trip_planner/api/trips.py` today, so this is a concrete change with a concrete regression test, not a contingency |
 | **An item is deleted while it holds attachments** | the cascade removes them, and the existing confirmation dialog is extended to name the count ("This item has 2 files. Deleting it deletes them too.") — because deleting a plan entry is not obviously a file-management action, and the attachment-level confirmation already names the file it destroys |
 | The item is deleted while its attachment list is open | the delete cascades; the next request answers `404` and the SPA returns to the day |
 | An item is moved to another day of the same trip | its attachments move with it — they hang off `item_id`. Day attachments stay on the day, which is the point of having two parents |
@@ -476,7 +557,7 @@ One addition only: a paperclip glyph with a count on any item card that has atta
 
 ## 📝 Risks & Impact Review
 
-- **Blast radius: one screen and one `PATCH`.** Every API change is additive under `BACKWARD_COMPATIBILITY.md` §1 — new endpoints, new *optional* response fields, new *optional* request fields, new error-code enum members. Nothing existing is removed, renamed, retyped, or given a new meaning; no status code changes for an existing condition; no validation is tightened on an existing input. §3 ("stored trip and itinerary documents") is respected in the strongest form: every existing stored trip keeps loading unchanged, because the columns added to `item` are nullable and mean nothing when absent.
+- **Blast radius: one screen, one `PATCH`, and — newly, since the first draft — a narrowing edit to a shipped endpoint.** `PATCH /trips/{tripId}` is live, so the `days_have_attachments` guard changes code another spec already delivered and is the only place this feature touches someone else's surface. It is tightening a destructive branch rather than loosening it, and the existing `days_have_items` suite is its regression guard. Every API change is additive under `BACKWARD_COMPATIBILITY.md` §1 — new endpoints, new *optional* response fields, new *optional* request fields, new error-code enum members. Nothing existing is removed, renamed, retyped, or given a new meaning; no status code changes for an existing condition; no validation is tightened on an existing input. §3 ("stored trip and itinerary documents") is respected in the strongest form: every existing stored trip keeps loading unchanged, because the columns added to `item` are nullable and mean nothing when absent.
 - **Three migration-class decisions, all designed for the cheaper failure.** *Where the bytes live* — Postgres now, with the escape hatch designed as an additive `storage_backend` + `object_key` pair and a copy job rather than a rewrite (A2 ⚠). *What an attachment hangs off* — one table, two nullable FKs, a `CHECK`; widening to a third parent is additive, and this is the shape the deferred hub screen (A13) can query without a `UNION` (A5). *Where reservation data hangs* — on the item, with the dates being the item's existing span, so nothing in the system holds two answers to when a booking is (A6 ⚠).
 - **Rollback story.** Two Alembic revisions, each with a working `downgrade`, and they unwind independently: rolling back Phase 3 leaves attachments working and removes reservation data; rolling back both leaves the walking skeleton exactly as it was — a timeline with statuses and a counter and no attachments — and destroys the attachments and reservation data, which is what rolling back this feature means. The frontend degrades in the same shape: the day detail without the attachment panels is the screen the foundation spec shipped.
 - **The new risk this feature introduces is the upload surface itself**, and the Security section is the mitigation, in full, with two residual risks named rather than papered over: **no malware scanning** and **no EXIF stripping**. Both are tolerable at exactly one consumer who is also the uploader (D15) and both become preconditions the moment a guest can fetch a byte (A8).
@@ -498,7 +579,9 @@ One addition only: a paperclip glyph with a count on any item card that has atta
 | R06 / D09 | One editor; attachments are the owner's, and no write path exists for anyone else |
 | D12 / N01 | Parsing, Wallet export, cost totals and cost splitting are deferred, never excluded |
 | D15 | One consumer, which is what makes "no malware scanning" and "no EXIF stripping" tolerable — and what makes them preconditions on the sharing spec |
-| Walking-skeleton **A2**, **A4** | Owner-confirmed and relied on: the multi-stop shape is untouched, and the item time span is what carries R04's "dates" |
+| Walking-skeleton **A2**, **A4** | Owner-confirmed, shipped, and relied on: the multi-stop shape is untouched, and the item time span is what carries R04's "dates" |
+| Design-system adoption (PR #11) | The visual authority. This feature invents no colour, radius or border, uses the shipped `.empty-state`, `.dialog--confirm`, field, button and chip recipes, and spends the three tokens that spec annotated for a dropzone before this feature had any code. Its two new gate commands bind this one |
+| Design-system workstream B | Specified inert previews for this feature's two surfaces; **its Phase 5 was cut by the owner mid-run**, so nothing inert exists and this spec builds the real thing. The interaction if it is ever built first is a numbered step, not an assumption |
 | A05 | The authority for every cut in the Scope table, and the source of the slippable tail |
 | Brief **Q03** | **Answered here** — A2, A3, A4, A8, A9 — with decision rows D16 and D18 proposed above so the answers land in the brief rather than only in this document |
 | Brief **Q04** | **Answered here** — A7 — with decision row D17 proposed above, which also retires the "undecided" sentence inside R04 |
@@ -563,17 +646,18 @@ Every step is testable and leaves the application working. This structure is wha
 7. `GET …/attachments/{id}`, `GET …/attachments/{id}/content` with the full header set, and `DELETE …/attachments/{id}`. Verify: tests asserting **every** header in the Security section is present with its exact value; that a conditional request with the `ETag` answers `304`; that the delete removes the blob row; and that all three answer `404` for an attachment belonging to another trip.
 8. `attachment_count` on the timeline payload, `attachments` on the day-detail payload, and the three reservation fields on the item serialiser and on `PATCH /items/{itemId}`. Verify: API tests that the count matches, that an item move carries its attachments, that a day attachment does not move, that clearing a cost requires clearing both halves, and that omitting a field leaves it unchanged.
 9. Cascade behaviour end to end. Verify: tests that deleting an item, a day's parent trip, and a trip each remove the attachment rows **and** the blob rows in one transaction, and that no other trip's rows are touched.
-10. The `days_have_attachments` guard on `PATCH /trips/{tripId}` — the foundation spec's "days without items are removed silently" branch is narrowed to "days without items **and without attachments**". Verify: a test that shortening a range past a day holding a voucher and no items answers `409` and changes nothing, and that shortening past a genuinely empty day still removes it. **If the foundation spec's `PATCH /trips` has not shipped when this phase runs** (it is in that spec's slippable tail), this step becomes a requirement recorded on it instead — and the step is not silently dropped.
+10. The `days_have_attachments` guard on the **shipped** `PATCH /trips/{tripId}` in `backend/trip_planner/api/trips.py` — its "days without items are removed silently" branch is narrowed to "days without items **and without attachments**". Verify: a test that shortening a range past a day holding a voucher and no items answers `409` and changes nothing; that shortening past a genuinely empty day still removes it; and that the existing `days_have_items` tests still pass unchanged. **This is the one step in this spec that edits code another spec shipped**, so it carries that spec's regression suite as its guard.
 
 ### Phase 2 — The day detail attachment UI (*Now* bullet 5)
 
 1. `src/api/attachments.ts` — the typed client with upload progress and abort. Verify: unit tests for the progress callback and for abort producing no row.
-2. The `UploadDropzone` component: a labelled real file input, the client-side pre-check, the state machine (idle → selected → uploading → done / failed), the `aria-live` region, and per-file independence. Verify: component tests for each state, for a refused pre-check never issuing a request, for the translated message of each server error code, and for retry.
+2. The `UploadDropzone` component: a labelled real file input, the client-side pre-check, the state machine (idle → selected → uploading → done / failed), the `aria-live` region, and per-file independence. Its CSS uses only `--hairline-strong`, `--surface-sunken` and `--radius-lg`, and the failure pill only the shipped danger pair. Verify: component tests for each state, for a refused pre-check never issuing a request, for the translated message of each server error code, and for retry — **plus `python3 scripts/check_css_tokens.py` green**, which is the check that catches an invented token dropping a property silently, and `python3 scripts/check_contrast.py` green, with a new declared pair added to its table in this same step if the design ever needs one.
 3. The day documents panel on `/trips/:id/days/:date`, with its empty state. Verify: component tests for the list, the empty state, and both locales.
 4. The item attachment strip inside the item editor, plus the paperclip and count on the item row. Verify: component tests for an item with none, with one, and with several.
 5. Download and delete, with a confirmation dialog naming the file. Verify: component tests for the confirmation copy in both locales and for focus returning to the trigger.
 6. The attachment-count ICU plural key in both locales. Verify: a test asserting the Polish `few` (2 pliki) and `many` (5 plików) forms render, and `check_locales.py` green.
-7. The paperclip badge on the timeline's item cards. Verify: a component test that it appears only when `attachment_count > 0`.
+7. The paperclip badge on the timeline's item cards, as `ItemRow`'s optional `attachmentCount?` prop. Verify: a component test that it appears only when `attachment_count > 0`, and that `ItemRow`'s existing callers that pass no count render exactly as before — the additive-prop guarantee, asserted rather than assumed.
+8. **If `frontend/src/features/preview/` exists when this phase runs** — it does not today, because the design-system spec's Phase 5 was cut, but it remains in the *Now* scope — delete this feature's two preview surfaces (the documents-panel `<PreviewNotice>` and disabled input, the reservation disclosure's `<PreviewNotice>` and disabled fields) and update that spec's `data-preview` census from four surfaces to two. Verify: the census test passes at its new number, and a `grep` for `data-preview` returns only the chat and sharing sites. **If the folder does not exist, this step is a no-op and is recorded as one** rather than deleted, so a later reader knows the interaction was considered.
 
 ### Phase 3 — Reservation data (R04, D07)
 

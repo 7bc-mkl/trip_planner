@@ -2,152 +2,180 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Mockup 02 — item editor: attachments and optional reservation details (EN)</title>
-<link rel="stylesheet" href="_tokens.css">
+<title>Mockup 02 — item editor: attachments and the optional reservation disclosure (EN)</title>
+<link rel="stylesheet" href="_mockup.css">
 <style>
-  .dialog { background: #fff; border: 1px solid var(--line-strong); border-radius: 1.5rem; padding: 24px; box-shadow: 0 20px 25px -5px rgba(15,23,42,.08); max-width: 640px; }
-  .dialog h2 { margin-bottom: 2px; }
-  .cols2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  .cols3 { display: grid; grid-template-columns: 1fr 130px; gap: 12px; }
-  .seg { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
-  .seg span { border: 1px solid var(--line); border-radius: var(--r); padding: 8px 4px; text-align: center; font-size: 12px; font-weight: 600; color: var(--ink-2); background: #fff; }
-  .seg span.on { border-color: var(--primary); color: var(--primary); box-shadow: inset 0 0 0 1px var(--primary); }
-  .statuses { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; }
-  .statuses label { display: flex; align-items: center; gap: 9px; border: 1px solid var(--line); border-radius: var(--r); padding: 10px 12px; font-size: 13px; background: #fff; }
-  .statuses label.on { border-color: var(--done-fg); box-shadow: inset 0 0 0 1px var(--done-fg); background: var(--done-bg); }
-  .radio { width: 15px; height: 15px; border-radius: 999px; border: 2px solid var(--line-strong); flex: none; }
-  .radio.on { border-color: var(--done-fg); background: radial-gradient(circle, var(--done-fg) 0 45%, #fff 46%); }
-  .ta { min-height: 60px; }
-  .sect { margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--line); }
-  .file { display: grid; grid-template-columns: 38px 1fr auto; gap: 11px; align-items: center; border: 1px solid var(--line); border-radius: var(--r); padding: 9px 11px; background: #fff; }
-  .file + .file { margin-top: 8px; }
-  .thumb { width: 38px; height: 38px; border-radius: var(--r); display: grid; place-items: center; font-size: 16px; background: var(--plan-bg); color: var(--ink-2); }
-  .file .fn { font-size: 13px; font-weight: 600; word-break: break-all; }
-  .file .meta { font-size: 12px; color: var(--ink-3); }
-  .file .acts { display: flex; gap: 9px; font-size: 12px; font-weight: 600; color: var(--primary); white-space: nowrap; }
-  .file .acts .del { color: #b60205; }
-  .addfile { margin-top: 10px; border: 2px dashed var(--line-strong); border-radius: var(--r); padding: 13px; text-align: center; font-size: 13px; font-weight: 600; color: var(--ink-2); background: #fff; }
-  .disc { border: 1px solid var(--book-line); background: var(--book-bg); border-radius: var(--r-lg); padding: 16px; }
-  .disc .head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-  .disc .head b { font-size: 14px; color: #92400e; }
-  .disc .why { font-size: 13px; color: #92400e; margin: 8px 0 14px; }
-  .disc .fields { display: grid; gap: 12px; background: #fff; border: 1px solid var(--book-line); border-radius: var(--r); padding: 14px; }
-  .opt { font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-3); }
-  .dlg-actions { display: flex; justify-content: space-between; align-items: center; margin-top: 22px; }
-  .del { color: #b60205; font-weight: 600; font-size: 14px; }
-  .callout { display: grid; gap: 6px; }
-  .callout li { font-size: 13px; color: var(--ink-2); }
+  .overlay {
+    display: grid; place-items: start center;
+    padding: var(--space-lg) var(--space-md) var(--space-2xl);
+    background: rgb(15 23 42 / 20%);
+    min-height: 100vh;
+  }
+  .dialog {
+    width: min(38rem, 100%);
+    padding: var(--space-lg);
+    border-radius: var(--radius-xl);
+    background: var(--surface);
+    box-shadow: var(--elevation-3);
+  }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-sm); }
+  .grid-cost { display: grid; grid-template-columns: 1fr 9rem; gap: var(--space-sm); }
+  .sect { margin-top: var(--space-lg); padding-top: var(--space-md); border-top: 1px solid var(--hairline); }
+  .file-row {
+    display: grid; grid-template-columns: 2.5rem minmax(0,1fr) auto;
+    gap: var(--space-sm); align-items: center;
+    padding: var(--space-sm); border: 1px solid var(--hairline);
+    border-radius: var(--radius-lg); background: var(--surface);
+  }
+  .file-thumb {
+    width: 2.5rem; height: 2.5rem; border-radius: var(--radius);
+    display: grid; place-items: center; font-size: 17px;
+    background: var(--draft-bg); color: var(--primary);
+  }
+  .file-name { font-size: 13px; font-weight: 600; word-break: break-all; }
+  .file-acts { display: flex; gap: var(--space-xs); }
+  .dlg-actions { display: flex; justify-content: space-between; align-items: center; margin-top: var(--space-lg); }
+  .never { display: grid; gap: var(--space-xs); margin: var(--space-xs) 0 0; padding-left: 1.1rem; }
+  .never li { font-size: 13px; line-height: 19px; color: var(--text-muted); }
+  .seg-status { display: grid; grid-template-columns: repeat(3,1fr); gap: var(--space-2xs); }
+  .seg-status span {
+    display: grid; place-items: center; height: 40px;
+    border: 1px solid var(--hairline); border-radius: 9999px;
+    background: var(--surface); color: var(--text-muted);
+    font-size: 13px; font-weight: 600;
+  }
+  .seg-status span.on {
+    background: var(--status-confirmed-bg); color: var(--status-confirmed-text);
+    border-color: var(--status-confirmed-border);
+  }
+  .opt { font-size: 11px; font-weight: 700; letter-spacing: .025em; text-transform: uppercase; color: var(--text-subtle); }
 </style>
 </head>
 <body>
-<header class="top">
-  <span class="brand">Smart Trip Planner</span>
-  <nav><span>My trips</span><span>Timeline</span><b style="color:var(--primary)">Day</b></nav>
-  <span class="spacer"></span>
-  <span class="locale"><span>PL</span><span class="on">EN</span></span>
-  <span class="muted">michal@…&nbsp;· Sign out</span>
+<header class="chrome">
+  <span class="wordmark">Smart Trip Planner</span>
+  <span class="chrome__context">Malaysia, October 2026</span>
+  <span style="flex:1"></span>
+  <span class="chrome__right">
+    <span class="segmented"><span class="pill">PL</span><span class="pill" style="background:var(--primary);color:var(--on-primary);border-color:var(--primary)">EN</span></span>
+    <span class="muted">michal@… · Sign out</span>
+  </span>
 </header>
 
-<div class="wrap">
-  <p class="banner">Illustrative mockup for <code>.ai/specs/2026-09-05-attachments-and-reservation-data.md</code>, rendered in the English locale because R01 makes both first-class. This is R04 and D07 in one screen. The voucher has just been attached and the user has <em>opened</em> the reservation disclosure himself — nothing in the app opens it for him, and nothing prompts him to. Every field in it is optional, and none of them is a condition of saving, attaching, or reaching <b>Done</b>. The dates are <b>not</b> here: the reservation's dates are the item's own time span, edited above.</p>
+<p class="mockup-note">Illustrative mockup for <code>.ai/specs/2026-09-05-attachments-and-reservation-data.md</code>, drawn on the <b>shipped design system</b> and rendered in English because R01 makes both locales first-class. This is R04 and D07 in one screen: the voucher is attached and the user has <b>opened</b> the reservation disclosure himself — nothing in the app opens it for him and nothing prompts him to. Every field in it is optional and none is a condition of saving, attaching, or reaching <b>Done</b>. The dates are <b>not</b> here — a reservation's dates are the item's own time span, edited above.</p>
 
-  <div class="grid">
-    <div class="dialog">
-      <h2>Edit item</h2>
-      <p class="sub">Day 2 — Sunday, 11 October 2026 · Kuala Lumpur</p>
+<div class="overlay">
+  <div class="dialog">
+    <h2 class="headline-lg">Edit item</h2>
+    <p class="hint" style="margin-bottom:var(--space-md)">Day 2 — Sunday, 11 October 2026 · Kuala Lumpur</p>
 
-      <label class="f">Type</label>
-      <div class="seg" style="margin-bottom:14px">
-        <span class="on">Accommodation</span><span>Transport</span><span>Activity</span><span>Meal</span><span>Other</span>
+    <div class="stack--sm">
+      <div class="field">
+        <span class="label-md">Type</span>
+        <span class="segmented" style="flex-wrap:wrap">
+          <span class="pill" style="background:var(--primary);color:var(--on-primary);border-color:var(--primary)">Accommodation</span>
+          <span class="pill">Transport</span><span class="pill">Activity</span>
+          <span class="pill">Meal</span><span class="pill">Other</span>
+        </span>
       </div>
 
-      <label class="f">Title</label>
-      <div class="input" style="margin-bottom:14px">Stay: The Chow Kit</div>
+      <div class="field">
+        <span class="label-md">Title</span>
+        <div class="input">Stay: The Chow Kit</div>
+      </div>
 
-      <div class="cols2" style="margin-bottom:14px">
-        <div>
-          <label class="f">Start</label>
+      <div class="grid2">
+        <div class="field">
+          <span class="label-md">Start</span>
           <div class="input">15:00</div>
         </div>
-        <div>
-          <label class="f">Ends on <span class="opt">— the item's span</span></label>
+        <div class="field">
+          <span class="label-md">Ends on <span class="opt">— the item's span</span></span>
           <div class="input">14 October 2026</div>
         </div>
       </div>
 
-      <label class="f">Notes</label>
-      <div class="input ta" style="margin-bottom:16px">Deluxe room, 3 nights, breakfast included.</div>
-
-      <label class="f">Status</label>
-      <div class="statuses">
-        <label><span class="radio"></span>To plan</label>
-        <label><span class="radio"></span>To book</label>
-        <label class="on"><span class="radio on"></span>Done</label>
+      <div class="field">
+        <span class="label-md">Notes</span>
+        <div class="input" style="height:auto;min-height:64px;padding:var(--space-sm)">Deluxe room, 3 nights, breakfast included.</div>
       </div>
-      <p class="note" style="margin-top:8px">One click, always. Moving an item to <b>Done</b> never asks for a confirmation number, a cost, or anything else (R04).</p>
 
-      <div class="sect">
-        <h3 style="margin-bottom:10px">Attachments <span class="muted" style="font-weight:400">· 1 file</span></h3>
-        <div class="file">
-          <div class="thumb">📄</div>
-          <div>
-            <div class="fn">Voucher_The_Chow_Kit.pdf</div>
-            <div class="meta">PDF · 840 kB · just added</div>
-          </div>
-          <div class="acts"><span>Download</span><span class="del">Delete</span></div>
+      <div class="field">
+        <span class="label-md">Status</span>
+        <div class="seg-status">
+          <span>To plan</span><span>To book</span><span class="on">● Done</span>
         </div>
-        <div class="addfile">📎 Add file, photo or ticket — PDF, JPEG or PNG, up to 10 MB</div>
-      </div>
-
-      <div class="sect">
-        <div class="disc">
-          <div class="head">
-            <b>Reservation details <span class="opt" style="color:#b45309">— optional</span></b>
-            <span class="muted" style="font-size:13px;font-weight:600">Collapse ▲</span>
-          </div>
-          <p class="why">Anything you already have. Leaving all of it empty changes nothing — not the status, not the readiness counter, and nothing will ask you for it later.</p>
-          <div class="fields">
-            <div>
-              <label class="f">Confirmation number</label>
-              <div class="input ph">e.g. #9842103 — leave empty if you do not have it</div>
-            </div>
-            <div class="cols3">
-              <div>
-                <label class="f">Cost</label>
-                <div class="input">1250.00</div>
-              </div>
-              <div>
-                <label class="f">Currency</label>
-                <div class="input">PLN</div>
-              </div>
-            </div>
-          </div>
-          <p class="note" style="margin:10px 0 0;color:#92400e">No dates here — the booking's dates are this item's start and "ends on", a few rows above. One answer in the system to when the stay is.</p>
-        </div>
-      </div>
-
-      <div class="dlg-actions">
-        <span class="del">Delete item</span>
-        <span><span class="btn ghost">Cancel</span> <span class="btn primary">Save</span></span>
+        <p class="hint">One click, always. Moving an item to <b>Done</b> never asks for a confirmation number, a cost, or anything else (R04).</p>
       </div>
     </div>
 
-    <div class="side">
-      <div class="card">
-        <h3>What this screen must never do</h3>
-        <ul class="callout" style="margin:10px 0 0;padding-left:18px">
+    <div class="sect">
+      <div class="row" style="justify-content:space-between;margin-bottom:var(--space-sm)">
+        <h3 class="headline-sm">Attachments</h3>
+        <span class="count-chip">📎 1 file</span>
+      </div>
+      <div class="file-row">
+        <div class="file-thumb" aria-hidden="true">📄</div>
+        <div>
+          <div class="file-name">Voucher_The_Chow_Kit.pdf</div>
+          <p class="hint">PDF · 840 kB · just added</p>
+        </div>
+        <div class="file-acts">
+          <span class="btn btn--ghost btn--sm">Download</span>
+          <span class="btn btn--danger btn--sm">Delete</span>
+        </div>
+      </div>
+      <div class="dropzone" style="margin-top:var(--space-sm);cursor:pointer">
+        <strong>📎 Add file, photo or ticket</strong>
+        <span class="body-sm">PDF, JPEG or PNG, up to 10 MB</span>
+      </div>
+    </div>
+
+    <div class="sect">
+      <div class="disclosure">
+        <div class="disclosure__summary">
+          <span>▾</span>
+          <span>Reservation details <span class="opt">— optional</span></span>
+        </div>
+        <div class="disclosure__body">
+          <p class="hint">Anything you already have. Leaving all of it empty changes nothing — not the status, not the readiness counter, and nothing will ask you for it later.</p>
+          <div class="field">
+            <span class="label-md">Confirmation number</span>
+            <div class="input" style="color:var(--text-subtle)">e.g. #9842103 — leave empty if you do not have it</div>
+          </div>
+          <div class="grid-cost">
+            <div class="field">
+              <span class="label-md">Cost</span>
+              <div class="input">1250.00</div>
+            </div>
+            <div class="field">
+              <span class="label-md">Currency</span>
+              <div class="input">PLN</div>
+            </div>
+          </div>
+          <p class="hint"><em>No dates here — the booking's dates are this item's start and "ends on", a few rows above. One answer in the system to when the stay is. Amounts render through one <code>Intl.NumberFormat</code> call: <b>PLN&nbsp;1,250.00</b> in English, <b>1 250,00 zł</b> in Polish.</em></p>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:var(--space-md);box-shadow:none;background:var(--canvas)">
+        <p class="eyebrow">What this screen must never do</p>
+        <ul class="never">
           <li>Require a reservation field to save, attach, or reach <b>Done</b>.</li>
           <li>Block on a modal, or interrupt the flow.</li>
-          <li>Open this panel by itself, ever — the user opens it.</li>
+          <li>Open this disclosure by itself, ever — the user opens it.</li>
           <li>Show any "incomplete" badge, count, prompt or reminder for an empty field.</li>
           <li>Let reservation data move the readiness counter.</li>
         </ul>
-        <p class="note" style="margin-top:12px">These are R04's "never demanded", written as invariants — Phase 3 steps 3, 5 and 6 test each one.</p>
+        <p class="hint" style="margin-top:var(--space-xs)"><em>These are R04's "never demanded" written as invariants — Phase 3 steps 3, 5 and 6 test each one.</em></p>
       </div>
-      <div class="card">
-        <h3>Money formatting</h3>
-        <p class="muted" style="margin:8px 0 0">One <code>Intl.NumberFormat</code> call: <b>PLN&nbsp;1,250.00</b> in English, <b>1 250,00 zł</b> in Polish. Never concatenated (R01).</p>
-      </div>
+    </div>
+
+    <div class="dlg-actions">
+      <span class="btn btn--danger btn--sm">Delete item</span>
+      <span class="row">
+        <span class="btn btn--ghost">Cancel</span>
+        <span class="btn btn--primary">Save</span>
+      </span>
     </div>
   </div>
 </div>

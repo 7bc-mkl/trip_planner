@@ -3,145 +3,149 @@
 <head>
 <meta charset="utf-8">
 <title>Mockup 03 — stany wysyłki pliku (PL)</title>
-<link rel="stylesheet" href="_tokens.css">
+<link rel="stylesheet" href="_mockup.css">
 <style>
-  .states { display: grid; gap: 14px; }
-  .st { border: 1px solid var(--line); border-radius: var(--r-lg); padding: 14px 16px; background: #fff; display: grid; grid-template-columns: 40px 1fr auto; gap: 12px; align-items: center; }
-  .st .ic { width: 40px; height: 40px; border-radius: var(--r); display: grid; place-items: center; font-size: 17px; background: var(--plan-bg); }
-  .st .fn { font-size: 14px; font-weight: 600; word-break: break-all; }
-  .st .meta { font-size: 12px; color: var(--ink-3); margin-top: 2px; }
-  .st .act { font-size: 13px; font-weight: 600; color: var(--primary); white-space: nowrap; }
-  .bar { height: 6px; border-radius: 999px; background: var(--line); margin-top: 8px; overflow: hidden; }
+  .st {
+    display: grid; grid-template-columns: 2.5rem minmax(0,1fr) auto;
+    gap: var(--space-sm); align-items: center;
+    padding: var(--space-sm); border: 1px solid var(--hairline);
+    border-radius: var(--radius-lg); background: var(--surface);
+    box-shadow: var(--elevation-1);
+  }
+  .st + .st { margin-top: var(--space-xs); }
+  .st__ic {
+    width: 2.5rem; height: 2.5rem; border-radius: var(--radius);
+    display: grid; place-items: center; font-size: 16px;
+    background: var(--draft-bg); color: var(--primary);
+  }
+  .st__name { font-size: 14px; font-weight: 600; word-break: break-all; }
+  .st__code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; color: var(--text-subtle); }
+  .st--err { border-color: var(--danger); background: var(--danger-surface); }
+  .st--err .st__ic { background: var(--surface); color: var(--danger); }
+  .st--err .st__msg { font-size: 13px; font-weight: 600; color: var(--on-danger-surface); margin-top: 2px; }
+  .st--ok { border-color: var(--status-confirmed-border); background: var(--status-confirmed-bg); }
+  .st--ok .st__ic { background: var(--surface); color: var(--status-confirmed-text); }
+  .bar { height: 6px; border-radius: 9999px; background: var(--draft-bg); margin-top: var(--space-2xs); overflow: hidden; }
   .bar i { display: block; height: 100%; background: var(--primary); }
-  .st.err { border-color: #fecaca; background: #fef2f2; }
-  .st.err .ic { background: #fee2e2; }
-  .st.err .msg { font-size: 13px; color: #b60205; margin-top: 3px; font-weight: 600; }
-  .st.err .act { color: #b60205; }
-  .st.ok { border-color: var(--done-line); background: var(--done-bg); }
-  .st.ok .ic { background: #d1fae5; }
-  .code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; color: var(--ink-3); }
-  .lbl { font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-3); margin: 18px 0 6px; }
-  .lbl:first-child { margin-top: 0; }
-  table.rules { width: 100%; border-collapse: collapse; font-size: 12.5px; }
-  table.rules th, table.rules td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
-  table.rules th { color: var(--ink-3); font-size: 11px; text-transform: uppercase; letter-spacing: .04em; }
+  .lbl { margin: var(--space-lg) 0 var(--space-xs); }
+  .lbl:first-of-type { margin-top: 0; }
+  table.rules { width: 100%; border-collapse: collapse; font-size: 13px; }
+  table.rules th, table.rules td { text-align: left; padding: var(--space-2xs) 0; border-bottom: 1px solid var(--hairline); vertical-align: top; }
+  table.rules th { font-size: 11px; font-weight: 600; letter-spacing: .025em; text-transform: uppercase; color: var(--text-subtle); }
+  table.rules td:last-child { text-align: right; font-weight: 600; white-space: nowrap; padding-left: var(--space-sm); }
 </style>
 </head>
 <body>
-<header class="top">
-  <span class="brand">Smart Trip Planner</span>
-  <nav><span>Moje podróże</span><span>Oś czasu</span><b style="color:var(--primary)">Dzień</b></nav>
-  <span class="spacer"></span>
-  <span class="locale"><span class="on">PL</span><span>EN</span></span>
-  <span class="muted">michal@…&nbsp;· Wyloguj</span>
+<header class="chrome">
+  <span class="wordmark">Smart Trip Planner</span>
+  <span class="chrome__context">Malezja, październik 2026</span>
+  <span style="flex:1"></span>
+  <span class="chrome__right">
+    <span class="segmented"><span class="pill" style="background:var(--primary);color:var(--on-primary);border-color:var(--primary)">PL</span><span class="pill">EN</span></span>
+    <span class="muted">michal@… · Wyloguj</span>
+  </span>
 </header>
 
-<div class="wrap">
-  <p class="banner">Ilustracyjny mockup do <code>.ai/specs/2026-09-05-attachments-and-reservation-data.md</code>. Każdy plik ma własny pasek postępu i własny wynik — awaria jednego nigdy nie cofa pozostałych. Komunikaty pochodzą z przetłumaczonych kluczy kodów błędu (<code>ErrorCode</code>), a nie z prozy serwera; postęp i zakończenie są ogłaszane w regionie <code>aria-live</code>.</p>
+<p class="mockup-note">Ilustracyjny mockup do <code>.ai/specs/2026-09-05-attachments-and-reservation-data.md</code>, rysowany na wdrożonym systemie projektowym. Każdy plik ma własny pasek postępu i własny wynik — awaria jednego nigdy nie cofa pozostałych. Komunikaty pochodzą z przetłumaczonych kluczy <code>ErrorCode</code>, nie z prozy serwera; postęp i zakończenie są ogłaszane w regionie <code>aria-live</code>. Pigułka błędu to jedyna nowa para tekst-na-kolorze w tej funkcji i używa <code>--danger-surface</code> / <code>--on-danger-surface</code>, które <code>scripts/check_contrast.py</code> ma już w swojej tabeli.</p>
 
-  <h1>Wysyłanie plików — stany</h1>
-  <p class="sub">Jeden plik na żądanie. Sprawdzenie po stronie przeglądarki jest tylko wygodą — o przyjęciu pliku decyduje wyłącznie serwer, na podstawie samych bajtów.</p>
+<div class="page">
+  <main>
+    <h1 class="headline-xl">Wysyłanie plików — stany</h1>
+    <p class="hint" style="margin-bottom:var(--space-lg)">Jeden plik na żądanie. Sprawdzenie po stronie przeglądarki jest tylko wygodą — o przyjęciu pliku decyduje wyłącznie serwer, na podstawie samych bajtów.</p>
 
-  <div class="grid">
-    <div>
-      <div class="lbl">W trakcie</div>
-      <div class="states">
-        <div class="st">
-          <div class="ic">⬆️</div>
-          <div>
-            <div class="fn">Bilet_Petronas_Skybridge.pdf</div>
-            <div class="meta">PDF · 1,4 MB · wysyłanie… 62%</div>
-            <div class="bar"><i style="width:62%"></i></div>
-          </div>
-          <span class="act">Anuluj</span>
-        </div>
+    <p class="eyebrow lbl">W trakcie</p>
+    <div class="st">
+      <div class="st__ic" aria-hidden="true">⬆</div>
+      <div>
+        <div class="st__name">Bilet_Petronas_Skybridge.pdf</div>
+        <p class="hint">PDF · 1,4 MB · wysyłanie… 62%</p>
+        <div class="bar"><i style="width:62%"></i></div>
       </div>
-
-      <div class="lbl">Gotowe</div>
-      <div class="states">
-        <div class="st ok">
-          <div class="ic">✅</div>
-          <div>
-            <div class="fn">Voucher_The_Chow_Kit.pdf</div>
-            <div class="meta">PDF · 840 kB · dodano</div>
-          </div>
-          <span class="act">Pobierz</span>
-        </div>
-      </div>
-
-      <div class="lbl">Odrzucone przez serwer</div>
-      <div class="states">
-        <div class="st err">
-          <div class="ic">🚫</div>
-          <div>
-            <div class="fn">rezerwacja.pkpass</div>
-            <div class="msg">Ten format nie jest obsługiwany. Przyjmujemy PDF, JPEG i PNG.</div>
-            <div class="meta code">415 · unsupported_file_type</div>
-          </div>
-          <span class="act">Usuń</span>
-        </div>
-        <div class="st err">
-          <div class="ic">🚫</div>
-          <div>
-            <div class="fn">skan_paszportu_4000dpi.png</div>
-            <div class="msg">Plik jest za duży. Maksymalny rozmiar to 10 MB.</div>
-            <div class="meta code">413 · attachment_too_large</div>
-          </div>
-          <span class="act">Usuń</span>
-        </div>
-        <div class="st err">
-          <div class="ic">🚫</div>
-          <div>
-            <div class="fn">potwierdzenie.pdf</div>
-            <div class="msg">Podróż osiągnęła limit 250 MB załączników.</div>
-            <div class="meta code">409 · trip_storage_quota_exceeded</div>
-          </div>
-          <span class="act">Ponów</span>
-        </div>
-        <div class="st err">
-          <div class="ic">🚫</div>
-          <div>
-            <div class="fn">bilet.pdf</div>
-            <div class="msg">Za dużo wysyłek w krótkim czasie. Spróbuj za chwilę.</div>
-            <div class="meta code">429 · rate_limited</div>
-          </div>
-          <span class="act">Ponów</span>
-        </div>
-      </div>
-
-      <div class="lbl">Przyjęte mimo mylącej nazwy</div>
-      <div class="states">
-        <div class="st ok">
-          <div class="ic">🖼</div>
-          <div>
-            <div class="fn">bilet.pdf</div>
-            <div class="meta">Zapisane jako <b>image/jpeg</b> · 2,1 MB — o typie decydują bajty, nigdy rozszerzenie ani nagłówek klienta.</div>
-          </div>
-          <span class="act">Pobierz</span>
-        </div>
-      </div>
+      <span class="btn btn--ghost btn--sm">Anuluj</span>
     </div>
 
-    <div class="side">
-      <div class="card">
-        <h3>Co serwer sprawdza</h3>
-        <table class="rules">
-          <tr><th>Kontrola</th><th>Wartość</th></tr>
-          <tr><td>Typ</td><td>bajty magiczne + kontrola strukturalna; PDF, JPEG, PNG</td></tr>
-          <tr><td>Rozmiar</td><td>10 MB — <code>Content-Length</code> przed odczytem i licznik w trakcie</td></tr>
-          <tr><td>Wymiary</td><td>≤ 50 Mpx, czytane z nagłówka; serwer nigdy nie dekoduje obrazu</td></tr>
-          <tr><td>Części</td><td>dokładnie jedna, <code>file</code></td></tr>
-          <tr><td>Na rodzica</td><td>20 załączników</td></tr>
-          <tr><td>Na podróż</td><td>250 MB</td></tr>
-          <tr><td>Tempo</td><td>30 wysyłek / 10 min, 200 MB / godz.</td></tr>
-        </table>
+    <p class="eyebrow lbl">Gotowe</p>
+    <div class="st st--ok">
+      <div class="st__ic" aria-hidden="true">✓</div>
+      <div>
+        <div class="st__name">Voucher_The_Chow_Kit.pdf</div>
+        <p class="hint">PDF · 840 kB · dodano</p>
       </div>
-      <div class="card">
-        <h3>Nazwa pliku</h3>
-        <p class="muted" style="margin:8px 0 0">Jest wyłącznie etykietą. Kluczem w bazie jest UUID załącznika, więc <code>../../etc/passwd</code> nie jest filtrowane — jest niereprezentowalne.</p>
-      </div>
+      <span class="btn btn--ghost btn--sm">Pobierz</span>
     </div>
-  </div>
+
+    <p class="eyebrow lbl">Odrzucone przez serwer</p>
+    <div class="st st--err">
+      <div class="st__ic" aria-hidden="true">✕</div>
+      <div>
+        <div class="st__name">rezerwacja.pkpass</div>
+        <div class="st__msg">Ten format nie jest obsługiwany. Przyjmujemy PDF, JPEG i PNG.</div>
+        <div class="st__code">415 · unsupported_file_type</div>
+      </div>
+      <span class="btn btn--ghost btn--sm">Usuń</span>
+    </div>
+    <div class="st st--err">
+      <div class="st__ic" aria-hidden="true">✕</div>
+      <div>
+        <div class="st__name">skan_paszportu_4000dpi.png</div>
+        <div class="st__msg">Plik jest za duży. Maksymalny rozmiar to 10 MB.</div>
+        <div class="st__code">413 · attachment_too_large</div>
+      </div>
+      <span class="btn btn--ghost btn--sm">Usuń</span>
+    </div>
+    <div class="st st--err">
+      <div class="st__ic" aria-hidden="true">✕</div>
+      <div>
+        <div class="st__name">potwierdzenie.pdf</div>
+        <div class="st__msg">Podróż osiągnęła limit 250 MB załączników.</div>
+        <div class="st__code">409 · trip_storage_quota_exceeded</div>
+      </div>
+      <span class="btn btn--ghost btn--sm">Ponów</span>
+    </div>
+    <div class="st st--err">
+      <div class="st__ic" aria-hidden="true">✕</div>
+      <div>
+        <div class="st__name">bilet.pdf</div>
+        <div class="st__msg">Za dużo wysyłek w krótkim czasie. Spróbuj za chwilę.</div>
+        <div class="st__code">429 · rate_limited</div>
+      </div>
+      <span class="btn btn--ghost btn--sm">Ponów</span>
+    </div>
+
+    <p class="eyebrow lbl">Przyjęte mimo mylącej nazwy</p>
+    <div class="st st--ok">
+      <div class="st__ic" aria-hidden="true">🖼</div>
+      <div>
+        <div class="st__name">bilet.pdf</div>
+        <p class="hint">Zapisane jako <b>image/jpeg</b> · 2,1 MB — o typie decydują bajty, nigdy rozszerzenie ani nagłówek klienta.</p>
+      </div>
+      <span class="btn btn--ghost btn--sm">Pobierz</span>
+    </div>
+  </main>
+
+  <aside class="dock">
+    <div class="dock__card">
+      <p class="eyebrow">Co serwer sprawdza</p>
+      <table class="rules" style="margin-top:var(--space-xs)">
+        <tr><td>Typ</td><td>PDF / JPEG / PNG</td></tr>
+        <tr><td>Rozmiar</td><td>10 MB</td></tr>
+        <tr><td>Wymiary</td><td>≤ 25 Mpx</td></tr>
+        <tr><td>Części</td><td>1 (<code>file</code>)</td></tr>
+        <tr><td>Na rodzica</td><td>20</td></tr>
+        <tr><td>Na podróż</td><td>250 MB</td></tr>
+        <tr><td>Tempo</td><td>30 / 10 min</td></tr>
+      </table>
+      <p class="hint" style="margin-top:var(--space-xs)">Typ z bajtów magicznych i kontroli strukturalnej. Serwer nigdy nie dekoduje obrazu — wymiary czyta jako dwie liczby z nagłówka.</p>
+    </div>
+    <div class="dock__card">
+      <p class="eyebrow">Kolejność, która ma znaczenie</p>
+      <p class="hint" style="margin-top:var(--space-2xs)">Okno tempa jest sprawdzane <b>przed</b> odczytem treści. Limiter działający po wciągnięciu 10 MB do pamięci odmawia <em>zapisania</em> zalewu, ale nie odmawia jego <em>wchłonięcia</em>.</p>
+    </div>
+    <div class="dock__card">
+      <p class="eyebrow">Nazwa pliku</p>
+      <p class="hint" style="margin-top:var(--space-2xs)">Jest wyłącznie etykietą. Kluczem jest UUID załącznika, więc <code>../../etc/passwd</code> nie jest filtrowane — jest niereprezentowalne.</p>
+    </div>
+  </aside>
 </div>
 </body>
 </html>
