@@ -1,0 +1,107 @@
+/**
+ * chrome.css — the frame around every authenticated screen.
+ *
+ * The header, the page grid, the dock and (from Phase 5) the drawer: the things
+ * that are not a screen and not a component, but the shell both live inside.
+ *
+ * Its `@import` sits between `base.css` and `components.css` in `index.css`, and
+ * that position is the contract: the chrome frames the page, so a component
+ * recipe must be able to override it and a screen must be able to override both.
+ *
+ * Only tokens from `tokens.css` are referenced. `--header-height` in particular
+ * is consumed, not restated: the sticky layers beneath the header (the filter
+ * bar in step 4.4, the day anchors in step 4.5) offset by that same custom
+ * property, so a magic number here would silently misalign all of them.
+ */
+
+/* --- the shell ------------------------------------------------------- */
+
+/* No padding here any more. The header is full-bleed so its frosted band and
+   its hairline run the whole width of the viewport, and the canvas below pays
+   for its own gutters. */
+.app-shell {
+  min-height: 100dvh;
+}
+
+/* --- the header ------------------------------------------------------ */
+
+/*
+ * Sticky, frosted, hairline-bottomed, exactly `--header-height` tall.
+ *
+ * THE OPAQUE FALLBACK IS DECLARED FIRST AND THE FROST IS THE PROGRESSIVE
+ * ENHANCEMENT, per DESIGN.md's "Elevation & Depth" rule for floating
+ * operational overlays: without `backdrop-filter` a 0.85-alpha white band lets
+ * the scrolling page show through the wordmark, which is a legibility failure
+ * rather than a missing flourish. So the base rule paints `--surface` and only
+ * the `@supports` block below opts into `--frost-bg`.
+ */
+.app-header {
+  position: sticky;
+  top: 0;
+  /* Above the canvas and above the sticky layers that offset by
+     `--header-height`; below the dialog and drawer overlays. */
+  z-index: 20;
+  background: var(--surface);
+  border-bottom: 1px solid var(--hairline);
+}
+
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .app-header {
+    background: var(--frost-bg);
+    -webkit-backdrop-filter: blur(var(--frost-blur));
+    backdrop-filter: blur(var(--frost-blur));
+  }
+}
+
+/* The band is full-bleed; its contents are not. They sit on the same centred
+   measure and the same gutters as the page grid below, so the wordmark lines up
+   with the page heading. */
+.app-header__inner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  height: var(--header-height);
+  width: min(var(--page-max), 100%);
+  margin-inline: auto;
+  padding-inline: var(--gutter-mobile);
+}
+
+@media (min-width: 768px) {
+  .app-header__inner {
+    padding-inline: var(--gutter-desktop);
+  }
+}
+
+/* D01: the export's "VoyageAI" lockup supplies the layout, never the name. */
+.app-header__brand {
+  flex: none;
+  color: var(--text);
+  font: var(--type-headline-sm);
+  letter-spacing: var(--tracking-headline-sm);
+  text-decoration: none;
+}
+
+/* Controls grouped right: the locale switch (R01) and sign-out. The export's
+   four-tab nav is not adopted (Q4), so there is nothing between them. */
+.app-header__controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-left: auto;
+}
+
+/* --- the canvas ------------------------------------------------------ */
+
+/* One centred column. Step 15 replaces this with the page grid and its optional
+   dock column; the measure and the gutters are already the grid's. */
+.app-shell > main {
+  width: min(56rem, 100%);
+  margin-inline: auto;
+  padding: var(--space-lg) var(--gutter-mobile);
+}
+
+@media (min-width: 768px) {
+  .app-shell > main {
+    padding-inline: var(--gutter-desktop);
+  }
+}

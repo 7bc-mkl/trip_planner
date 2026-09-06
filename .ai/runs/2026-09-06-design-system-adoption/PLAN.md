@@ -26,7 +26,7 @@
 | 2 | 2.4 | Elevation utilities, cards, dialogs and the frosted backdrop (spec step 10) | group:B | done | 87acf35 |
 | 2 | 2.5 | Migrate off the bridge aliases and delete the bridge (spec step 11) | dispatch | done | 9a7c625 |
 | 2 | 2.6 | Phase-2 screenshot set (spec step 12) | inline | done | 6ac2230 |
-| 3 | 3.1 | Rebuild the header in `styles/chrome.css` and `AppShell` (spec step 13) | group:C | todo | — |
+| 3 | 3.1 | Rebuild the header in `styles/chrome.css` and `AppShell` (spec step 13) | group:C | done | pending |
 | 3 | 3.2 | The optional `context` prop on trip-scoped routes (spec step 14) | group:C | todo | — |
 | 3 | 3.3 | The optional `dock` prop and the responsive page grid (spec step 15) | group:C | todo | — |
 | 3 | 3.4 | Phase-3 screenshot set, including 360px (spec step 16) | inline | todo | — |

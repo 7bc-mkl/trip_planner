@@ -10,6 +10,10 @@ import { useSession } from '../auth/SessionContext'
  * The chrome every authenticated screen shares: the product name, the locale
  * switch, sign-out, and a slot for the screen's own primary action.
  *
+ * The header is sticky and frosted; its rules live in `styles/chrome.css` and
+ * nothing here sets a height, because the sticky layers beneath it read
+ * `--header-height` from the token file rather than from this component.
+ *
  * One component rather than a copy per screen so the locale switch (R01, present
  * on every screen) and the sign-out control cannot go missing from one of them.
  * `<main>` and the heading are real landmarks, which is what makes the page
@@ -31,22 +35,32 @@ export function AppShell({
 
   return (
     <div className="app-shell">
-      <header>
-        <Link className="app-shell__brand" to="/trips">
-          {t('app.name')}
-        </Link>
-        <LocaleSwitch
-          onChange={(locale) => {
-            // Signed in, the choice is stored on the owner rather than only in
-            // this browser, so the language survives a new one (R01).
-            if (isLocale(locale)) {
-              void session.persistLocale(locale)
-            }
-          }}
-        />
-        <button type="button" onClick={() => void session.signOut()}>
-          {t('nav.signOut')}
-        </button>
+      {/* The frosted sticky band. Full-bleed, with its contents on the same
+          centred measure as the canvas below — see `styles/chrome.css`. */}
+      <header className="app-header">
+        <div className="app-header__inner">
+          <Link className="app-header__brand" to="/trips">
+            {t('app.name')}
+          </Link>
+          <div className="app-header__controls">
+            <LocaleSwitch
+              onChange={(locale) => {
+                // Signed in, the choice is stored on the owner rather than only
+                // in this browser, so the language survives a new one (R01).
+                if (isLocale(locale)) {
+                  void session.persistLocale(locale)
+                }
+              }}
+            />
+            <button
+              type="button"
+              className="button-quiet"
+              onClick={() => void session.signOut()}
+            >
+              {t('nav.signOut')}
+            </button>
+          </div>
+        </div>
       </header>
 
       <main>

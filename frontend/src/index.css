@@ -11,10 +11,9 @@
  *   components  buttons, fields, chips, cards, rows, dialogs, previews
  *   screens     the login card, the trip list, the timeline, the day detail
  *
- * `chrome.css` is not written yet: Phase 3 (step 13) creates it and slots its
- * `@import` between `base` and `components`, exactly there — the chrome frames
- * the page, so a component recipe must be able to override it, and a screen
- * must be able to override both.
+ * `chrome.css` sits between `base` and `components`, exactly there — the chrome
+ * frames the page, so a component recipe must be able to override it, and a
+ * screen must be able to override both.
  *
  * Vite inlines `@import` at build time, so the shipped bundle is still one
  * stylesheet; the imports have to stay the first statements in the file for the
@@ -22,5 +21,6 @@
  */
 @import './styles/tokens.css';
 @import './styles/base.css';
+@import './styles/chrome.css';
 @import './styles/components.css';
 @import './styles/screens.css';

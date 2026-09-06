@@ -166,63 +166,14 @@ textarea:disabled {
   font-size: 0.875rem;
 }
 
-/* --- the authenticated shell --- */
-
-.app-shell {
-  min-height: 100dvh;
-  padding: var(--space-lg);
-}
-
-.app-shell > header {
-  display: flex;
-  align-items: center;
-  gap: var(--space-md);
-  margin-bottom: var(--space-lg);
-  padding-bottom: var(--space-md);
-  border-bottom: 1px solid var(--hairline);
-}
-
-/* SCOPE CORRECTION. This was `.app-shell button` — an element catch-all at
-   specificity (0,1,1), which outranks every `.button-*` class recipe (0,1,0)
-   and so repainted the primary action with the quiet fill on every
-   authenticated screen. `:not([class])` narrows it to the one unclassed button
-   in the shell (sign-out), so the two rule sets no longer overlap at all and
-   the recipes below can be seen. Phase 3 (step 13) rebuilds the header in
-   `chrome.css` and gives that button a class of its own. */
-.app-shell button:not([class]) {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 40px;
-  padding: var(--space-xs) var(--space-md);
-  border: 1px solid var(--hairline);
-  border-radius: var(--radius);
-  background: transparent;
-  color: var(--primary);
-  font: var(--type-label-lg);
-  letter-spacing: var(--tracking-label-lg);
-  cursor: pointer;
-}
-
-.app-shell button:not([class]):hover {
-  background: var(--surface-sunken);
-}
-
-/* --- shared authenticated chrome --- */
-
-.app-shell__brand {
-  margin-right: auto;
-  font-size: 1.125rem;
-  font-weight: 700;
-  color: inherit;
-  text-decoration: none;
-  letter-spacing: -0.01em;
-}
-
-.app-shell main {
-  width: min(56rem, 100%);
-  margin-inline: auto;
-}
+/* --- the authenticated shell ---
+ *
+ * The shell, the header and the canvas moved to `chrome.css` in step 13, which
+ * is also where the last unclassed button in the app went: sign-out now wears
+ * the `.button-quiet` recipe below, so the `.app-shell button:not([class])`
+ * catch-all that used to live here has no subject left and is gone. Only the
+ * page heading — a block a screen composes rather than a frame around it —
+ * stays in the component layer. */
 
 .page-heading {
   display: flex;
@@ -337,8 +288,7 @@ textarea:disabled {
 @media (prefers-reduced-motion: no-preference) {
   .button-primary,
   .button-quiet,
-  .button-danger,
-  .app-shell button:not([class]) {
+  .button-danger {
     transition:
       background-color 150ms ease,
       border-color 150ms ease,
