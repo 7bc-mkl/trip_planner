@@ -23,11 +23,23 @@ export function AppShell({
   title,
   breadcrumb,
   actions,
+  context,
   children,
 }: {
   title: string
   breadcrumb?: ReactNode
   actions?: ReactNode
+  /**
+   * The trip a trip-scoped route is showing, named in the header between the
+   * wordmark and the controls: the title and its date range, truncated to one
+   * line.
+   *
+   * It is the export's trip picker without being a picker — there is one trip
+   * in view and `/trips` is one click away — so it is **text, not a control**,
+   * and it is optional: a screen that is not about one trip passes nothing and
+   * the header is exactly what it was.
+   */
+  context?: ReactNode
   children: ReactNode
 }) {
   const { t } = useTranslation()
@@ -42,6 +54,7 @@ export function AppShell({
           <Link className="app-header__brand" to="/trips">
             {t('app.name')}
           </Link>
+          {context !== undefined && <p className="app-header__context">{context}</p>}
           <div className="app-header__controls">
             <LocaleSwitch
               onChange={(locale) => {

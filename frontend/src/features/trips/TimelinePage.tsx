@@ -92,6 +92,13 @@ export function TimelinePage() {
   return (
     <AppShell
       title={trip.title}
+      // The header's trip context line. Both halves go through the locale — the
+      // dates through `Intl`, the join through ICU — rather than being glued
+      // together here with a separator this file invented.
+      context={t('trip.headerContext', {
+        title: trip.title,
+        dates: formatDateRange(trip.start_date, trip.end_date, i18n.language),
+      })}
       breadcrumb={
         <nav aria-label={t('nav.breadcrumb')} className="breadcrumb">
           <Link to="/trips">{t('trips.title')}</Link>

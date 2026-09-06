@@ -28,7 +28,8 @@
     "delete": "Delete trip",
     "deleteTitle": "Delete this trip?",
     "deleteMessage": "“{title}” and everything planned in it — every destination, every day and every item — will be deleted. This cannot be undone.",
-    "deleteConfirm": "Delete trip"
+    "deleteConfirm": "Delete trip",
+    "headerContext": "{title} · {dates}"
   },
   "trips": {
     "title": "Trips",

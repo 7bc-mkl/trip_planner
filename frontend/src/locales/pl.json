@@ -28,7 +28,8 @@
     "delete": "Usuń podróż",
     "deleteTitle": "Usunąć tę podróż?",
     "deleteMessage": "„{title}” i wszystko, co w niej zaplanowano — każdy cel, każdy dzień i każdy element — zostanie usunięte. Tej operacji nie można cofnąć.",
-    "deleteConfirm": "Usuń podróż"
+    "deleteConfirm": "Usuń podróż",
+    "headerContext": "{title} · {dates}"
   },
   "trips": {
     "title": "Podróże",

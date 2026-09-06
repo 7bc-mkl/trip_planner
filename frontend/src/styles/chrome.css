@@ -81,6 +81,39 @@
   text-decoration: none;
 }
 
+/*
+ * The trip context line: the trip title and its date range, on trip-scoped
+ * routes only.
+ *
+ * ONE LINE, ALWAYS. `min-width: 0` is the load-bearing declaration — without it
+ * a flex item refuses to shrink below its content and a long title pushes the
+ * controls off the band instead of ellipsing. A 120-character title therefore
+ * truncates; it never wraps and never grows the header past
+ * `--header-height`.
+ *
+ * Hidden below 768px rather than truncated to nothing: on a 360px band the
+ * wordmark, the locale switch and sign-out already own every pixel, and on both
+ * trip-scoped routes the same trip is named in the page's own `<h1>` a few
+ * hundred pixels below.
+ */
+.app-header__context {
+  display: none;
+  margin: 0;
+}
+
+@media (min-width: 768px) {
+  .app-header__context {
+    display: block;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    color: var(--text-muted);
+    font: var(--type-body-sm);
+    letter-spacing: var(--tracking-body-sm);
+  }
+}
+
 /* Controls grouped right: the locale switch (R01) and sign-out. The export's
    four-tab nav is not adopted (Q4), so there is nothing between them. */
 .app-header__controls {

@@ -5,10 +5,12 @@ import { Link, useParams } from 'react-router-dom'
 import { ApiError } from '../../api/client'
 import { createItem, deleteItem, fetchDay, updateItem } from '../../api/items'
 import type { DayDetail, Item, ItemInput } from '../../api/items'
+import { fetchTrip } from '../../api/trips'
+import type { TripSummary } from '../../api/trips'
 import { AppShell } from './AppShell'
 import { ItemDialog } from './ItemDialog'
 import { ItemRow } from './ItemRow'
-import { formatDate, stageLabel } from './format'
+import { formatDate, formatDateRange, stageLabel } from './format'
 
 /**
  * `/trips/:tripId/days/:date` — the day detail.
@@ -71,6 +73,27 @@ export function DayDetailPage() {
     return () => controller.abort()
   }, [load])
 
+  /**
+   * The trip this day belongs to, for the header's context line only.
+   *
+   * The day endpoint answers with `trip_id` and nothing else about the trip, so
+   * the title and the date range have to be read separately. Deliberately
+   * best-effort: a failure here leaves the context line absent and changes
+   * nothing else on the screen, because naming the trip in the header must
+   * never be a reason a day fails to render.
+   */
+  const [tripSummary, setTripSummary] = useState<TripSummary | null>(null)
+
+  useEffect(() => {
+    const controller = new AbortController()
+    if (tripId !== undefined) {
+      fetchTrip(tripId, controller.signal)
+        .then((fresh) => setTripSummary(fresh))
+        .catch(() => setTripSummary(null))
+    }
+    return () => controller.abort()
+  }, [tripId])
+
   // Anything loaded for another date is not this screen's data.
   const current = loaded.date === date ? loaded : null
   const day = current?.day ?? null
@@ -120,6 +143,18 @@ export function DayDetailPage() {
   return (
     <AppShell
       title={formatDate(day.date, i18n.language)}
+      context={
+        tripSummary === null
+          ? undefined
+          : t('trip.headerContext', {
+              title: tripSummary.title,
+              dates: formatDateRange(
+                tripSummary.start_date,
+                tripSummary.end_date,
+                i18n.language,
+              ),
+            })
+      }
       breadcrumb={
         <nav aria-label={t('nav.breadcrumb')} className="breadcrumb">
           <Link to="/trips">{t('trips.title')}</Link>
