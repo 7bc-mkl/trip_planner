@@ -3,6 +3,10 @@
 Phase 1 of the walking skeleton: the owner, their sessions, and the login-attempt
 log the rate limiter counts. Phase 2 adds the trip, its ordered stages and the
 generated days; Phase 3 adds the items that hang off a day.
+
+The attachments slice adds three more: `attachment` (metadata), `attachment_blob`
+(the bytes, split off so a listing cannot read them by accident) and
+`upload_event` (the upload limiter's storage, shaped after `login_attempt`).
 """
 
 from __future__ import annotations
@@ -12,6 +16,7 @@ from datetime import date as date_type
 from datetime import datetime, time
 
 from sqlalchemy import (
+    CHAR,
     BigInteger,
     CheckConstraint,
     Date,
@@ -19,6 +24,7 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Integer,
+    LargeBinary,
     String,
     Text,
     Time,
@@ -33,8 +39,12 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from trip_planner.db.base import Base
 
 __all__ = [
+    "ATTACHMENT_CONTENT_TYPES",
     "ITEM_KINDS",
     "ITEM_STATUSES",
+    "MAX_ATTACHMENT_BYTES",
+    "Attachment",
+    "AttachmentBlob",
     "Item",
     "LoginAttempt",
     "Owner",
@@ -42,12 +52,25 @@ __all__ = [
     "Trip",
     "TripDay",
     "TripStage",
+    "UploadEvent",
     "normalise_email",
     "normalise_place",
 ]
 
 #: The five item types the filter bar's chips are built from.
 ITEM_KINDS = ("accommodation", "transport", "activity", "meal", "other")
+
+#: The only three types the bytes of an upload are allowed to turn out to be.
+#:
+#: This is the *derived* type — what sniffing the file's own header concluded —
+#: never the `Content-Type` the client claimed. A constraint over a tuple the
+#: sniffer also reads is what keeps "what we accept" and "what we can store" one
+#: fact rather than two that drift.
+ATTACHMENT_CONTENT_TYPES = ("application/pdf", "image/jpeg", "image/png")
+
+#: 10 MiB, the per-file cap (A4). Enforced before the body is read *and* here, so
+#: a write path that skips the endpoint still cannot store a larger file.
+MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024
 
 #: The three statuses R02 and D05 fix, in the order they progress.
 #:
@@ -353,6 +376,11 @@ class TripDay(Base):
         cascade="all, delete-orphan",
         order_by="Item.position",
     )
+    attachments: Mapped[list[Attachment]] = relationship(
+        back_populates="trip_day",
+        cascade="all, delete-orphan",
+        order_by="Attachment.created_at",
+    )
 
     def __repr__(self) -> str:
         return f"<TripDay id={self.id!r} date={self.date!r}>"
@@ -426,6 +454,169 @@ class Item(Base):
     )
 
     trip_day: Mapped[TripDay] = relationship(back_populates="items")
+    attachments: Mapped[list[Attachment]] = relationship(
+        back_populates="item",
+        cascade="all, delete-orphan",
+        order_by="Attachment.created_at",
+    )
 
     def __repr__(self) -> str:
         return f"<Item id={self.id!r} kind={self.kind!r} status={self.status!r}>"
+
+
+class Attachment(Base):
+    """A file pinned to exactly one parent — a day, or an item on that day.
+
+    **One table with two nullable foreign keys**, not two tables and not a
+    polymorphic `(parent_type, parent_id)` pair. Two tables would duplicate every
+    column, constraint, index and endpoint, and would owe a `UNION` the first time
+    anything asks for "this trip's documents". A polymorphic key would buy the
+    same single table by giving up referential integrity — no cascade, and a
+    dangling parent becomes representable. Two real foreign keys keep the database
+    doing the deleting, and the `CHECK` below makes both "no parent" and "two
+    parents" states the database will not hold.
+
+    **There is deliberately no `trip_id`.** It would be a convenience for scoping
+    and a denormalisation that can drift; the parent chain (`item → trip_day →
+    trip`, or `trip_day → trip`) already answers it exactly, and ownership is
+    enforced one hop up by `get_owned_trip`. A trip-level attachment, if it is
+    ever wanted, arrives as a nullable `trip_id` plus a widened `CHECK` — an
+    ordinary additive migration rather than something to guess at now.
+
+    `content_type` is **derived from the bytes**, never copied from the request,
+    and the CHECK is what makes that structural: a write path that trusted the
+    client's header could still only store one of three types.
+
+    `sha256` is indexed but **not unique** — the same voucher attached to two days
+    is two attachments, and refusing the second would be a rule nobody asked for
+    (A14 asks only for a hint).
+    """
+
+    __tablename__ = "attachment"
+    __table_args__ = (
+        # Exactly one parent, always. `<>` on two booleans is XOR in PostgreSQL.
+        CheckConstraint(
+            "(item_id IS NULL) <> (trip_day_id IS NULL)",
+            name="ck_attachment_exactly_one_parent",
+        ),
+        CheckConstraint(
+            _in_list("content_type", ATTACHMENT_CONTENT_TYPES),
+            name="ck_attachment_content_type",
+        ),
+        CheckConstraint(
+            f"byte_size > 0 AND byte_size <= {MAX_ATTACHMENT_BYTES}",
+            name="ck_attachment_byte_size",
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        PgUUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    item_id: Mapped[uuid.UUID | None] = mapped_column(
+        PgUUID(as_uuid=True),
+        ForeignKey("item.id", ondelete="CASCADE"),
+        nullable=True,
+        index=True,
+    )
+    trip_day_id: Mapped[uuid.UUID | None] = mapped_column(
+        PgUUID(as_uuid=True),
+        ForeignKey("trip_day.id", ondelete="CASCADE"),
+        nullable=True,
+        index=True,
+    )
+    #: The display name only, normalised on write. It never reaches a filesystem,
+    #: a path, a shell or a storage key — the primary key is the storage identity.
+    filename: Mapped[str] = mapped_column(Text, nullable=False)
+    content_type: Mapped[str] = mapped_column(Text, nullable=False)
+    #: The true length of what was stored, counted while reading the body.
+    byte_size: Mapped[int] = mapped_column(Integer, nullable=False)
+    sha256: Mapped[str] = mapped_column(CHAR(64), nullable=False, index=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+    item: Mapped[Item | None] = relationship(back_populates="attachments")
+    trip_day: Mapped[TripDay | None] = relationship(back_populates="attachments")
+    blob: Mapped[AttachmentBlob] = relationship(
+        back_populates="attachment",
+        cascade="all, delete-orphan",
+        single_parent=True,
+        uselist=False,
+    )
+
+    def __repr__(self) -> str:
+        return (
+            f"<Attachment id={self.id!r} filename={self.filename!r} "
+            f"content_type={self.content_type!r}>"
+        )
+
+
+class AttachmentBlob(Base):
+    """The file's bytes, in a table of their own.
+
+    Split from the metadata for one reason, and it is not tidiness: with the bytes
+    in the same row, rendering a day of six photos would read sixty megabytes to
+    display six filenames, and nothing in SQLAlchemy stops an ordinary
+    `SELECT`-the-whole-row from doing it. A `deferred()` loader option would be a
+    rule that can be forgotten at one call site; a separate table makes the
+    mistake unrepresentable. Postgres TOASTs a large `BYTEA` out of line anyway,
+    so the split costs no storage.
+
+    The primary key **is** the foreign key: one blob per attachment, enforced by
+    the schema rather than by convention. `ON DELETE CASCADE` from `attachment`,
+    which cascades from `item` / `trip_day`, which cascade from `trip` — so
+    deleting a trip deletes its files transactionally, with no sweeper and no
+    eventual consistency to get wrong.
+    """
+
+    __tablename__ = "attachment_blob"
+
+    attachment_id: Mapped[uuid.UUID] = mapped_column(
+        PgUUID(as_uuid=True),
+        ForeignKey("attachment.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    data: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+
+    attachment: Mapped[Attachment] = relationship(back_populates="blob")
+
+    def __repr__(self) -> str:
+        """Excludes `data`: a repr of ten megabytes helps nobody and logs badly."""
+        return f"<AttachmentBlob attachment_id={self.attachment_id!r}>"
+
+
+class UploadEvent(Base):
+    """The upload limiter's storage — `LoginAttempt`'s pattern, for an authenticated caller.
+
+    A separate table rather than a widened `login_attempt` because the two are
+    keyed on different things: `login_attempt` counts a normalised e-mail and a
+    source address for an endpoint with no user yet, this counts an owner who is
+    already signed in. Merging them would mean nullable columns on both halves and
+    a discriminator to tell them apart, and would change a shipped table's meaning
+    to save one `CREATE TABLE`.
+
+    In Postgres rather than process memory for the same reason as there: a
+    deployment runs more than one worker, so an in-process counter would be
+    decorative. Rows outside the window are deleted on each check; there is still
+    no scheduler.
+
+    `byte_size` is carried so the volume window (megabytes per hour) is a `SUM`
+    over the same rows the rate window (uploads per ten minutes) counts.
+    """
+
+    __tablename__ = "upload_event"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    owner_id: Mapped[uuid.UUID] = mapped_column(
+        PgUUID(as_uuid=True),
+        ForeignKey("owner.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    occurred_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now(), index=True
+    )
+    byte_size: Mapped[int] = mapped_column(Integer, nullable=False)
+
+    def __repr__(self) -> str:
+        return f"<UploadEvent id={self.id!r} owner_id={self.owner_id!r} at={self.occurred_at!r}>"

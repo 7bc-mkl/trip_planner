@@ -35,6 +35,34 @@ def test_downgrade_to_base_and_back_up_succeeds(alembic_config: Config, engine: 
     assert _current_revision(engine) == head
 
 
+def test_the_attachment_revision_round_trips_on_its_own(
+    alembic_config: Config, engine: sa.Engine
+) -> None:
+    """`0005_attachment` must be reversible without taking the walking skeleton with it.
+
+    The whole-chain test above would still pass if this revision's downgrade
+    dropped its tables in an order PostgreSQL refuses, because a chain walked to
+    base drops everything anyway. Stepping down exactly one revision and back is
+    what proves the phase rolls back alone — which is the reason the reservation
+    columns are a separate revision in the first place.
+    """
+    head = _current_revision(engine)
+    inspector = sa.inspect(engine)
+    attachment_tables = {"attachment", "attachment_blob", "upload_event"}
+    assert attachment_tables <= set(inspector.get_table_names())
+
+    command.downgrade(alembic_config, "0004_item")
+    assert _current_revision(engine) == "0004_item"
+    remaining = set(sa.inspect(engine).get_table_names())
+    assert attachment_tables & remaining == set()
+    # The tables the earlier phases created are untouched.
+    assert {"owner", "trip", "trip_day", "item"} <= remaining
+
+    command.upgrade(alembic_config, "head")
+    assert _current_revision(engine) == head
+    assert attachment_tables <= set(sa.inspect(engine).get_table_names())
+
+
 def test_every_revision_defines_a_downgrade(alembic_config: Config) -> None:
     """A revision whose downgrade is missing breaks the phase-by-phase rollback story."""
     from alembic.script import ScriptDirectory
