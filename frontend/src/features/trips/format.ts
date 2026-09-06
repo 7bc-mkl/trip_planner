@@ -184,6 +184,59 @@ export function splitByteSize(bytes: number): { value: number; unit: ByteSizeUni
 }
 
 /**
+ * ISO 4217's shape, mirroring `CURRENCY_CODE_PATTERN` in
+ * `backend/trip_planner/domain/money.py`: three upper-case letters, nothing
+ * else. Not an allow-list — the server deliberately keeps none, and a second,
+ * stricter list on this side would refuse costs the API happily accepts.
+ */
+export const CURRENCY_CODE_PATTERN = /^[A-Z]{3}$/u
+
+/**
+ * The wire shape of a cost amount, mirroring the server's rules for one
+ * (`validate_cost`): digits, no sign, at most two decimal places. `0` and
+ * `0.00` both match — a free museum day is a real cost of zero, not an absent
+ * one — while `-1` and `1.234` both fail, which is exactly the `422
+ * invalid_cost` the spec's Edge Cases table names.
+ */
+export const COST_AMOUNT_PATTERN = /^\d+(\.\d{1,2})?$/u
+
+/**
+ * A typed amount, normalised into the decimal string the wire takes.
+ *
+ * **The comma is a decimal separator here.** This is a Polish-first product
+ * (R01, R09) and `249,50` is how a Polish keyboard writes two hundred
+ * forty-nine fifty; `NUMERIC(12,2)` and `domain/money.py` take `249.50`.
+ * Translating between the two is this function's whole job, done once on the
+ * way to the wire rather than at each of the places an amount is read.
+ *
+ * Three things are normalised, and no more:
+ *
+ * - **Whitespace anywhere is dropped**, which covers a leading or trailing
+ *   space and the group separator in `1 250,50` — including the
+ *   *non-breaking* space `Intl` itself renders under `pl`, since `\s` under
+ *   the `u` flag matches it. So this reads back what `formatCurrency` prints.
+ * - **Every comma becomes a dot.** A second comma then leaves two dots, which
+ *   `COST_AMOUNT_PATTERN` refuses — `1,250,50` is reported as invalid rather
+ *   than guessed at.
+ * - **A trailing separator is dropped**, so the half-typed `249,` reads as
+ *   `249` instead of flashing an error message between two keystrokes.
+ *
+ * **Deliberately not handled**, because this is not a locale-aware number
+ * parser and must not grow into one: the English grouping style `1,250.50`
+ * (whose comma this reads as a decimal separator, so it is refused rather
+ * than silently misread by a factor of a thousand); a leading `+`; a currency
+ * symbol or code typed into the amount box; non-ASCII digits; scientific
+ * notation. Each of those fails `COST_AMOUNT_PATTERN`, which marks the field
+ * rather than sending the server a guess.
+ */
+export function normaliseAmount(amount: string): string {
+  return amount
+    .replace(/\s/gu, '')
+    .replace(/,/gu, '.')
+    .replace(/\.$/u, '')
+}
+
+/**
  * A stored reservation cost, rendered as money through **one**
  * `Intl.NumberFormat` call — the spec's cross-cutting rule that a currency
  * goes through `Intl`, never through concatenation. `amount` arrives as the
@@ -205,11 +258,34 @@ export function splitByteSize(bytes: number): { value: number; unit: ByteSizeUni
  * example fail to reproduce on the very Node/ICU build this runs on.
  * `'always'` is the one option that turns grouping back on without
  * hand-rolling the separator.
+ *
+ * **It never renders `NaN`, and never throws.** `Number('')` is `0` and
+ * `Number('abc')` is `NaN`, so an unguarded call used to put a literal
+ * `NaN €` on the screen the moment a Polish user typed the Polish decimal
+ * comma (Step 3.4-review-fix-2), and a currency of `P` — two keystrokes into
+ * `PLN` — makes `Intl.NumberFormat` throw a `RangeError` outright. An amount
+ * that is empty or does not parse, or a currency that is not ISO-4217 shaped,
+ * therefore renders **nothing at all**: an empty string is the honest answer
+ * where a rounded guess or the word `NaN` would be a lie about the user's
+ * money. The caller decides what to do with nothing — `ReservationPanel`
+ * renders no cost element at all, which is also what its no-nagging
+ * invariant requires.
+ *
+ * The comma is normalised here as well as in `reservationInput`, so a live
+ * draft value and a saved wire value both render the same way through the
+ * same call.
  */
 export function formatCurrency(amount: string, currency: string, locale: string): string {
+  const normalised = normaliseAmount(amount)
+  const value = Number(normalised)
+
+  if (normalised === '' || !Number.isFinite(value) || !CURRENCY_CODE_PATTERN.test(currency)) {
+    return ''
+  }
+
   return new Intl.NumberFormat(locale, {
     style: 'currency',
     currency,
     useGrouping: 'always',
-  }).format(Number(amount))
+  }).format(value)
 }

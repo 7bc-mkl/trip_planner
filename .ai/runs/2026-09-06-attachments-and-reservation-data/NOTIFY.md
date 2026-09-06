@@ -395,3 +395,32 @@ without ever appearing twice, and both read the same `upload.duplicateHint` key.
 
 Nothing about A14's substance moved: nothing is deduplicated, nothing is refused, both copies are
 stored and listed, and the hint carries no `role="alert"`, no undo and no dismissal.
+
+## Step 3.4-review-fix-2 — three decisions inside the cost input
+
+**The comma is normalised, the English grouping style is not.** `normaliseAmount` (`format.ts`)
+strips whitespace — which also covers the group separator in `1 250,50`, including the non-breaking
+one `Intl` itself prints — turns every comma into a dot, and drops a trailing separator so a
+half-typed `249,` is not an error between two keystrokes. It deliberately stops there: `1,250.50`
+(the English grouping style), a leading `+`, a currency symbol typed into the amount box, non-ASCII
+digits and scientific notation are all **refused** rather than guessed at. Reading `1,250.50` as a
+decimal comma would send the server a number a thousand times too small; failing the wire pattern
+marks the field instead. This is not, and must not become, a locale-aware number parser.
+
+**`formatCurrency` renders nothing rather than a lie.** An empty or unparseable amount, or a
+currency that is not ISO-4217 shaped, now yields `''` — no `NaN`, and no `RangeError` either
+(`new Intl.NumberFormat('pl', { currency: 'P' })` throws, and `P` is two keystrokes into typing
+`PLN`, so the old code could crash the editor). The collapsed summary renders no cost element at
+all for those values, which is also what the no-nagging invariant wants.
+
+**A cost the server would refuse now blocks the save on the client — a widening worth naming.**
+Invariant 1 says no reservation field is ever *required*; it does not say a typed value that
+`domain/money.py` would answer with `422 invalid_cost` must be sent anyway. An empty cost is still
+never marked and never blocks anything, and the ordinary Save is untouched. What changed is that a
+malformed **pair that would actually be transmitted** (both halves non-blank, the same `hasCost`
+rule `reservationInput` uses) marks its own half with `aria-invalid` + `aria-describedby` pointing
+at the translated `error.invalid_cost` message, and disables Save until it is fixed — the same
+computed-message-under-the-field pattern `TripCreatePage` uses for a stage outside the trip, and the
+same string the server's own 422 maps to. A malformed half beside a blank one is *not* marked: it is
+dropped rather than sent, so complaining about it would be a complaint about a value the server
+never sees. That is what replaces "Sprawdź zaznaczone pola" with nothing marked.

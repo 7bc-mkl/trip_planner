@@ -47,7 +47,7 @@
 | 4 | 4.3 | The non-blocking duplicate hint | dispatch:cheap | done | `3c17e05` |
 | 1 | 1.6-review-fix-1 | Concurrent uploads must not block the event loop | dispatch:capable | done | `f560efd` |
 | 4 | 4.3-review-fix-1 | The duplicate hint actually renders instead of being retired first | dispatch:capable | done | `78b1538` |
-| 3 | 3.4-review-fix-2 | A comma decimal is accepted, and a rejected field is actually marked | dispatch:capable | todo | — |
+| 3 | 3.4-review-fix-2 | A comma decimal is accepted, and a rejected field is actually marked | dispatch:capable | done | `f14f8db` |
 
 ## Goal
 

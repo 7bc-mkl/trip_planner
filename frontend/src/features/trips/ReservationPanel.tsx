@@ -1,6 +1,11 @@
 import { useTranslation } from 'react-i18next'
 
-import { formatCurrency } from './format'
+import {
+  COST_AMOUNT_PATTERN,
+  CURRENCY_CODE_PATTERN,
+  formatCurrency,
+  normaliseAmount,
+} from './format'
 
 /**
  * The three reservation fields, exactly as they live flattened on `ItemDraft`.
@@ -47,7 +52,11 @@ export function reservationInput(value: ReservationValue): {
   cost_amount: string | null
   cost_currency: string | null
 } {
-  const amount = value.costAmount.trim()
+  // `normaliseAmount` rather than `trim`: the Polish decimal comma has to
+  // become the wire's dot here, at the one point the draft turns into a
+  // request body, or `249,50` reaches a `NUMERIC(12,2)` as a string it cannot
+  // parse. See that function for what it deliberately does not translate.
+  const amount = normaliseAmount(value.costAmount)
   const currency = value.costCurrency.trim()
   const hasCost = amount !== '' && currency !== ''
 
@@ -56,6 +65,58 @@ export function reservationInput(value: ReservationValue): {
     cost_amount: hasCost ? amount : null,
     cost_currency: hasCost ? currency : null,
   }
+}
+
+/**
+ * The id of the one field-level cost message, shared by both halves of the
+ * pair through `aria-describedby`. A module constant rather than a `useId`
+ * because every other control in this panel already carries a fixed id
+ * (`item-cost-amount`, `item-cost-currency`) that its `<label>` points at,
+ * and one dialog is on screen at a time.
+ */
+const COST_ERROR_ID = 'item-cost-error'
+
+/**
+ * Which half of the cost the app would be refused on — the client side of
+ * `422 invalid_cost`.
+ *
+ * The same rules `domain/money.py` applies (`COST_AMOUNT_PATTERN` and
+ * `CURRENCY_CODE_PATTERN` mirror it directly), checked here so the user is
+ * told *which box* to fix while they are still looking at it. Before this,
+ * a bad amount produced the server's generic "check the marked fields" with
+ * nothing marked anywhere: a dead end and an accessibility failure at once.
+ *
+ * **Judged only on a pair that would actually be sent** — the same `hasCost`
+ * rule `reservationInput` above uses. A malformed half beside a blank one is
+ * dropped rather than transmitted, so complaining about it would be a
+ * complaint about a value the server will never see: that is the nagging
+ * invariant 4 rules out, and it would also fire on the ordinary way through
+ * `PLN` (`P`, then `PL`) while the amount box is still empty.
+ *
+ * An empty pair is never an error. No reservation field is ever required
+ * (invariant 1) and this does not make one required by the back door.
+ */
+export function costFieldErrors(value: ReservationValue): {
+  amount: boolean
+  currency: boolean
+} {
+  const amount = normaliseAmount(value.costAmount)
+  const currency = value.costCurrency.trim()
+
+  if (amount === '' || currency === '') {
+    return { amount: false, currency: false }
+  }
+
+  return {
+    amount: !COST_AMOUNT_PATTERN.test(amount),
+    currency: !CURRENCY_CODE_PATTERN.test(currency),
+  }
+}
+
+/** Whether a save must be refused because the cost pair cannot be saved. */
+export function hasCostError(value: ReservationValue): boolean {
+  const errors = costFieldErrors(value)
+  return errors.amount || errors.currency
 }
 
 /**
@@ -107,6 +168,15 @@ export function reservationInput(value: ReservationValue): {
  * about what counts as "a cost". Nothing renders when there is none: no
  * placeholder, no dash, no "not set" — invariant 4 above forbids a marker keyed
  * on an *empty* field, and a muted "no cost yet" would be exactly that.
+ *
+ * **A refused cost marks the box it is about (Step 3.4-review-fix-2).** The
+ * two cost inputs take `aria-invalid` and an `aria-describedby` pointing at a
+ * single translated `error.invalid_cost` message, on exactly the halves
+ * `costFieldErrors` refuses. This does not weaken invariant 1: an empty field
+ * is never marked and never blocks anything; only a value the user actually
+ * typed, which the server would answer with `422 invalid_cost`, is. The
+ * collapsed summary goes quiet for the same values rather than rendering a
+ * rounded guess of an amount that cannot be saved.
  */
 export function ReservationPanel({
   value,
@@ -117,19 +187,20 @@ export function ReservationPanel({
 }) {
   const { t, i18n } = useTranslation()
 
-  const trimmedAmount = value.costAmount.trim()
+  const trimmedAmount = normaliseAmount(value.costAmount)
   const trimmedCurrency = value.costCurrency.trim()
   const hasCost = trimmedAmount !== '' && trimmedCurrency !== ''
+  const errors = costFieldErrors(value)
+  const formattedCost =
+    hasCost && !errors.amount && !errors.currency
+      ? formatCurrency(trimmedAmount, trimmedCurrency, i18n.language)
+      : ''
 
   return (
     <details className="reservation-panel">
       <summary className="reservation-panel__summary">
         {t('item.reservation.heading')}
-        {hasCost && (
-          <span className="reservation-panel__cost">
-            {formatCurrency(trimmedAmount, trimmedCurrency, i18n.language)}
-          </span>
-        )}
+        {formattedCost !== '' && <span className="reservation-panel__cost">{formattedCost}</span>}
       </summary>
 
       <div className="reservation-panel__body">
@@ -145,10 +216,16 @@ export function ReservationPanel({
         <div className="field-row">
           <div>
             <label htmlFor="item-cost-amount">{t('item.reservation.costLabel')}</label>
+            {/* `aria-invalid` and `aria-describedby` are set only while the
+                field is actually refused, never as a permanent attribute: an
+                untouched, empty cost box is valid, and announcing it as
+                invalid would make an optional field sound required. */}
             <input
               id="item-cost-amount"
               inputMode="decimal"
               value={value.costAmount}
+              aria-invalid={errors.amount ? true : undefined}
+              aria-describedby={errors.amount ? COST_ERROR_ID : undefined}
               onChange={(event) => onChange({ ...value, costAmount: event.target.value })}
             />
           </div>
@@ -158,12 +235,28 @@ export function ReservationPanel({
               id="item-cost-currency"
               value={value.costCurrency}
               maxLength={3}
+              aria-invalid={errors.currency ? true : undefined}
+              aria-describedby={errors.currency ? COST_ERROR_ID : undefined}
               onChange={(event) =>
                 onChange({ ...value, costCurrency: event.target.value.toUpperCase() })
               }
             />
           </div>
         </div>
+
+        {/* The message the marked fields point at — the same
+            `<p role="alert">` beneath the offending field that
+            `TripCreatePage` renders for a stage whose dates fall outside the
+            trip, and the same `error.invalid_cost` string the server's own
+            422 maps to, so the client's refusal and the server's read
+            identically. One message for the pair, because the cost is one
+            fact in two boxes and `domain/money.py` refuses it with one
+            code. */}
+        {(errors.amount || errors.currency) && (
+          <p id={COST_ERROR_ID} role="alert">
+            {t('error.invalid_cost')}
+          </p>
+        )}
       </div>
     </details>
   )

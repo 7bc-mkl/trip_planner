@@ -10,7 +10,7 @@ import { clearDraft, readDraft, saveDraft } from '../auth/draftStore'
 import { ItemAttachments } from './ItemAttachments'
 import { draftKey, draftOf } from './itemDraft'
 import type { ItemDraft } from './itemDraft'
-import { ReservationPanel, reservationInput } from './ReservationPanel'
+import { ReservationPanel, hasCostError, reservationInput } from './ReservationPanel'
 import { STATUS_GLYPH } from './statusGlyph'
 
 /**
@@ -139,9 +139,24 @@ export function ItemDialog({
     }
   }
 
+  /**
+   * A cost the server would answer with `422 invalid_cost` — a comma-decimal
+   * amount is *not* one of these, it is normalised on the way to the wire.
+   * Blocking here rather than sending it is what lets `ReservationPanel` mark
+   * the offending box: the alternative was the server's generic "check the
+   * marked fields" with nothing marked (Step 3.4-review-fix-2).
+   *
+   * Applied on a create too, even though a create sends none of the trio: the
+   * panel marks the box from the same predicate, and a form that paints a
+   * field red while cheerfully saving is worse than one that asks for the two
+   * characters it cannot read. An empty cost is never invalid, so the
+   * ordinary create — which never opens this panel at all — is untouched.
+   */
+  const costInvalid = hasCostError(draft)
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (draft.title.trim() === '' || saving) {
+    if (draft.title.trim() === '' || costInvalid || saving) {
       return
     }
 
@@ -313,7 +328,7 @@ export function ItemDialog({
             <button
               type="submit"
               className="button-primary"
-              disabled={draft.title.trim() === '' || saving}
+              disabled={draft.title.trim() === '' || costInvalid || saving}
             >
               {saving ? t('item.saving') : t('item.save')}
             </button>
