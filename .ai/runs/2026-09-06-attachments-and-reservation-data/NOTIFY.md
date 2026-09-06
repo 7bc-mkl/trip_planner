@@ -160,3 +160,20 @@
 - Environment: `agent-browser` is not on `PATH` (cached binary used), and Chrome will not launch
   unless `TMPDIR` is `/tmp` — this worktree path exceeds Chromium's singleton-socket length limit.
 - Tasks-table SHAs for rows 2.1..2.5 reconciled to their post-amend values.
+
+## 2026-09-06T21:35:00Z — Step 2.8 is a no-op, and is recorded as one
+- Checked, at the moment the Step ran: `frontend/src/features/preview/` **does not exist**; a
+  repository-wide grep for `data-preview` and `PreviewNotice` returns **nothing**; there is no
+  census test. Only `features/auth/` and `features/trips/` exist under `features/`.
+- Therefore this feature had no inert preview surfaces to delete and no census number to update, and
+  Step 2.8 lands no code.
+- **Recorded rather than deleted, deliberately**, because the spec asks for exactly that: "If the
+  folder does not exist, this step is a no-op and is recorded as one — rather than deleted, so a
+  later reader knows the interaction was considered." The interaction was considered.
+- The background, for that later reader: the design-system spec's workstream B specified two of this
+  feature's surfaces as inert previews — the day-documents panel with a disabled file input, and the
+  collapsed reservation disclosure with three disabled fields — and its Phase 5 was cut by the owner
+  mid-run (PR #11). So this feature's UI is a **first build, not an activation**, and every surface
+  Phase 2 and Phase 3 create is new markup. Had workstream B shipped first, this Step would have
+  deleted those two `<PreviewNotice>` blocks, removed the `disabled` attributes and the
+  `data-preview` markers, and lowered that spec's census from four surfaces to two.
