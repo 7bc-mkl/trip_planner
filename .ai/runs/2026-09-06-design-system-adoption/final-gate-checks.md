@@ -86,7 +86,7 @@ Artifacts in `final-gate-artifacts/`. Per-phase sets are in `checkpoint-1..4-art
 | Check | Result |
 |---|---|
 | Five routes × two locales, 1440×1000 | ✅ 10 captures |
-| Timeline and day detail at 360×800, both locales | ✅ 4 captures — single column, no horizontal scrolling |
+| Timeline and day detail at 360×800, both locales | ✅ 4 captures — **after a correction**, see below |
 | **Polish diacritics at every weight in use** | ✅ `qa-diacritics-specimen.png` — `ą ć ę ł ń ó ś ź ż` and their capitals at 400/500/600/700/800, plus `display-lg` at 700 and `body-sm` at 400. Every glyph is in Plus Jakarta Sans's own forms: the ogonek on `ą`/`ę`, the stroke through `ł`, the acute on `ć ń ó ś ź`, the dot on `ż`. No per-glyph fallback — which is the silent failure the `latin-ext` subset exists to prevent, and the reason this capture is a specimen rather than a glance at a screen. |
 | `prefers-reduced-motion: reduce` | ✅ `qa-reduced-motion-timeline.png` — the timeline renders complete and correct with no transition, no hover scale, and the readiness ring at its final value. |
 | **Forced-colors / high-contrast** | ⚠️ **Could not run.** The configured browser provider (`agent-browser` v0.34.0) exposes `set media [dark\|light] [reduced-motion]` and no forced-colors emulation, and its CDP passthrough would need a WebSocket client the toolchain does not have. Noted rather than faked. The assertable half of the contract *is* covered by the suite: every status chip renders a translated text node and a glyph beside its `data-status` attribute, so nothing conveys status through a background or a shadow alone — Step 2.3 added two tests for exactly that, and they are in the 148. What remains unverified is the *rendering* under forced colors, which needs a human on a machine with high-contrast mode on. |
@@ -104,3 +104,33 @@ state for a PR that ships no preview surfaces.
 the contrast, token-completeness and bundle-size evidence is recorded above; the two checks
 that could not run are named with their reason, and the two that are `n/a` are `n/a` because
 the owner cut the phase that would have given them something to check.
+
+## Correction — this gate's own 360px check was too shallow
+
+The row above originally read *"✅ single column, no horizontal scrolling"*. Both halves were
+true and both missed the point: at 360px the timeline's item titles were breaking to roughly
+one character per line — `Petr / onas / Tow / ers / — / skyb / ridg / e` — in the very files
+this gate signed off. The authoritative code review caught it from these committed artifacts,
+and it landed as Step 4.9-review-fix.
+
+Recording it because the failure is instructive rather than embarrassing: a visual check that
+asks only "does it overflow" will pass a screen nobody can read. The question a 360px capture
+has to answer is "is this usable", and that needs a human or an agent to actually look at the
+image rather than tick a geometric property.
+
+## Post-review re-verification (after Steps 4.9 / 6.3 / 6.4-review-fix)
+
+The review's two majors and one of its minors were re-checked in Chrome against the fixes, not
+merely re-read:
+
+| Claim | Before | After |
+|---|---|---|
+| Header paints over the modal, its controls stay clickable | `overlay z=10, header z=20`; `elementFromPoint` at the header's right returned `BUTTON.button-quiet "Sign out"`, **outside** the overlay | `overlay z=30, header z=20`; the same probe returns `DIV.dialog-overlay`, **inside** the overlay |
+| 360px timeline title | broken per character | first title `230px × 24px`, one line, full text `WAW → KUL, LOT 7822 / MH 3` |
+| Sticky day anchor covered by the wrapped filter bar | bar measured **88px** at 768/800px against a token claiming 52px; anchor sticky and covered | token corrected to `3.5rem` (56px, the measured single-row height); anchor `static` at 768/800px where the bar wraps, `sticky` from 900px where it demonstrably fits |
+
+Gate after the fixes: all eight commands green, **149 frontend tests** (+1 — the layering
+contract now has a regression test that was proved to fail when the overlay is put back to 10).
+The screenshot sets in `final-gate-artifacts/` were re-captured after the fixes, with the
+hardened capture script that now reads the applied locale back and fails on a mismatch, waits
+on `document.fonts.ready`, and asserts an expected element per screen before shooting.
