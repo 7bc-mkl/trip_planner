@@ -44,7 +44,10 @@
     "emptyBody": "Create your first trip and its empty timeline, then fill it in day by day."
   },
   "tripCreate": {
+    "eyebrow": "Trip planning",
     "title": "New trip",
+    "subtitle": "Set the dates, the route and the destinations. The days are filled in afterwards, item by item.",
+    "dockTitle": "Trip at a glance",
     "titleLabel": "Trip name",
     "titlePlaceholder": "Malaysia, October 2026",
     "startDate": "Start date",

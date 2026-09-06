@@ -16,15 +16,15 @@
 /* --- elevation, for the screen-scoped cards ---------------------------
  *
  * The same recipe `.elevation-1` carries in `components.css`, said once here
- * for the four cards that belong to exactly one screen. It is repeated rather
- * than joined onto the component selector list because a screen name in the
- * component layer would undo the split this file exists for — and repeated
- * once, not four times.
+ * for the cards that belong to exactly one screen: the login card, a trip row,
+ * and the creator's grouped field cards. It is repeated rather than joined onto
+ * the component selector list because a screen name in the component layer
+ * would undo the split this file exists for — and repeated once, not per card.
  */
 
 .login form,
 .trip-list a,
-.trip-form {
+.field-card {
   border: 1px solid var(--hairline);
   border-radius: var(--radius-lg);
   background: var(--surface);
@@ -185,78 +185,304 @@
   text-align: right;
 }
 
-/* --- /trips/new --- */
+/* --- /trips/new — the multi-stop creator -----------------------------
+ *
+ * The export's creator layout: an eyebrow / headline-xl title / body-lg
+ * subtitle heading, grouped field cards with hairline separators instead of the
+ * bordered `fieldset` the skeleton drew, a segmented route-mode control painted
+ * on the existing radio group, numbered stage cards, and the form-completing
+ * action full-width in the deepest tone.
+ *
+ * The form itself is no longer a card. Its GROUPS are the cards — that is what
+ * "grouped field cards" means — so `.trip-form` is a column of them and the
+ * elevation recipe at the top of this file names `.field-card`.
+ */
+
+/* The eyebrow. It renders in the shell's above-the-heading slot, so it is
+   scoped by the screen it appears on rather than by that slot's name — the
+   timeline puts a breadcrumb in the same place and must not inherit this. */
+.page__canvas:has(> .trip-form) > .page-eyebrow {
+  margin: 0 0 var(--space-2xs);
+  color: var(--text-muted);
+  font: var(--type-label-md);
+  letter-spacing: var(--tracking-label-md);
+  text-transform: uppercase;
+}
+
+/* The title at its full `headline-xl` size: `base.css` already binds `h1` to
+   that role, and this undoes the component layer's 1.75rem cap for this screen
+   only — the same `:has()` scoping the trip banner uses, and for the same
+   reason: the shell has no screen-specific hook and a paint job does not earn a
+   new prop. */
+.page__canvas:has(> .trip-form) > .page-heading {
+  margin-bottom: var(--space-xs);
+}
+
+.page__canvas:has(> .trip-form) > .page-heading h1 {
+  font: var(--type-headline-xl);
+  letter-spacing: var(--tracking-headline-xl);
+}
+
+.trip-form__subtitle {
+  margin: 0 0 var(--space-lg);
+  max-width: 46rem;
+  color: var(--text-muted);
+  font: var(--type-body-lg);
+  letter-spacing: var(--tracking-body-lg);
+}
 
 .trip-form {
   display: flex;
   flex-direction: column;
-  gap: var(--space-sm);
+  gap: var(--space-md);
+}
+
+/* The group. Its surface, border, radius and shadow are elevation-1's, at the
+   top of this file. */
+.field-card {
+  margin: 0;
   padding: var(--space-lg);
 }
 
+/* `fieldset` needs its user-agent minimum width defeated, or a long stage
+   field inside one refuses to shrink below its content. */
+fieldset.field-card {
+  min-width: 0;
+}
+
+.field-card legend {
+  padding: 0;
+  margin-bottom: var(--space-sm);
+  color: var(--text-muted);
+  font: var(--type-label-md);
+  letter-spacing: var(--tracking-label-md);
+  text-transform: uppercase;
+}
+
 .trip-form label {
-  font-size: 0.875rem;
-  font-weight: 600;
+  display: block;
+  margin-bottom: var(--space-2xs);
+  font: var(--type-label-lg);
+  letter-spacing: var(--tracking-label-lg);
 }
 
 /* The creator's inputs wear the field recipe in `components.css`. */
 
+/* The hairline separator, between one field group and the next INSIDE a card —
+   never above the first, which is what the sibling combinator buys. */
+.field-card__row + .field-card__row {
+  margin-top: var(--space-md);
+  padding-top: var(--space-md);
+  border-top: 1px solid var(--hairline);
+}
+
 .trip-form .field-row {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--space-md);
 }
 
 .trip-form .field-row > div {
-  flex: 1;
+  flex: 1 1 10rem;
+  min-width: 0;
 }
 
-.trip-form fieldset {
-  margin: 0;
-  padding: var(--space-md);
+/* The segmented control (spec step 22). PAINT ON A RADIO GROUP, exactly as the
+   filter bar's pills are: the markup is still a `<fieldset>` of three radios,
+   each inside its `<label>`, and deleting every rule below would leave a
+   working, announced, arrow-navigable radio group behind. The `<span>` is the
+   only addition — a paintable box for the `:checked` state, because a label
+   with a hidden input inside it has no other element to colour.
+   `label:has(:checked)` rather than `:checked + label`: the input is a child,
+   so there is no sibling to select. */
+.route-mode__options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2xs);
+  padding: var(--space-2xs);
   border: 1px solid var(--hairline);
   border-radius: var(--radius-md);
+  background: var(--surface-sunken);
 }
 
-.trip-form legend {
-  padding-inline: var(--space-xs);
-  font-size: 0.875rem;
-  font-weight: 600;
+.route-mode__options label {
+  position: relative;
+  flex: 1 1 10rem;
+  margin-bottom: 0;
+  cursor: pointer;
 }
 
-.route-mode label {
-  display: flex;
-  align-items: center;
-  gap: var(--space-xs);
-  padding: var(--space-2xs) 0;
-  font-weight: 400;
+/* The radio is moved out of sight, NEVER out of the accessibility tree:
+   `display: none` would take it out of the tab order and out of the group. */
+.route-mode__options input[type='radio'] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
 }
 
-.trip-form .hint {
-  margin: 0 0 var(--space-sm);
+.route-mode__options span {
+  display: block;
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--radius);
   color: var(--text-muted);
-  font-size: 0.8125rem;
+  font: var(--type-label-lg);
+  letter-spacing: var(--tracking-label-lg);
+  text-align: center;
 }
 
-.stage-row {
-  display: grid;
-  grid-template-columns: 2fr 1fr 1fr auto;
-  align-items: end;
-  gap: var(--space-xs);
-  padding: var(--space-sm) 0;
+/* The selected segment: a raised surface out of the sunken track. Colour is an
+   addition — the checked radio is the state a screen reader reads. */
+.route-mode__options label:has(:checked) span {
+  background: var(--surface);
+  color: var(--primary);
+  box-shadow: var(--elevation-1);
+}
+
+.route-mode__options label:hover:not(:has(:checked)) span {
+  color: var(--text);
+}
+
+/* The ring follows the hidden input onto the segment, so keyboard focus is
+   visible on the thing the reader can actually see. */
+.route-mode__options label:has(:focus-visible) span {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .route-mode__options span {
+    transition:
+      background-color 150ms ease,
+      color 150ms ease,
+      box-shadow 150ms ease;
+  }
+}
+
+/* The route card's own fields sit below the segmented control, separated from
+   it by the same hairline every other group uses. */
+.route-mode .route-mode__options + .field-card__row {
+  margin-top: var(--space-md);
+  padding-top: var(--space-md);
   border-top: 1px solid var(--hairline);
 }
 
-.stage-row [role='alert'] {
-  grid-column: 1 / -1;
+.trip-form .hint {
+  margin: 0 0 var(--space-md);
+  color: var(--text-muted);
+  font: var(--type-body-sm);
+  letter-spacing: var(--tracking-body-sm);
 }
 
+/* The numbered stage card, on the sunken tone so a card inside a card still
+   reads as nested without a second shadow. */
+.stage-card {
+  padding: var(--space-md);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+}
+
+.stage-card + .stage-card {
+  margin-top: var(--space-sm);
+}
+
+.stage-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-sm);
+}
+
+/* The ordinal badge. Decoration: it is `aria-hidden` in the markup because the
+   place field's label already carries the number. */
+.stage-card__number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: var(--radius-full);
+  background: var(--primary);
+  color: var(--on-primary);
+  font: var(--type-label-lg);
+  letter-spacing: var(--tracking-label-lg);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The remove control: the ghost recipe, compacted to an icon-and-word button.
+   Its name stays VISIBLE — the icon is an addition to the word, never a
+   replacement for it. */
+.stage-card__remove {
+  gap: var(--space-2xs);
+  min-height: 32px;
+  padding: var(--space-2xs) var(--space-xs);
+  border-color: transparent;
+  color: var(--danger);
+  font: var(--type-label-md);
+  letter-spacing: var(--tracking-label-md);
+}
+
+.stage-card__remove:hover:not(:disabled) {
+  border-color: var(--hairline);
+  background: var(--danger-surface);
+  color: var(--on-danger-surface);
+}
+
+/* The glyph slot, reserved and empty until step 6.1 ships the sprite. It holds
+   its space so adding the icon later moves nothing. */
+.stage-card__remove-icon {
+  display: inline-block;
+  width: 1rem;
+  height: 1rem;
+}
+
+.stage-card__fields {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: var(--space-sm);
+}
+
+@media (max-width: 767px) {
+  .stage-card__fields {
+    grid-template-columns: 1fr;
+  }
+}
+
+.stage-card__fields > div {
+  min-width: 0;
+}
+
+.stage-card [role='alert'] {
+  margin-bottom: 0;
+}
+
+/* The ghost "add stage", full-width beneath the last card so it reads as the
+   next row rather than as a second action competing with the submit. */
+.stages__add {
+  width: 100%;
+  margin-top: var(--space-sm);
+  border-style: dashed;
+}
+
+/* The form-completing action: full-width at the foot, on the `--primary-deep`
+   recipe from `components.css`. */
+.trip-form__submit {
+  width: 100%;
+}
+
+/* The live summary, now inside the dock's "trip at a glance" card. */
 .trip-form__summary {
   margin: 0;
-  padding: var(--space-sm);
-  border-radius: var(--radius-sm);
-  background: var(--canvas);
-  color: var(--text-muted);
-  font-size: 0.875rem;
+  color: var(--text);
+  font: var(--type-body-md);
+  letter-spacing: var(--tracking-body-md);
+  font-variant-numeric: tabular-nums;
 }
 
 /* --- /trips/:id — the trip banner ------------------------------------
