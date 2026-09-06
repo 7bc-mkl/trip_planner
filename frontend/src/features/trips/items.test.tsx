@@ -46,6 +46,11 @@ const MUSEUM = {
   end_date: null,
   title: 'Batu Caves',
   notes: 'bring water',
+  attachment_count: 0,
+  confirmation_number: null,
+  cost_amount: null,
+  cost_currency: null,
+  attachments: [],
 }
 
 const HOTEL = {
@@ -58,6 +63,11 @@ const HOTEL = {
   end_date: '2026-10-13',
   title: 'Nocleg: Memmo Alfama',
   notes: null,
+  attachment_count: 0,
+  confirmation_number: null,
+  cost_amount: null,
+  cost_currency: null,
+  attachments: [],
 }
 
 const DAY = {
@@ -66,6 +76,7 @@ const DAY = {
   date: '2026-10-11',
   stages: [STAGE],
   items: [MUSEUM, HOTEL],
+  attachments: [],
   previous_date: '2026-10-10',
   next_date: '2026-10-12',
 }
@@ -690,6 +701,98 @@ describe('items on the timeline', () => {
     const row = screen.getByText('Batu Caves').closest('.item-row')
 
     expect(within(row as HTMLElement).queryByRole('button')).not.toBeInTheDocument()
+  })
+
+  // Step 2.7: the timeline wires `attachmentCount` from `item.attachment_count`.
+  // Both fixture items already carry `attachment_count: 0`, so the existing
+  // tests above are already proof the wiring adds no bare paperclip — this one
+  // is the positive case, and the negative case asserted in the same card set.
+  it('shows the paperclip badge only on cards whose item has attachments', async () => {
+    mockApi(
+      backend({
+        trip: {
+          ...TRIP,
+          days: TRIP.days.map((day) =>
+            day.id === 'day-1'
+              ? {
+                  ...day,
+                  items: [
+                    { ...MUSEUM, attachment_count: 2 },
+                    { ...HOTEL, attachment_count: 0 },
+                  ],
+                }
+              : day,
+          ),
+        },
+      }),
+    )
+
+    renderApp('/trips/trip-1')
+    await screen.findByText('Batu Caves')
+
+    const museumRow = screen.getByText('Batu Caves').closest('.item-row') as HTMLElement
+    const hotelRow = screen.getByText('Nocleg: Memmo Alfama').closest('.item-row') as HTMLElement
+
+    expect(within(museumRow).getByText('2 pliki')).toBeInTheDocument()
+    expect(museumRow.querySelector('.item-row__attachments')).not.toBeNull()
+    expect(hotelRow.querySelector('.item-row__attachments')).toBeNull()
+  })
+})
+
+describe("the item card's paperclip badge", () => {
+  it('is absent when no count is given — an existing caller unchanged by this Step', () => {
+    const { container } = render(<ItemRow item={MUSEUM} dayDate="2026-10-11" />)
+
+    expect(container.querySelector('.item-row__attachments')).toBeNull()
+  })
+
+  it('is absent when the count is given as zero', () => {
+    const { container } = render(
+      <ItemRow item={MUSEUM} dayDate="2026-10-11" attachmentCount={0} />,
+    )
+
+    expect(container.querySelector('.item-row__attachments')).toBeNull()
+  })
+
+  it('appears with the paperclip and the count when the item has attachments', () => {
+    const { container } = render(
+      <ItemRow item={MUSEUM} dayDate="2026-10-11" attachmentCount={3} />,
+    )
+
+    const badge = container.querySelector('.item-row__attachments')
+    expect(badge).not.toBeNull()
+    expect(screen.getByText('3 pliki')).toBeInTheDocument()
+
+    const icon = badge?.querySelector('svg')
+    expect(icon).toHaveAttribute('aria-hidden', 'true')
+    expect(icon).toHaveAttribute('focusable', 'false')
+    expect(icon?.querySelector('use')?.getAttribute('href')).toMatch(/icons\.svg.*#paperclip$/u)
+  })
+
+  it('renders the Polish few and many plural forms distinctly, the split ICU exists for', () => {
+    const { rerender } = render(
+      <ItemRow item={MUSEUM} dayDate="2026-10-11" attachmentCount={2} />,
+    )
+    expect(screen.getByText('2 pliki')).toBeInTheDocument()
+
+    rerender(<ItemRow item={MUSEUM} dayDate="2026-10-11" attachmentCount={5} />)
+    expect(screen.getByText('5 plików')).toBeInTheDocument()
+  })
+
+  it('renders the translated count in English too', async () => {
+    await applyLocale('en')
+
+    render(<ItemRow item={MUSEUM} dayDate="2026-10-11" attachmentCount={1} />)
+
+    expect(screen.getByText('1 file')).toBeInTheDocument()
+  })
+
+  it('renders the English plural form for several', async () => {
+    await applyLocale('en')
+
+    render(<ItemRow item={MUSEUM} dayDate="2026-10-11" attachmentCount={5} />)
+
+    expect(screen.getByText('5 files')).toBeInTheDocument()
   })
 })
 

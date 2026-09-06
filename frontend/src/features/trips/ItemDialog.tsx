@@ -2,12 +2,15 @@ import { useEffect, useId, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 
+import type { Attachment } from '../../api/attachments'
 import { ApiError } from '../../api/client'
 import { ITEM_KINDS, ITEM_STATUSES, fromTimeInput } from '../../api/items'
 import type { Item, ItemInput } from '../../api/items'
 import { clearDraft, readDraft, saveDraft } from '../auth/draftStore'
+import { ItemAttachments } from './ItemAttachments'
 import { draftKey, draftOf } from './itemDraft'
 import type { ItemDraft } from './itemDraft'
+import { ReservationPanel, hasCostError, reservationInput } from './ReservationPanel'
 import { STATUS_GLYPH } from './statusGlyph'
 
 /**
@@ -30,21 +33,37 @@ import { STATUS_GLYPH } from './statusGlyph'
  * `<dialog>` is deliberately not used: its `showModal()` focus behaviour is not
  * implemented consistently enough in jsdom to test, and the trap below is the
  * part that actually has to be verified.
+ *
+ * **Hosts `ItemAttachments`**, the strip that lets files be pinned to this
+ * item — see that module's own doc for the new-item case, where `item` is
+ * `null` and there is nothing yet to pin a file to. **And `ReservationPanel`**,
+ * the collapsed disclosure beneath it — see that module's own doc for why a
+ * create never sends the trio it edits.
  */
 
 const FOCUSABLE =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
 
 export function ItemDialog({
+  tripId,
   item,
   onSave,
   onDelete,
+  onUploaded,
+  onAttachmentDeleted,
   onClose,
 }: {
+  tripId: string
   /** The item being edited, or `null` when adding a new one. */
   item: Item | null
   onSave: (input: ItemInput) => Promise<void>
   onDelete?: () => Promise<void>
+  /** Called once per successful upload from `ItemAttachments`, so the day
+      list's own paperclip count catches up without waiting for Save. */
+  onUploaded: (attachment: Attachment) => void
+  /** Called once per successful attachment delete from `ItemAttachments` —
+      named distinctly from `onDelete` above, which deletes the whole item. */
+  onAttachmentDeleted: () => void
   onClose: () => void
 }) {
   const { t } = useTranslation()
@@ -120,9 +139,24 @@ export function ItemDialog({
     }
   }
 
+  /**
+   * A cost the server would answer with `422 invalid_cost` — a comma-decimal
+   * amount is *not* one of these, it is normalised on the way to the wire.
+   * Blocking here rather than sending it is what lets `ReservationPanel` mark
+   * the offending box: the alternative was the server's generic "check the
+   * marked fields" with nothing marked (Step 3.4-review-fix-2).
+   *
+   * Applied on a create too, even though a create sends none of the trio: the
+   * panel marks the box from the same predicate, and a form that paints a
+   * field red while cheerfully saving is worse than one that asks for the two
+   * characters it cannot read. An empty cost is never invalid, so the
+   * ordinary create — which never opens this panel at all — is untouched.
+   */
+  const costInvalid = hasCostError(draft)
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (draft.title.trim() === '' || saving) {
+    if (draft.title.trim() === '' || costInvalid || saving) {
       return
     }
 
@@ -138,6 +172,9 @@ export function ItemDialog({
         end_date: draft.endDate === '' ? null : draft.endDate,
         title: draft.title.trim(),
         notes: draft.notes.trim() === '' ? null : draft.notes.trim(),
+        // Only on an edit: a create's `ItemCreate` takes none of these three
+        // and forbids extra keys — see `reservationInput`'s own doc.
+        ...(item === null ? {} : reservationInput(draft)),
       })
       // Cleared only on success: a failed save must leave the draft to retry.
       clearDraft(key)
@@ -260,6 +297,18 @@ export function ItemDialog({
 
           {error !== null && <p role="alert">{error}</p>}
 
+          <ItemAttachments
+            tripId={tripId}
+            item={item}
+            onUploaded={onUploaded}
+            onDeleted={onAttachmentDeleted}
+          />
+
+          <ReservationPanel
+            value={draft}
+            onChange={(next) => setDraft({ ...draft, ...next })}
+          />
+
           <div className="dialog__actions">
             {onDelete !== undefined && (
               <button
@@ -279,7 +328,7 @@ export function ItemDialog({
             <button
               type="submit"
               className="button-primary"
-              disabled={draft.title.trim() === '' || saving}
+              disabled={draft.title.trim() === '' || costInvalid || saving}
             >
               {saving ? t('item.saving') : t('item.save')}
             </button>

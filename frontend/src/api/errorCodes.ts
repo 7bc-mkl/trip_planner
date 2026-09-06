@@ -17,6 +17,15 @@ export type ErrorCode =
   | 'days_have_items'
   | 'stages_outside_new_range'
   | 'items_outside_new_range'
+  | 'attachment_too_large'
+  | 'unsupported_file_type'
+  | 'malformed_upload'
+  | 'attachment_limit_reached'
+  | 'trip_storage_quota_exceeded'
+  | 'rate_limited'
+  | 'invalid_cost'
+  | 'invalid_reservation_field'
+  | 'days_have_attachments'
 
 export const ERROR_CODES: readonly ErrorCode[] = [
   'invalid_credentials',
@@ -34,4 +43,13 @@ export const ERROR_CODES: readonly ErrorCode[] = [
   'days_have_items',
   'stages_outside_new_range',
   'items_outside_new_range',
+  'attachment_too_large',
+  'unsupported_file_type',
+  'malformed_upload',
+  'attachment_limit_reached',
+  'trip_storage_quota_exceeded',
+  'rate_limited',
+  'invalid_cost',
+  'invalid_reservation_field',
+  'days_have_attachments',
 ] as const

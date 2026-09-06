@@ -54,6 +54,17 @@ class ErrorCode(StrEnum):
     STAGES_OUTSIDE_NEW_RANGE = "stages_outside_new_range"
     ITEMS_OUTSIDE_NEW_RANGE = "items_outside_new_range"
 
+    # Attachments and reservation data.
+    ATTACHMENT_TOO_LARGE = "attachment_too_large"
+    UNSUPPORTED_FILE_TYPE = "unsupported_file_type"
+    MALFORMED_UPLOAD = "malformed_upload"
+    ATTACHMENT_LIMIT_REACHED = "attachment_limit_reached"
+    TRIP_STORAGE_QUOTA_EXCEEDED = "trip_storage_quota_exceeded"
+    RATE_LIMITED = "rate_limited"
+    INVALID_COST = "invalid_cost"
+    INVALID_RESERVATION_FIELD = "invalid_reservation_field"
+    DAYS_HAVE_ATTACHMENTS = "days_have_attachments"
+
 
 #: The status each code is served with. Kept beside the enum so a code cannot be
 #: introduced without deciding its status, and so the pairing is assertable.
@@ -75,6 +86,23 @@ STATUS_FOR_CODE: dict[ErrorCode, int] = {
     ErrorCode.DAYS_HAVE_ITEMS: status.HTTP_409_CONFLICT,
     ErrorCode.STAGES_OUTSIDE_NEW_RANGE: status.HTTP_409_CONFLICT,
     ErrorCode.ITEMS_OUTSIDE_NEW_RANGE: status.HTTP_409_CONFLICT,
+    ErrorCode.ATTACHMENT_TOO_LARGE: status.HTTP_413_CONTENT_TOO_LARGE,
+    ErrorCode.UNSUPPORTED_FILE_TYPE: status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+    ErrorCode.MALFORMED_UPLOAD: status.HTTP_422_UNPROCESSABLE_CONTENT,
+    # 409, not 422: the request is well-formed and the rule is about the state of
+    # the parent (it already holds the maximum number of attachments), which the
+    # caller can resolve by removing one first.
+    ErrorCode.ATTACHMENT_LIMIT_REACHED: status.HTTP_409_CONFLICT,
+    # 409, not 422: the request is well-formed and the rule is about the state of
+    # the trip or the installation (its stored bytes), which the caller can
+    # resolve by freeing space first.
+    ErrorCode.TRIP_STORAGE_QUOTA_EXCEEDED: status.HTTP_409_CONFLICT,
+    ErrorCode.RATE_LIMITED: status.HTTP_429_TOO_MANY_REQUESTS,
+    ErrorCode.INVALID_COST: status.HTTP_422_UNPROCESSABLE_CONTENT,
+    ErrorCode.INVALID_RESERVATION_FIELD: status.HTTP_422_UNPROCESSABLE_CONTENT,
+    # 409, not 422: the request is well-formed and the rule is about the state of
+    # the trip, which the caller can resolve by moving or deleting the items.
+    ErrorCode.DAYS_HAVE_ATTACHMENTS: status.HTTP_409_CONFLICT,
 }
 
 

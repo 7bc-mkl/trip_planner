@@ -30,7 +30,8 @@
  */
 
 .filter-bar,
-.item-row {
+.item-row,
+.attachment-row {
   border: 1px solid var(--hairline);
   border-radius: var(--radius-lg);
   background: var(--surface);
@@ -622,11 +623,150 @@ textarea:disabled {
   margin-left: auto;
 }
 
+/* The attachment-count badge, right after the chip at the trailing edge — an
+   addition beside the chip, never a replacement for it. Text, not colour,
+   carries the count: the glyph is `aria-hidden` decoration and the number
+   always renders through the translated `item.attachmentCount` key next to
+   it, the same "icon plus a real word" contract every glyph in this file
+   keeps. */
+.item-row__attachments {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2xs);
+  color: var(--text-muted);
+  font: var(--type-label-md);
+  letter-spacing: var(--tracking-label-md);
+}
+
+.item-row__attachments-icon {
+  display: inline-flex;
+}
+
+.item-row__attachments-icon svg {
+  width: 1rem;
+  height: 1rem;
+}
+
 .item-row__notes {
   flex-basis: 100%;
   color: var(--text-muted);
   font: var(--type-body-sm);
   letter-spacing: var(--tracking-body-sm);
+}
+
+/* --- day attachments (`features/trips/DayAttachments.tsx`) ------------
+ *
+ * The panel below the item list on the day detail. Its heading is a bare
+ * `<h2>` — the base layer already sets `--type-headline-lg` on every `h2` —
+ * and its empty state is the shipped `.empty-state`/`.empty-state--inline`
+ * recipe rather than a bespoke one.
+ */
+
+.day-attachments {
+  margin-top: var(--space-xl);
+}
+
+.day-attachments__heading {
+  margin: 0 0 var(--space-sm);
+}
+
+.day-attachments__list {
+  display: grid;
+  gap: var(--space-xs);
+  margin: 0 0 var(--space-md);
+  padding: 0;
+  list-style: none;
+}
+
+/* One attachment: the card recipe at `--radius-lg` (declared with
+   `.item-row` above), a preview or a glyph, the filename and the size. */
+.attachment-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+}
+
+/* The original file, never a server-generated thumbnail (A12) — scaled down
+   by the browser in CSS alone, and lazy-loaded by the `<img loading="lazy">`
+   attribute in the markup, not by anything here. */
+.attachment-row__preview {
+  flex: none;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: var(--radius-md);
+  object-fit: cover;
+}
+
+/* The image preview's click target (Step 4.2). A plain button reset — no
+   border, no fill, no padding beyond the image itself — so it reads as the
+   same 2.5rem tile the PDF glyph beside it is, just with a pointer cursor and
+   the shared `:focus-visible` ring from `base.css` for a keyboard user. */
+.attachment-row__preview-trigger {
+  display: block;
+  flex: none;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-md);
+  background: none;
+  cursor: pointer;
+}
+
+/* The PDF glyph's tile, matching `.item-row__icon`'s shape. */
+.attachment-row__glyph {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+  color: var(--text-muted);
+}
+
+.attachment-row__meta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2xs);
+  min-width: 0;
+}
+
+.attachment-row__name {
+  overflow-wrap: anywhere;
+  font: var(--type-body-md);
+}
+
+.attachment-row__size {
+  color: var(--text-muted);
+  font: var(--type-label-md);
+  letter-spacing: var(--tracking-label-md);
+}
+
+/* The duplicate hint (A14) — a third muted line under the size, wearing the
+   same recipe the upload queue's own hint does. Deliberately quiet: it is
+   information, not a problem, so it borrows nothing from the error or the
+   danger palette. */
+.attachment-row__duplicate-hint {
+  color: var(--text-muted);
+  font: var(--type-body-sm);
+  letter-spacing: var(--tracking-body-sm);
+}
+
+/* Download and delete, pinned to the row's far edge rather than crowding the
+   name and size. Download wears the ghost recipe as an `<a>` rather than a
+   `<button>` — see `AttachmentRow.tsx` for why — so its underline (the `a`
+   default in `base.css`) is undone here the same way `.day-nav__link` already
+   undoes it for its own anchors. */
+.attachment-row__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  margin-left: auto;
+  flex: none;
+}
+
+.attachment-row__actions a {
+  text-decoration: none;
 }
 
 /* --- the item editor dialog --- */
@@ -857,6 +997,70 @@ textarea:disabled {
   }
 }
 
+/* --- item attachments (`features/trips/ItemAttachments.tsx`) -----------
+ *
+ * The strip inside the item editor, below its fields — the same row recipe
+ * as the day panel (`.attachment-row`, declared with `.day-attachments`
+ * above), via the shared `AttachmentRow`, set off by its own hairline rather
+ * than `.day-attachments`'s `margin-top` alone: it sits inside a form full of
+ * other fields, not at the foot of a whole screen.
+ */
+.item-attachments {
+  margin-top: var(--space-md);
+  padding-top: var(--space-md);
+  border-top: 1px solid var(--hairline);
+}
+
+.item-attachments__heading {
+  margin: 0 0 var(--space-sm);
+  font: var(--type-headline-sm);
+  letter-spacing: var(--tracking-headline-sm);
+}
+
+.item-attachments__list {
+  display: grid;
+  gap: var(--space-xs);
+  margin: 0 0 var(--space-md);
+  padding: 0;
+  list-style: none;
+}
+
+/* --- the reservation panel (`features/trips/ReservationPanel.tsx`) -----
+ *
+ * A native `<details>`/`<summary>`, set off the same way `.item-attachments`
+ * is set off from the fields above it — a top hairline rather than a second
+ * card, because the whole editor already sits at `--radius-xl` and boxing a
+ * box inside it is not a recipe this design system has. The three fields
+ * inside wear the field recipe and `.field-row` at the top of this file, like
+ * every other control in this dialog; nothing here declares its own input
+ * styling.
+ */
+.reservation-panel {
+  margin-top: var(--space-md);
+  padding-top: var(--space-md);
+  border-top: 1px solid var(--hairline);
+}
+
+.reservation-panel__summary {
+  cursor: pointer;
+  font: var(--type-label-lg);
+  letter-spacing: var(--tracking-label-lg);
+}
+
+.reservation-panel__cost {
+  margin-left: var(--space-xs);
+  color: var(--text-muted);
+  font: var(--type-label-md);
+  letter-spacing: var(--tracking-label-md);
+}
+
+.reservation-panel__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  margin-top: var(--space-sm);
+}
+
 .dialog__actions {
   display: flex;
   justify-content: flex-end;
@@ -1061,6 +1265,36 @@ textarea:disabled {
   color: var(--text-muted);
 }
 
+/* A failed confirmation is not the muted body copy above it. This is the
+   shipped `[role='alert']` recipe — `--danger` on the dialog's `--surface`,
+   exactly the pair the item editor's own field messages already render on this
+   same panel — restated only because `.dialog--confirm p` would otherwise win
+   on specificity and mute it. No new colour pair. */
+.dialog--confirm [role='alert'] {
+  color: var(--danger);
+}
+
+/* --- the image lightbox (Step 4.2) ---
+ *
+ * The same `.dialog` shell — same scrim, same frost, same `--radius` — just
+ * without its usual heading/form padding rhythm: the image is the whole
+ * content, so the panel hugs it instead of imposing the form's vertical gap. */
+.dialog--lightbox {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-xs);
+  width: auto;
+  max-width: 90vw;
+}
+
+.dialog--lightbox__image {
+  display: block;
+  max-width: 100%;
+  max-height: 80dvh;
+  border-radius: var(--radius-md);
+}
+
 /* Solid, so the destructive action is unmistakable — but it is not the one that
    holds focus when the dialog opens. */
 .button-danger--solid {
@@ -1090,4 +1324,217 @@ textarea:disabled {
   flex: none;
   width: 1.25rem;
   height: 1.25rem;
+}
+
+/* --- the upload drop zone (`features/trips/UploadDropzone.tsx`) -----------
+ *
+ * THIS RECIPE INVENTS NOTHING. The design system reserved its three tokens
+ * before the feature had any code: `--hairline-strong` is annotated "dropzone
+ * border", `--surface-sunken` "drag-over dropzone", `--radius-lg` "cards, day
+ * modules, dropzones". Those three are the whole visual language here —
+ * `--surface-sunken` is literally the token the drag-over state below fills to,
+ * the same one `:hover` already used, so drag-and-drop adds no new token or
+ * new pair to check.
+ *
+ * `--hairline-strong` is 1.48:1 on `--surface` and that is deliberate: a dashed
+ * drop-zone outline is decoration around a control the `<label>`'s own words
+ * already identify, not the boundary WCAG 1.4.11 governs. `check_contrast.py`
+ * names this exact case in its docstring — do not "correct" it here.
+ *
+ * The state pills wear the shipped status-chip triples (background, text,
+ * border) rather than a new palette, and the failure pill wears
+ * `--danger-surface` / `--on-danger-surface`, which is already a declared pair
+ * in `check_contrast.py`. No pair in this block is new, which is why the script
+ * gains no row this commit.
+ */
+
+.upload-dropzone {
+  display: grid;
+  gap: var(--space-sm);
+}
+
+/* The label IS the drop zone. It wraps the input, so the whole surface is the
+   control's own hit area — no click handler, no `<div role="button">`. */
+.upload-dropzone__label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2xs);
+  padding: var(--space-lg);
+  border: 2px dashed var(--hairline-strong);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  text-align: center;
+  cursor: pointer;
+}
+
+.upload-dropzone__label:hover {
+  background: var(--surface-sunken);
+}
+
+/* Drag-and-drop is layered on top of the same label; the outline never
+   changes, only the fill — and the hint text beside it, so the state is never
+   colour alone (see the component doc comment). */
+.upload-dropzone__label[data-drag-over='true'] {
+  background: var(--surface-sunken);
+}
+
+/* Focus lives on the input, which is clipped out of sight, so the zone has to
+   wear the ring on its behalf — otherwise the keyboard path is invisible. */
+.upload-dropzone__label:focus-within {
+  border-color: var(--primary);
+  background: var(--surface-sunken);
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* Clipped, not `display: none` and not `visibility: hidden`: both of those
+   remove the input from the accessibility tree and from the tab order, which
+   would delete the keyboard path this component exists to keep. */
+.upload-dropzone__input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.upload-dropzone__title {
+  color: var(--text);
+  font: var(--type-label-lg);
+  letter-spacing: var(--tracking-label-lg);
+}
+
+.upload-dropzone__hint {
+  color: var(--text-muted);
+  font: var(--type-body-sm);
+  letter-spacing: var(--tracking-body-sm);
+}
+
+/* The live region. It is always in the DOM and usually empty, so it takes no
+   space of its own until it has something to say. */
+.upload-dropzone__announcement {
+  margin: 0;
+  color: var(--text-muted);
+  font: var(--type-body-sm);
+  letter-spacing: var(--tracking-body-sm);
+}
+
+.upload-dropzone__list {
+  display: grid;
+  gap: var(--space-xs);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* One row per file: name and pill on the first line, the bar and any refusal
+   message spanning both columns beneath them. */
+.upload-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-sm);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.upload-row__name {
+  color: var(--text);
+  font: var(--type-body-md);
+  letter-spacing: var(--tracking-body-md);
+  overflow-wrap: anywhere;
+}
+
+/* The status-chip recipe, reused in shape as well as in colour. Colour is an
+   addition to the translated word and the glyph, never a replacement. */
+.upload-row__pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2xs);
+  padding: var(--space-2xs) var(--space-xs);
+  border: 1px solid var(--status-draft-border);
+  border-radius: var(--radius-full);
+  background: var(--status-draft-bg);
+  color: var(--status-draft-text);
+  font: var(--type-label-sm);
+  letter-spacing: var(--tracking-label-sm);
+  white-space: nowrap;
+}
+
+.upload-row__glyph {
+  flex: none;
+}
+
+.upload-row__pill[data-state='uploading'] {
+  border-color: var(--status-progress-border);
+  background: var(--status-progress-bg);
+  color: var(--status-progress-text);
+}
+
+.upload-row__pill[data-state='done'] {
+  border-color: var(--status-confirmed-border);
+  background: var(--status-confirmed-bg);
+  color: var(--status-confirmed-text);
+}
+
+/* The one text-on-colour pair outside the chip triples — and it is a shipped,
+   already-declared one. */
+.upload-row__pill[data-state='failed'] {
+  border-color: var(--on-danger-surface);
+  background: var(--danger-surface);
+  color: var(--on-danger-surface);
+}
+
+.upload-row__track {
+  grid-column: 1 / -1;
+  height: 6px;
+  border-radius: var(--radius-full);
+  background: var(--hairline);
+  overflow: hidden;
+}
+
+/* Determinate, and only ever rendered once a real byte count exists. The width
+   is set inline by the component; the default here is what keeps the property
+   defined in this file, so `check_css_tokens.py` can resolve it — and the bar
+   still has a value on a render where the component has not set one. */
+.upload-row__bar {
+  --upload-progress: 0%;
+
+  display: block;
+  width: var(--upload-progress);
+  height: 100%;
+  background: var(--primary);
+}
+
+/* The same colour the shipped `[role='alert']` recipe already renders on this
+   surface — the refusal message is not a new pair, it is that one. */
+/* The non-blocking duplicate hint (A14) — the same muted-on-surface recipe
+   `.upload-dropzone__hint` already uses, deliberately not `.upload-row__error`'s
+   danger tone: this never blocks the upload, so it must not read as a warning. */
+.upload-row__duplicate-hint {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--text-muted);
+  font: var(--type-body-sm);
+  letter-spacing: var(--tracking-body-sm);
+}
+
+.upload-row__error {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--danger);
+  font: var(--type-body-sm);
+  letter-spacing: var(--tracking-body-sm);
+}
+
+.upload-row__actions {
+  display: flex;
+  gap: var(--space-xs);
 }

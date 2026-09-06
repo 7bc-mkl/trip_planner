@@ -502,6 +502,29 @@ class TestReadinessOnThePayloads:
         body = signed_in_client.get(f"{TRIPS}/{trip['id']}").json()
         assert body["readiness"] == {"arranged": 1, "tracked": 1}
 
+    def test_reservation_data_does_not_change_what_the_counter_counts(
+        self, signed_in_client: TestClient, trip: dict
+    ) -> None:
+        """Step 3.5, through the real API rather than the pure function: a `done`
+        item with a confirmation number and a cost is exactly as arranged as one
+        with neither. Nothing between the PATCH and the served figure may make
+        the two count differently."""
+        documented = add_item(signed_in_client, trip, title="documented", status="done")
+        response = signed_in_client.patch(
+            f"{TRIPS}/{trip['id']}/items/{documented['id']}",
+            json={
+                "confirmation_number": "SX-9912L",
+                "cost_amount": "249.00",
+                "cost_currency": "PLN",
+            },
+        )
+        assert response.status_code == 200, response.text
+        add_item(signed_in_client, trip, title="undocumented", status="done")
+
+        body = signed_in_client.get(f"{TRIPS}/{trip['id']}").json()
+
+        assert body["readiness"] == {"arranged": 2, "tracked": 2}
+
 
 class _WithStatus:
     """Minimal stand-in so the domain function can be run over the JSON payload."""

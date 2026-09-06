@@ -281,8 +281,16 @@ export function TimelinePage() {
                     {visible.map((item) => (
                       <li key={item.id}>
                         {/* The dot on the rail is the timeline's alone; the day
-                            detail renders the same card without one. */}
-                        <ItemRow item={item} dayDate={day.date} railDot />
+                            detail renders the same card without one. The
+                            paperclip count comes straight off the item — no
+                            price, no currency, no confirmation number, per the
+                            spec's "and nothing else". */}
+                        <ItemRow
+                          item={item}
+                          dayDate={day.date}
+                          railDot
+                          attachmentCount={item.attachment_count}
+                        />
                       </li>
                     ))}
                   </ul>

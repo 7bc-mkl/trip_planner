@@ -21,6 +21,10 @@ export type ItemDraft = {
   endDate: string
   title: string
   notes: string
+  /** The reservation trio `ReservationPanel` reads and writes — see its own doc. */
+  confirmationNumber: string
+  costAmount: string
+  costCurrency: string
 }
 
 /** The key a draft is stored under. `new` for an item that does not exist yet. */
@@ -38,5 +42,16 @@ export function draftOf(item: Item | null): ItemDraft {
     endDate: item?.end_date ?? '',
     title: item?.title ?? '',
     notes: item?.notes ?? '',
+    confirmationNumber: item?.confirmation_number ?? '',
+    costAmount: item?.cost_amount ?? '',
+    // `PLN` whenever the item does not already carry a currency of its own —
+    // a fresh item and an existing one with no cost yet both land here. This
+    // is the plain default assumption A7 settles for (no conversion, no
+    // locale-driven guess), and it is also what keeps `reservationInput`'s
+    // paired cost rule from silently dropping a typed amount: that rule
+    // clears the whole pair the moment either half is blank, and with the
+    // currency pre-filled it no longer can be, in ordinary use, just because
+    // the user only touched the amount field.
+    costCurrency: item?.cost_currency ?? 'PLN',
   }
 }

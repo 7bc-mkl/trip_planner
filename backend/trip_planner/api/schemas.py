@@ -12,12 +12,21 @@ indistinguishable from "absent because there are none", which is the ambiguity
 - `TripSummary` — a row of `/trips`.
 - `TripDetail`  — the timeline payload for `/trips/{id}`.
 - `DayDetail`   — the day-detail payload for `/trips/{id}/days/{date}`.
+
+The same reasoning splits the item in two, for the same reason and along the same
+seam: `ItemRead` — every field the timeline needs, including how *many* files are
+pinned to the item — and `ItemDetail`, which adds the files themselves. A single
+`attachments: list | None` would make "absent because this is the timeline"
+indistinguishable from "absent because this item has no files", and the count is
+on **both** shapes so that no consumer has to ask a different question depending
+on which payload it happens to be holding.
 """
 
 from __future__ import annotations
 
 import uuid
-from datetime import date, time
+from datetime import date, datetime, time
+from decimal import Decimal
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
@@ -25,8 +34,10 @@ from pydantic import BaseModel, ConfigDict
 from trip_planner.db.models import ITEM_KINDS, ITEM_STATUSES
 
 __all__ = [
+    "AttachmentRead",
     "DayDetail",
     "DayRead",
+    "ItemDetail",
     "ItemKind",
     "ItemRead",
     "ItemStatus",
@@ -72,6 +83,32 @@ class StageRead(BaseModel):
     end_date: date | None
 
 
+class AttachmentRead(BaseModel):
+    """One attachment's metadata — the shape served wherever an attachment appears.
+
+    Defined once, in the module both the upload router and the day/timeline
+    serialisers import, because the spec says this object is "identical wherever
+    an attachment is serialised" and two definitions of one wire shape drift.
+
+    `content_type` is the type **derived from the bytes** on upload, never
+    anything the client claimed, and `byte_size` is the length that was actually
+    counted while reading. Both parents are always present, exactly one of them
+    non-null, so a consumer can tell a day's document from an item's without
+    knowing which endpoint it came from.
+    """
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    filename: str
+    content_type: str
+    byte_size: int
+    sha256: str
+    created_at: datetime
+    item_id: uuid.UUID | None
+    trip_day_id: uuid.UUID | None
+
+
 class ItemRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -86,6 +123,46 @@ class ItemRead(BaseModel):
     end_date: date | None
     title: str
     notes: str | None
+    #: How many files are pinned to this item — the paperclip badge's number.
+    #:
+    #: One integer rather than the list, because the timeline renders a badge and
+    #: never a filename: shipping the files themselves would put every filename of
+    #: a year-long trip on a payload for a screen that shows none of them.
+    #:
+    #: The default exists so that an `Item` — a database row, which has no such
+    #: attribute — still validates through `model_config.from_attributes`. Every
+    #: serialiser overrides it with the counted value via `api.items.item_read`,
+    #: and the count is always aggregated in one query for the whole payload.
+    attachment_count: int = 0
+    #: The reservation data R04 keeps when it arrives — on **both** item shapes.
+    #:
+    #: The timeline does not render any of the three. They are here anyway,
+    #: because omitting them from one item serialiser and not the other is exactly
+    #: how two shapes of the same object appear, which this module exists to
+    #: prevent: a consumer holding an `item` would have to know which payload it
+    #: came from before it could ask whether a cost was recorded.
+    #:
+    #: `null` throughout means "not recorded", and every item starts there.
+    confirmation_number: str | None = None
+    #: A `Decimal`, never a `float` — this is money. It reaches the wire as a JSON
+    #: **string** (`"249.00"`), which is Pydantic's default for `Decimal` and the
+    #: right one here: a JSON number would be parsed back as a binary float by
+    #: every client that reads it, reintroducing at the last hop the imprecision
+    #: `NUMERIC(12,2)` was chosen to avoid.
+    cost_amount: Decimal | None = None
+    cost_currency: str | None = None
+
+
+class ItemDetail(ItemRead):
+    """An item on the day-detail payload: the same fields plus its files.
+
+    The day detail is the one screen that renders attachments, so it is the one
+    payload that carries them. `ItemRead` stays the timeline's shape — see the
+    module docstring for why this is a second model rather than an optional field
+    on the first.
+    """
+
+    attachments: list[AttachmentRead]
 
 
 class DayRead(BaseModel):
@@ -141,6 +218,10 @@ class DayDetail(BaseModel):
     trip_id: uuid.UUID
     date: date
     stages: list[StageRead]
-    items: list[ItemRead]
+    items: list[ItemDetail]
+    #: The files pinned to the **day itself** — the printed reservation for the
+    #: whole day, the ferry timetable — as opposed to the ones pinned to an item,
+    #: which travel with the item and are listed inside it.
+    attachments: list[AttachmentRead]
     previous_date: date | None
     next_date: date | None

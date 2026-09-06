@@ -159,3 +159,171 @@ export function formatTime(value: string | null, locale: string): string {
     new Date(2000, 0, 1, hours, minutes),
   )
 }
+
+const BYTE_SIZE_UNITS = ['B', 'KB', 'MB'] as const
+export type ByteSizeUnit = (typeof BYTE_SIZE_UNITS)[number]
+
+/**
+ * Splits a byte count into the `{value, unit}` pair the `attachment.size` ICU
+ * key renders — never a pre-built string. `value` is a plain number, not a
+ * string this module has already formatted: the key's `{value, number}`
+ * argument is what hands it to `Intl.NumberFormat` under the active locale, so
+ * the decimal separator (`1.8` vs `1,8`) falls out of the translation call
+ * rather than being decided here.
+ */
+export function splitByteSize(bytes: number): { value: number; unit: ByteSizeUnit } {
+  const KB = 1024
+  const MB = KB * 1024
+  if (bytes >= MB) {
+    return { value: Math.round((bytes / MB) * 10) / 10, unit: 'MB' }
+  }
+  if (bytes >= KB) {
+    return { value: Math.round(bytes / KB), unit: 'KB' }
+  }
+  return { value: bytes, unit: 'B' }
+}
+
+/**
+ * ISO 4217's shape, mirroring `CURRENCY_CODE_PATTERN` in
+ * `backend/trip_planner/domain/money.py`: three upper-case letters, nothing
+ * else. Not an allow-list — the server deliberately keeps none, and a second,
+ * stricter list on this side would refuse costs the API happily accepts.
+ */
+export const CURRENCY_CODE_PATTERN = /^[A-Z]{3}$/u
+
+/**
+ * The wire shape of a cost amount, mirroring the server's rules for one
+ * (`validate_cost`): digits, no sign, at most two decimal places. `0` and
+ * `0.00` both match — a free museum day is a real cost of zero, not an absent
+ * one — while `-1` and `1.234` both fail, which is exactly the `422
+ * invalid_cost` the spec's Edge Cases table names.
+ */
+export const COST_AMOUNT_PATTERN = /^\d+(\.\d{1,2})?$/u
+
+/**
+ * The other half of the server's rule, which `COST_AMOUNT_PATTERN` cannot
+ * express: `NUMERIC(12,2)` has a *precision* as well as a scale, so an amount
+ * can be perfectly well-shaped and still be too large to store.
+ *
+ * Both numbers are the ones `backend/trip_planner/domain/money.py` writes down
+ * (`MAX_COST_DIGITS`, `MAX_COST_DECIMAL_PLACES`), mirrored here the same way
+ * `CURRENCY_CODE_PATTERN` mirrors its regex — and the bound below is *derived*
+ * from them rather than typed out, so `9999999999.99` exists in exactly one
+ * place on each side.
+ */
+export const MAX_COST_DECIMAL_PLACES = 2
+export const MAX_COST_DIGITS = 12
+export const MAX_COST_AMOUNT =
+  10 ** (MAX_COST_DIGITS - MAX_COST_DECIMAL_PLACES) - 10 ** -MAX_COST_DECIMAL_PLACES
+
+/**
+ * Whether a **normalised** amount is larger than the column can hold — the
+ * client side of the server's fourth `validate_cost` rule.
+ *
+ * A convenience, never an authority: the server repeats this check and its
+ * answer is the only one that decides anything. What it buys is that an
+ * over-large amount marks the field it is about, exactly like every other
+ * refused cost, instead of coming back as the generic "check the marked
+ * fields" with nothing marked.
+ *
+ * `Number` is safe here in a way it would not be for the *decimal* rule: this
+ * only ever judges values `COST_AMOUNT_PATTERN` has already accepted, so at
+ * most two decimal places, and a double's spacing around 10^10 is about
+ * 2 × 10⁻⁶ — thousands of times finer than the one-cent step this compares at.
+ * Anything the pattern refuses returns `false` here, because it is already
+ * refused for a better-stated reason.
+ */
+export function exceedsMaxCostAmount(amount: string): boolean {
+  const value = Number(amount)
+  return Number.isFinite(value) && value > MAX_COST_AMOUNT
+}
+
+/**
+ * A typed amount, normalised into the decimal string the wire takes.
+ *
+ * **The comma is a decimal separator here.** This is a Polish-first product
+ * (R01, R09) and `249,50` is how a Polish keyboard writes two hundred
+ * forty-nine fifty; `NUMERIC(12,2)` and `domain/money.py` take `249.50`.
+ * Translating between the two is this function's whole job, done once on the
+ * way to the wire rather than at each of the places an amount is read.
+ *
+ * Three things are normalised, and no more:
+ *
+ * - **Whitespace anywhere is dropped**, which covers a leading or trailing
+ *   space and the group separator in `1 250,50` — including the
+ *   *non-breaking* space `Intl` itself renders under `pl`, since `\s` under
+ *   the `u` flag matches it. So this reads back what `formatCurrency` prints.
+ * - **Every comma becomes a dot.** A second comma then leaves two dots, which
+ *   `COST_AMOUNT_PATTERN` refuses — `1,250,50` is reported as invalid rather
+ *   than guessed at.
+ * - **A trailing separator is dropped**, so the half-typed `249,` reads as
+ *   `249` instead of flashing an error message between two keystrokes.
+ *
+ * **Deliberately not handled**, because this is not a locale-aware number
+ * parser and must not grow into one: the English grouping style `1,250.50`
+ * (whose comma this reads as a decimal separator, so it is refused rather
+ * than silently misread by a factor of a thousand); a leading `+`; a currency
+ * symbol or code typed into the amount box; non-ASCII digits; scientific
+ * notation. Each of those fails `COST_AMOUNT_PATTERN`, which marks the field
+ * rather than sending the server a guess.
+ */
+export function normaliseAmount(amount: string): string {
+  return amount
+    .replace(/\s/gu, '')
+    .replace(/,/gu, '.')
+    .replace(/\.$/u, '')
+}
+
+/**
+ * A stored reservation cost, rendered as money through **one**
+ * `Intl.NumberFormat` call — the spec's cross-cutting rule that a currency
+ * goes through `Intl`, never through concatenation. `amount` arrives as the
+ * wire's decimal string (`NUMERIC(12,2)` is never a JS `float`; see
+ * `domain/money.py`), so turning it into a number happens here, at the one
+ * point it is about to be rendered, and nowhere else.
+ *
+ * This call produces both required shapes: `1 250,00 zł` under `pl` —
+ * Polish groups thousands with a *non-breaking* space, not a plain one, so
+ * a caller comparing this output should match that rather than fight it —
+ * and `PLN 1,250.00` under `en`, where `PLN` has no currency glyph `Intl`
+ * knows, so it falls back to the ISO code as the currency's own display
+ * form. Neither shape is assembled by hand.
+ *
+ * `useGrouping: 'always'` is not decoration: Polish's CLDR data sets a
+ * `minimumGroupingDigits` of 2, so the locale-default `'auto'` silently
+ * drops the separator on any four-digit amount (`1250,00 zł`, no space) and
+ * only groups from five digits up — which would make this exact, spec-cited
+ * example fail to reproduce on the very Node/ICU build this runs on.
+ * `'always'` is the one option that turns grouping back on without
+ * hand-rolling the separator.
+ *
+ * **It never renders `NaN`, and never throws.** `Number('')` is `0` and
+ * `Number('abc')` is `NaN`, so an unguarded call used to put a literal
+ * `NaN €` on the screen the moment a Polish user typed the Polish decimal
+ * comma (Step 3.4-review-fix-2), and a currency of `P` — two keystrokes into
+ * `PLN` — makes `Intl.NumberFormat` throw a `RangeError` outright. An amount
+ * that is empty or does not parse, or a currency that is not ISO-4217 shaped,
+ * therefore renders **nothing at all**: an empty string is the honest answer
+ * where a rounded guess or the word `NaN` would be a lie about the user's
+ * money. The caller decides what to do with nothing — `ReservationPanel`
+ * renders no cost element at all, which is also what its no-nagging
+ * invariant requires.
+ *
+ * The comma is normalised here as well as in `reservationInput`, so a live
+ * draft value and a saved wire value both render the same way through the
+ * same call.
+ */
+export function formatCurrency(amount: string, currency: string, locale: string): string {
+  const normalised = normaliseAmount(amount)
+  const value = Number(normalised)
+
+  if (normalised === '' || !Number.isFinite(value) || !CURRENCY_CODE_PATTERN.test(currency)) {
+    return ''
+  }
+
+  return new Intl.NumberFormat(locale, {
+    style: 'currency',
+    currency,
+    useGrouping: 'always',
+  }).format(value)
+}

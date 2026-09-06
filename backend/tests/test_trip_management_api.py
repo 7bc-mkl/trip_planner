@@ -1,7 +1,7 @@
 """Editing and deleting a trip, and managing its stages.
 
 Phase 4's backend. The rules under test all protect something the owner did not
-ask to lose: an item, a stage, or the route mode of the trip.
+ask to lose: an item, an attachment, a stage, or the route mode of the trip.
 """
 
 from __future__ import annotations
@@ -13,9 +13,15 @@ import sqlalchemy as sa
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session as OrmSession
 
+from tests.test_attachments_api import (
+    day_attachments_url,
+    item_attachments_url,
+    upload,
+)
+from tests.test_domain_uploads import make_pdf
 from tests.test_items_api import add_item
 from tests.test_trips_api import TRIPS, create, error_code
-from trip_planner.db.models import Item, Owner, Trip, TripDay, TripStage
+from trip_planner.db.models import Attachment, Item, Owner, Trip, TripDay, TripStage
 
 
 @pytest.fixture
@@ -330,6 +336,78 @@ class TestDateRangeChanges:
         response = patch(signed_in_client, trip, start_date="2026-10-14")
 
         assert response.status_code == 409
+
+    def test_shortening_past_a_day_holding_only_a_voucher_is_refused(
+        self, signed_in_client: TestClient, trip: dict
+    ) -> None:
+        """A day with a document and no items is not empty.
+
+        Without this guard the day would be dropped silently and its voucher
+        deleted by the cascade — a date edit destroying data, which A10 forbids.
+        """
+        upload(signed_in_client, day_attachments_url(trip, "2026-10-23"), make_pdf())
+
+        response = patch(signed_in_client, trip, end_date="2026-10-22")
+
+        assert response.status_code == 409
+        assert error_code(response) == "days_have_attachments"
+        assert response.json()["error"]["field"] == "2026-10-23"
+
+    def test_that_refusal_changes_nothing_at_all(
+        self, signed_in_client: TestClient, trip: dict, db_session: OrmSession
+    ) -> None:
+        """Dates, days and the file itself all survive the refused edit."""
+        stored = upload(
+            signed_in_client, day_attachments_url(trip, "2026-10-23"), make_pdf()
+        ).json()
+
+        patch(signed_in_client, trip, end_date="2026-10-22", title="Nowa nazwa")
+
+        body = signed_in_client.get(f"{TRIPS}/{trip['id']}").json()
+        assert body["end_date"] == "2026-10-24"
+        assert body["title"] == "Malezja, październik 2026"
+        assert len(body["days"]) == 15
+        assert db_session.get(Attachment, uuid.UUID(stored["id"])) is not None
+
+    def test_shortening_past_a_day_with_neither_items_nor_files_still_removes_it(
+        self, signed_in_client: TestClient, trip: dict
+    ) -> None:
+        """The silent removal is narrowed, not withdrawn: a truly empty day still goes.
+
+        A file on *another* day proves the guard looks at the days being dropped
+        rather than at the trip as a whole.
+        """
+        upload(signed_in_client, day_attachments_url(trip, "2026-10-11"), make_pdf())
+
+        assert patch(signed_in_client, trip, end_date="2026-10-23").status_code == 200
+        assert dates_of(signed_in_client, trip)[-1] == "2026-10-23"
+
+    def test_a_day_with_both_items_and_files_answers_days_have_items(
+        self, signed_in_client: TestClient, trip: dict
+    ) -> None:
+        """The deliberate choice: `days_have_items` wins when a day has both.
+
+        Either code would be truthful. `days_have_items` is the one a client
+        shipped before this feature already branches on, so keeping it means no
+        existing client meets an unknown code for a case it already handles —
+        and the owner's fix is the same either way: clear that day.
+        """
+        add_item(signed_in_client, trip, day="2026-10-23", title="Ostatni wieczór")
+        upload(signed_in_client, day_attachments_url(trip, "2026-10-23"), make_pdf())
+
+        response = patch(signed_in_client, trip, end_date="2026-10-22")
+
+        assert response.status_code == 409
+        assert error_code(response) == "days_have_items"
+
+    def test_a_file_pinned_to_an_item_on_a_dropped_day_is_protected_too(
+        self, signed_in_client: TestClient, trip: dict
+    ) -> None:
+        """`days_have_items` covers this today; the attachment guard does not rely on it."""
+        item = add_item(signed_in_client, trip, day="2026-10-23", title="Nocleg")
+        upload(signed_in_client, item_attachments_url(trip, item), make_pdf())
+
+        assert patch(signed_in_client, trip, end_date="2026-10-22").status_code == 409
 
     def test_editing_only_the_title_leaves_the_days_alone(
         self, signed_in_client: TestClient, trip: dict
