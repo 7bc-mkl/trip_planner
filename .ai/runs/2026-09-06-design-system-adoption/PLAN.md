@@ -39,7 +39,7 @@
 | 4 | 4.7 | `/trips/:id/days/:date` — the day detail (spec step 23) | dispatch | done | 14781cc |
 | 4 | 4.8 | Phase-4 screenshot set and the before/after pairs (spec step 24) | inline | done | 8d85675 |
 | 6 | 6.1 | The icon sprite and the `<Icon>` wrapper (spec step 32) | dispatch | done | d0a719d |
-| 6 | 6.2 | Final verification pass — contrast, diacritics, locales, bundle (spec step 33) | inline | done | pending |
+| 6 | 6.2 | Final verification pass — contrast, diacritics, locales, bundle (spec step 33) | inline | done | d0dc40d |
 
 ## Goal
 
