@@ -83,6 +83,18 @@ import { ApiError } from '../../api/client'
  * **Only successful rows retire.** A failed or cancelled row is the only record
  * of what went wrong and it carries the retry action, so it stays until the
  * owner dismisses it.
+ *
+ * **The duplicate hint (A14) is informational, never a gate.** When a
+ * successful upload's `sha256` matches one already in `listedAttachmentHashes`
+ * — the host's own list, scoped to this same parent — the done row grows one
+ * extra line saying so. Nothing is deduplicated and nothing is refused: both
+ * copies are stored, the attachment row still appears, and the hint requires
+ * no dismissal and offers no undo. It is decided entirely client-side from
+ * data the `201` response and the host's existing list already carry, so it
+ * costs no new request. Two identical files on two different parents are two
+ * legitimate attachments, not a duplicate — each host only ever lists its own
+ * parent's hashes, so the scoping falls out of that rather than needing its
+ * own check here.
  */
 
 /** The server's per-attachment ceiling, mirrored for the pre-check only. */
@@ -114,6 +126,16 @@ type Row = {
   /** The attachment the server created. Non-null only once `state` is `done`,
       and the handle the row retires by once the host's list carries it. */
   attachmentId: string | null
+  /**
+   * True when this upload's `sha256`, at the moment it succeeded, matched a
+   * hash already in `listedAttachmentHashes` — i.e. the same bytes are
+   * already attached to this same parent. Decided once, at success, from the
+   * hashes the host was listing *before* this attachment joined them: reading
+   * it reactively off the current list later would have the file match
+   * itself the instant the host's own refresh caught up. Never blocks, never
+   * offers undo, never affects storage (A14) — it is a hint, not a gate.
+   */
+  duplicate: boolean
 }
 
 /**
@@ -191,6 +213,7 @@ export function UploadDropzone({
   target,
   onUploaded,
   listedAttachmentIds = [],
+  listedAttachmentHashes = [],
   disabled = false,
 }: {
   target: UploadTarget
@@ -205,6 +228,15 @@ export function UploadDropzone({
    * would be shown.
    */
   listedAttachmentIds?: readonly string[]
+  /**
+   * The `sha256` of every attachment `listedAttachmentIds` names — the same
+   * host list, one column over. Scoped to this same parent by construction:
+   * each host (`DayAttachments`, `ItemAttachments`) only ever passes its own
+   * parent's attachments, so a match here means "already attached here", never
+   * "attached somewhere in the trip". Used only for the non-blocking duplicate
+   * hint (A14); a host that passes nothing simply never shows the hint.
+   */
+  listedAttachmentHashes?: readonly string[]
   disabled?: boolean
 }) {
   const { t } = useTranslation()
@@ -222,6 +254,17 @@ export function UploadDropzone({
     () => new Set(listedKey === '' ? [] : listedKey.split(',')),
     [listedKey],
   )
+
+  // The latest hashes the host is listing, read at the moment an upload
+  // succeeds rather than through the closure `start` was created with — a
+  // ref kept current every render, exactly like `listed` above but read
+  // imperatively instead of during render. Assigning during render (rather
+  // than in an effect) is deliberate: the value must reflect the render that
+  // is committing *now*, before this success's own `patch` and `onUploaded`
+  // run, or a host that appends synchronously could make the file match
+  // itself.
+  const hashesRef = useRef<readonly string[]>(listedAttachmentHashes)
+  hashesRef.current = listedAttachmentHashes
 
   /** One controller per in-flight row, so cancelling one cannot abort another. */
   const controllers = useRef(new Map<string, AbortController>())
@@ -295,11 +338,17 @@ export function UploadDropzone({
       upload.then(
         (attachment) => {
           controllers.current.delete(key)
+          // Decided now, from the hashes the host was listing the instant
+          // before this attachment joined them (see `hashesRef` above) — the
+          // upload still succeeds and the row still reaches `done` either way;
+          // this only adds a line, never a gate (A14).
+          const duplicate = hashesRef.current.includes(attachment.sha256)
           patch(key, {
             state: 'done',
             loaded: attachment.byte_size,
             total: attachment.byte_size,
             attachmentId: attachment.id,
+            duplicate,
           })
           setAnnouncement({ kind: 'done', filename: file.name })
           onUploaded?.(attachment)
@@ -343,6 +392,7 @@ export function UploadDropzone({
           errorKey: refusal === null ? null : `error.${refusal}`,
           refusedLocally: refusal !== null,
           attachmentId: null,
+          duplicate: false,
         }
       })
 
@@ -409,7 +459,13 @@ export function UploadDropzone({
   }
 
   function retry(row: Row) {
-    patch(row.key, { state: 'selected', loaded: 0, errorKey: null, attachmentId: null })
+    patch(row.key, {
+      state: 'selected',
+      loaded: 0,
+      errorKey: null,
+      attachmentId: null,
+      duplicate: false,
+    })
     start(row.key, row.file)
   }
 
@@ -491,6 +547,13 @@ export function UploadDropzone({
                 <p className="upload-row__error" role="alert">
                   {t(row.errorKey)}
                 </p>
+              )}
+
+              {/* Non-blocking (A14): no `role="alert"`, no dismiss action of its
+                  own, and no bearing on the row above it — the upload already
+                  succeeded and the attachment already exists either way. */}
+              {row.state === 'done' && row.duplicate && (
+                <p className="upload-row__duplicate-hint">{t('upload.duplicateHint')}</p>
               )}
 
               <span className="upload-row__actions">

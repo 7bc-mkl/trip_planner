@@ -1496,6 +1496,17 @@ textarea:disabled {
 
 /* The same colour the shipped `[role='alert']` recipe already renders on this
    surface — the refusal message is not a new pair, it is that one. */
+/* The non-blocking duplicate hint (A14) — the same muted-on-surface recipe
+   `.upload-dropzone__hint` already uses, deliberately not `.upload-row__error`'s
+   danger tone: this never blocks the upload, so it must not read as a warning. */
+.upload-row__duplicate-hint {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--text-muted);
+  font: var(--type-body-sm);
+  letter-spacing: var(--tracking-body-sm);
+}
+
 .upload-row__error {
   grid-column: 1 / -1;
   margin: 0;

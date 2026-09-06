@@ -160,6 +160,7 @@
     "announceDone": "Dodano {filename}",
     "announceFailed": "Nie dodano {filename}. {reason}",
     "announceCancelled": "Anulowano wysyłanie {filename}",
+    "duplicateHint": "Plik o takiej samej zawartości jest już tutaj dołączony.",
     "state": {
       "selected": "Wybrany",
       "uploading": "Wysyłanie",

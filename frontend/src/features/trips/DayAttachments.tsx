@@ -67,11 +67,15 @@ export function DayAttachments({
       {/* The list this panel is showing, handed back to the drop zone so a
           finished upload's queue row retires once the refetched list carries
           it — the file is shown once, as an attachment row, and the queue
-          cannot outlive a later delete. See `UploadDropzone`'s own note. */}
+          cannot outlive a later delete. See `UploadDropzone`'s own note. The
+          hashes travel alongside for the same reason and scope: this day's
+          own attachments, so the non-blocking duplicate hint (A14) only ever
+          fires for a file already attached to *this* day. */}
       <UploadDropzone
         target={{ kind: 'day', tripId, date }}
         onUploaded={onUploaded}
         listedAttachmentIds={attachments.map((attachment) => attachment.id)}
+        listedAttachmentHashes={attachments.map((attachment) => attachment.sha256)}
       />
     </section>
   )

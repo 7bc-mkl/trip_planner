@@ -560,6 +560,102 @@ describe('retiring a completed upload', () => {
   })
 })
 
+describe('the non-blocking duplicate hint (A14)', () => {
+  /**
+   * The spec's own stated verification: the hint appears when the upload's
+   * `sha256` matches one already on the same parent, and — the half that
+   * matters just as much — the upload still succeeds regardless. Nothing here
+   * is deduplicated or refused; both copies are stored, so `onUploaded` still
+   * fires and the row still reaches `done`.
+   */
+  it('shows the hint when the returned sha256 matches a hash already on this parent, and still succeeds', async () => {
+    const user = userEvent.setup()
+    const onUploaded = vi.fn()
+    render(
+      <UploadDropzone
+        target={DAY}
+        onUploaded={onUploaded}
+        listedAttachmentHashes={['other-hash', 'matching-hash']}
+      />,
+    )
+
+    await user.upload(dropzone(), pdf())
+    FakeXhr.instances[0]!.respond(201, { ...ATTACHMENT, sha256: 'matching-hash' })
+
+    await waitFor(() =>
+      expect(within(row('voucher.pdf')).getByText(pl.upload.state.done)).toBeInTheDocument(),
+    )
+    // The upload succeeded: nothing was refused, nothing deduplicated.
+    expect(onUploaded).toHaveBeenCalledWith(
+      expect.objectContaining({ sha256: 'matching-hash' }),
+    )
+    expect(within(row('voucher.pdf')).getByText(pl.upload.duplicateHint)).toBeInTheDocument()
+    // Non-blocking: no alert role, no undo/cancel action beside it.
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it('shows no hint when the returned sha256 matches nothing on this parent', async () => {
+    const user = userEvent.setup()
+    render(<UploadDropzone target={DAY} listedAttachmentHashes={['unrelated-hash']} />)
+
+    await user.upload(dropzone(), pdf())
+    FakeXhr.instances[0]!.respond(201, { ...ATTACHMENT, sha256: 'fresh-hash' })
+
+    await waitFor(() =>
+      expect(within(row('voucher.pdf')).getByText(pl.upload.state.done)).toBeInTheDocument(),
+    )
+    expect(screen.queryByText(pl.upload.duplicateHint)).not.toBeInTheDocument()
+  })
+
+  it('shows no hint for the same bytes uploaded to a different parent', async () => {
+    // Same hash the day panel is listing — but this dropzone stands in for a
+    // *different* parent (a different day/item), which in the real app means
+    // a host that never passes that hash in. Scoping falls out of each host
+    // only ever listing its own parent's attachments, not out of any check
+    // here — this pins that down at the drop-zone boundary.
+    const user = userEvent.setup()
+    render(<UploadDropzone target={DAY} listedAttachmentHashes={[]} />)
+
+    await user.upload(dropzone(), pdf())
+    FakeXhr.instances[0]!.respond(201, { ...ATTACHMENT, sha256: 'shared-hash' })
+
+    await waitFor(() =>
+      expect(within(row('voucher.pdf')).getByText(pl.upload.state.done)).toBeInTheDocument(),
+    )
+    expect(screen.queryByText(pl.upload.duplicateHint)).not.toBeInTheDocument()
+  })
+
+  it('renders the hint in English when the locale is English', async () => {
+    await applyLocale('en')
+    const user = userEvent.setup()
+    render(<UploadDropzone target={DAY} listedAttachmentHashes={['dup-hash']} />)
+
+    await user.upload(dropzone('en'), pdf())
+    FakeXhr.instances[0]!.respond(201, { ...ATTACHMENT, sha256: 'dup-hash' })
+
+    expect(await screen.findByText(en.upload.duplicateHint)).toBeInTheDocument()
+  })
+
+  it('does not carry a stale hint into a retry', async () => {
+    // A row that first failed cannot have a duplicate verdict yet; retrying it
+    // must not show a hint left over from nowhere, and a genuinely fresh
+    // result on the retry is what decides it.
+    const user = userEvent.setup()
+    render(<UploadDropzone target={DAY} listedAttachmentHashes={['dup-hash']} />)
+
+    await user.upload(dropzone(), pdf())
+    FakeXhr.instances[0]!.respond(429, { error: { code: 'rate_limited' } })
+
+    await user.click(await screen.findByRole('button', { name: pl.upload.retry }))
+    FakeXhr.instances[1]!.respond(201, { ...ATTACHMENT, sha256: 'fresh-hash' })
+
+    await waitFor(() =>
+      expect(within(row('voucher.pdf')).getByText(pl.upload.state.done)).toBeInTheDocument(),
+    )
+    expect(screen.queryByText(pl.upload.duplicateHint)).not.toBeInTheDocument()
+  })
+})
+
 describe('no state by colour alone', () => {
   it('every state renders a translated word beside its glyph', async () => {
     const user = userEvent.setup()

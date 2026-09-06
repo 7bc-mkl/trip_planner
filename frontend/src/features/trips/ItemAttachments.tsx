@@ -96,6 +96,9 @@ export function ItemAttachments({
           // append and the upload's own state settle in the same commit, so
           // the file is never rendered twice even for one frame.
           listedAttachmentIds={attachments.map((attachment) => attachment.id)}
+          // Same list, one column over — scopes the non-blocking duplicate
+          // hint (A14) to this item's own attachments.
+          listedAttachmentHashes={attachments.map((attachment) => attachment.sha256)}
         />
       )}
     </section>
