@@ -142,6 +142,15 @@
     "days_have_items": "Te dni mają już zaplanowane elementy. Najpierw je przenieś lub usuń, potem skróć podróż.",
     "stages_outside_new_range": "Część celów wykracza poza nowe daty. Najpierw je popraw, potem skróć podróż.",
     "items_outside_new_range": "Część elementów wykracza poza nową datę zakończenia. Najpierw je skróć lub usuń, potem skróć podróż.",
+    "attachment_too_large": "Ten plik przekracza limit 10 MB dla jednego załącznika.",
+    "unsupported_file_type": "Można załączać tylko pliki PDF, JPEG i PNG.",
+    "malformed_upload": "Nie udało się odczytać przesłanego pliku. Sprawdź plik i spróbuj ponownie.",
+    "attachment_limit_reached": "Tutaj jest już maksymalna liczba 20 załączników. Usuń jeden, zanim dodasz kolejny.",
+    "trip_storage_quota_exceeded": "Ta podróż osiągnęła limit miejsca na załączniki. Usuń jakiś załącznik, zanim dodasz kolejny.",
+    "rate_limited": "Zbyt wiele przesłanych plików w krótkim czasie. Odczekaj kilka minut i spróbuj ponownie.",
+    "invalid_cost": "Sprawdź koszt: musi mieć kwotę i walutę, nie może być ujemny i może mieć co najwyżej dwa miejsca po przecinku.",
+    "invalid_reservation_field": "Numer potwierdzenia jest za długi. Skróć go do 500 znaków lub mniej.",
+    "days_have_attachments": "Te dni mają już załączniki. Najpierw je usuń, potem skróć podróż.",
     "unknown": "Coś poszło nie tak. Spróbuj ponownie."
   }
 }
