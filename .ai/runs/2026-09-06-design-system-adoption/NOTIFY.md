@@ -48,3 +48,10 @@
 - Recorded, left as specified: the disabled-field pair is 4.34:1 (WCAG exempts inactive components, and spec step 8 prescribes it). Named for the UX review because Phase 5's preview fields are its main consumer.
 - Relayed from Step 2.5: the spec's own verification grep for that Step is too loose — `--space-[0-9]` also matches the canonical `--space-2xs`/`2xl`/`3xl`. The boundary-guarded form is empty.
 - UI verification ran: ten PNGs in `checkpoint-2-artifacts/`, five routes × two locales.
+
+## 2026-09-06T15:59Z — Steps 3.1–3.3 (executor, group:C)
+- Decision (Step 3.2): `DayDetailPage` now issues one extra `GET /trips/:id` for the header's context line, best-effort — the day endpoint answers with a bare `trip_id`, so the trip title and date range are not otherwise available on that route, and the spec puts the context line on **both** trip-scoped routes. A failure or an abort leaves the line absent and changes nothing else on the screen; no test's request assertions are affected.
+- Decision (Step 3.2): the context line is `display: none` below 768px rather than truncated to nothing — at 360px the band has no room beside the wordmark, the locale switch and sign-out, and the same trip is named in the page's own `<h1>`. Keeps the 360px "no horizontal scrolling" QA item honest.
+- Decision (Step 3.3): the dock is an `<aside>` **before** `<main>` in the markup, with the ≥1280px split placing it in column two. DOM order therefore equals the stacked visual order at the two narrow breakpoints, and nothing is reordered visually anywhere.
+- Step 3.1 retired the `.app-shell button:not([class])` catch-all: sign-out now wears `.button-quiet`, as the scope-correction comment from checkpoint 2 anticipated.
+- Visual QA for Steps 13–15 (header stays put on scroll, a 120-character title does not wrap, no horizontal scroll at 1280/1024/360px) is not evidenced here — Step 3.4 captures the phase-3 set, including the 360px timeline.
