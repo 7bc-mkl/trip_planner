@@ -286,3 +286,32 @@
   `click 'button[type=submit]'` works; a stuck dialog after it is the harness, not the app.
 - Gate: all eight commands green — backend **635 passed, 0 skipped**, frontend **265 passed**
   (up from 264), build clean, all three `check_*.py` OK.
+
+## 2026-09-07T00:25:00Z — checkpoint 5 (Phase 3 closes)
+- Run resumed: at the safety checkpoint the user reviewed and chose **"finish all of it"**, so
+  Phases 3 and 4 proceed rather than the run ending at Phase 2.
+- Steps covered: 3.1..3.7 plus `3.4-review-fix-1` (`930da01..8d21299`) — **eight Steps, not five**.
+  Cadence deviation recorded deliberately: Step 3.7 *is* a full UI walk with screenshots, so
+  checkpointing at 3.5 and walking again at 3.7 would have paid for the same browser work twice two
+  Steps apart. The gate commands still ran at the 3.6 boundary and were green, so no window went
+  unvalidated — only the ceremony was batched. Phase 4 returns to the normal cadence.
+- Gate: all eight green — **635 backend / 0 skipped**, **270 frontend**, build clean.
+- **R04 is met.** The brief's own flow was walked in the running application, in both locales:
+  counter `0 z 1 załatwionych` → `1 z 1 załatwionych`. A full reload returned the confirmation
+  number, cost and voucher; the disclosure stayed collapsed even immediately after the upload; and
+  moving to *gotowe* was one click with no request, no prompt and no second dialog.
+- Migration `0006_item_reservation` unwinds **independently** of `0005_attachment` — tested against a
+  database already holding items and attachments, which is assumption A1 made real rather than
+  asserted.
+- **Defect found by the walk and fixed:** `formatCurrency` had no call site in the application, so
+  `1 250,00 zł` never rendered and the spec's "money through `Intl`" rule governed nothing — Step 3.4
+  had shipped a green test over unreachable code. `3.4-review-fix-1` gives it the smallest honest
+  surface: the collapsed disclosure shows a *saved* cost, only when one exists, so it cannot nag and
+  `noNagging.test.tsx` passes unmodified.
+- Worth keeping: Polish CLDR sets `minimumGroupingDigits: 2`, so `Intl`'s default `useGrouping:
+  'auto'` omits the group separator on a four-digit amount and the spec's own cited example does not
+  reproduce without `useGrouping: 'always'`.
+- New deferred minor: manually clearing the pre-filled `PLN` while an amount is present drops both
+  halves silently. Outside ordinary use, but real.
+- Environment: `agent-browser` cannot drive `input[type=date]` **or** `input[type=time]` at all.
+- Tasks-table SHAs for all Phase 3 rows reconciled to their post-amend values.

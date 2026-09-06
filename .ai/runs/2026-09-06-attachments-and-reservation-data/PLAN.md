@@ -34,14 +34,14 @@
 | 2 | 2.7 | The paperclip badge on the timeline's item cards | dispatch:cheap | done | `4a2c751` |
 | 2 | 2.8 | Preview-surface reconciliation (no-op unless `features/preview/` exists) | inline | done | `cd52db1` |
 | 2 | 2.3-review-fix-1 | The day panel's post-upload refresh cannot be overwritten by a stale in-flight response | dispatch:capable | done | `02339d2` |
-| 3 | 3.1 | The `item` reservation columns on their own Alembic revision | dispatch:capable | done | `9935173` |
-| 3 | 3.2 | The `ReservationPanel` disclosure inside the item editor | dispatch | done | `bce160c` |
-| 3 | 3.3 | The disclosure's placement and its never-auto-expanded guarantee | dispatch | done | `e7ec7e2` |
-| 3 | 3.4 | Currency defaulting to `PLN` and `Intl.NumberFormat` rendering | dispatch:cheap | done | `d790e81` |
-| 3 | 3.5 | The status control's path to *done* left untouched and unconditioned | dispatch:cheap | done | `ed65394` |
-| 3 | 3.6 | Assert the absence of nagging | dispatch:cheap | done | `6e5141e` |
-| 3 | 3.7 | End-to-end verification of the brief's own flow | inline | done | `e5c4586` |
-| 3 | 3.4-review-fix-1 | The saved cost is actually rendered through `Intl`, giving the rule a call site | dispatch | done | `26a48ad` |
+| 3 | 3.1 | The `item` reservation columns on their own Alembic revision | dispatch:capable | done | `7e6b7c2` |
+| 3 | 3.2 | The `ReservationPanel` disclosure inside the item editor | dispatch | done | `acd8021` |
+| 3 | 3.3 | The disclosure's placement and its never-auto-expanded guarantee | dispatch | done | `0374d2c` |
+| 3 | 3.4 | Currency defaulting to `PLN` and `Intl.NumberFormat` rendering | dispatch:cheap | done | `10dbd5e` |
+| 3 | 3.5 | The status control's path to *done* left untouched and unconditioned | dispatch:cheap | done | `f17af1a` |
+| 3 | 3.6 | Assert the absence of nagging | dispatch:cheap | done | `99bf220` |
+| 3 | 3.7 | End-to-end verification of the brief's own flow | inline | done | `25e9826` |
+| 3 | 3.4-review-fix-1 | The saved cost is actually rendered through `Intl`, giving the rule a call site | dispatch | done | `8d21299` |
 | 4 | 4.1 | Drag-and-drop layered on the existing input | dispatch | todo | — |
 | 4 | 4.2 | The image lightbox — focus-trapped, `Escape` to close | dispatch | todo | — |
 | 4 | 4.3 | The non-blocking duplicate hint | dispatch:cheap | todo | — |
