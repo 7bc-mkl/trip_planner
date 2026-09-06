@@ -55,3 +55,9 @@
 - Decision (Step 3.3): the dock is an `<aside>` **before** `<main>` in the markup, with the ≥1280px split placing it in column two. DOM order therefore equals the stacked visual order at the two narrow breakpoints, and nothing is reordered visually anywhere.
 - Step 3.1 retired the `.app-shell button:not([class])` catch-all: sign-out now wears `.button-quiet`, as the scope-correction comment from checkpoint 2 anticipated.
 - Visual QA for Steps 13–15 (header stays put on scroll, a 120-character title does not wrap, no horizontal scroll at 1280/1024/360px) is not evidenced here — Step 3.4 captures the phase-3 set, including the 360px timeline.
+
+## 2026-09-06T14:01:08Z — checkpoint 3 (Steps 3.1–3.4)
+- Phase 3 complete: the frosted sticky header in its own `chrome.css`, the optional `context` and `dock` props on `AppShell`, and the responsive page grid. Gate green: locales (one new ICU key in both), css-tokens (268 refs), contrast (15/15), typecheck, **135 tests** (+4), build (CSS 21.81 kB).
+- Step review (`checkpoint`) over `590a4ee..001e1dc`: no blocker. Two minors accepted and named for the reviewer — `DayDetailPage` now makes one extra best-effort `GET /trips/:id` because the day endpoint carries only `trip_id` and the header context line is otherwise impossible there; and the context line is hidden below 768px rather than ellipsised to nothing. One process nit: the executor's NOTIFY append landed as its own commit `80cb3fe`.
+- The `.app-shell button:not([class])` specificity workaround introduced in Step 2.1 was deleted in 3.1 once sign-out took `.button-quiet` — as its own comment anticipated.
+- UI verification ran: twelve PNGs in `checkpoint-3-artifacts/` — five routes × two locales at 1440, plus the timeline at 360 in both locales. The dock slot is deliberately empty until Phase 4.
