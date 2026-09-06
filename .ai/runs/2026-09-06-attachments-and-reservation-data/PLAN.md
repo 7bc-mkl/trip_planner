@@ -18,11 +18,11 @@
 | 1 | 1.3 | `domain/money.py` — amount/currency pairing and ISO-4217 validation | dispatch:cheap | done | `17215fb` |
 | 1 | 1.4 | `security/quota.py` — per-owner rate/volume windows and locked byte quotas | dispatch:capable | done | `8cc3dc2` |
 | 1 | 1.5 | Nine new `ErrorCode` members with both locales' keys | dispatch:cheap | done | `da84350` |
-| 1 | 1.6 | The two upload endpoints, in the fixed check order | dispatch:capable | done | `9c47672` |
-| 1 | 1.7 | Attachment metadata, content download and delete routes | dispatch:capable | done | `c4d5f2a` |
-| 1 | 1.8 | `attachment_count`, day/item `attachments` and the three reservation fields on the serialisers and `PATCH` | dispatch:capable | done | `0f1cb4e` |
-| 1 | 1.9 | Cascade behaviour end to end | dispatch:cheap | done | `6a820b4` |
-| 1 | 1.10 | The `days_have_attachments` guard on the shipped `PATCH /trips/{tripId}` | dispatch:capable | done | `763a459` |
+| 1 | 1.6 | The two upload endpoints, in the fixed check order | dispatch:capable | done | `5ae3cb3` |
+| 1 | 1.7 | Attachment metadata, content download and delete routes | dispatch:capable | done | `74790ca` |
+| 1 | 1.8 | `attachment_count`, day/item `attachments` and the three reservation fields on the serialisers and `PATCH` | dispatch:capable | done | `eb423a8` |
+| 1 | 1.9 | Cascade behaviour end to end | dispatch:cheap | done | `5bec2c5` |
+| 1 | 1.10 | The `days_have_attachments` guard on the shipped `PATCH /trips/{tripId}` | dispatch:capable | done | `2ab94c6` |
 | 2 | 2.1 | `src/api/attachments.ts` — typed client with upload progress and abort | dispatch | todo | — |
 | 2 | 2.2 | `UploadDropzone` — labelled file input, pre-check, state machine, `aria-live` | dispatch:capable | todo | — |
 | 2 | 2.3 | The day documents panel on `/trips/:id/days/:date` | dispatch | todo | — |

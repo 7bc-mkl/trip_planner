@@ -72,3 +72,21 @@
   suite passes unmodified as the regression guard; the backend suite is 600 passed / 0 skipped.
 - The guard also covers attachments pinned to an *item* on a dropped day, in one `UNION`ed statement
   for the whole edit (no query per day), so it does not depend on the sibling's ordering to be safe.
+
+## 2026-09-06T19:45:00Z — checkpoint 2 (Phase 1 closes)
+- Steps covered: 1.6..1.10 (`26941d8..2ab94c6`). **Phase 1 is complete and independently shippable.**
+- Outcome: PASS. Three script gates green, `ruff` clean, `pytest` **600 passed / 0 skipped**,
+  frontend typecheck and 149 tests green. `npm run build` still deferred — no frontend source has
+  changed yet.
+- UI verification skipped, with reason: Phase 1 is backend-only by design ("Nothing in the UI
+  changes yet, and the phase is verifiable entirely by tests"), so there is nothing to photograph.
+- Dependency: `python-multipart` 0.0.32 added via `uv add`, `uv.lock` committed with the manifest.
+  The only dependency this run adds; the no-image-library rule stays asserted by a test.
+- Step review (checkpoint mode): no blocker, no major. The `UploadFile`-avoidance and the check
+  order are proved by test, not asserted in a comment — the temp-file test patches
+  `starlette.formparsers.SpooledTemporaryFile` as well as `tempfile`, which is the patch that
+  actually matters, and the ordering test demands `429` rather than `413` on an oversized body.
+- Nits carried to the final review: the parent lookup runs before `check_rate` (deliberate — a bad
+  path answers 404 without consuming quota — but a deviation from the spec's literal order), plus
+  the two nits from checkpoint 1.
+- Tasks-table SHAs for rows 1.6..1.10 reconciled to their post-amend values.
