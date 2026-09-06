@@ -150,6 +150,64 @@
     <div style="box-shadow:var(--elevation-2);border-color:var(--hairline-strong)"><b>elevation-2</b><br><span class="body-sm subtle">Hover i focus na karcie osi czasu</span></div>
     <div style="box-shadow:var(--elevation-3);border-radius:var(--radius-xl)"><b>elevation-3</b><br><span class="body-sm subtle">Dialog edycji pozycji, nad rozmytym tłem</span></div>
   </div>
+
+  <hr class="divider">
+
+  <h2 class="headline-lg section-title">Stany podglądowe — funkcje V1 bez backendu</h2>
+  <p class="body-sm muted" style="margin-top:0;max-width:44rem">
+    Jeden wzorzec, trzy mechanizmy zależnie od rodzaju elementu. Stan niesie <b>słowo</b>, nie samo
+    przygaszenie: przygaszenie to dekoracja, a informacja przekazana wyłącznie prezentacją znika w trybie
+    wysokiego kontrastu i dla czytnika ekranu.
+  </p>
+
+  <div class="grid2">
+    <section>
+      <h3 class="headline-md" style="margin-bottom:var(--space-sm)">Kontrolka — <code>aria-disabled</code></h3>
+      <div class="row" style="flex-wrap:wrap">
+        <button class="btn btn--ghost" data-preview="true" aria-disabled="true">
+          Udostępnij <span class="preview-badge">Wkrótce</span>
+        </button>
+        <button class="btn btn--ghost" data-preview="true" aria-disabled="true">
+          Asystent <span class="preview-badge">Wkrótce</span>
+        </button>
+      </div>
+      <p class="hint" style="margin-top:var(--space-sm)">
+        Zostaje w kolejności tabulacji i jest ogłaszana jako niedostępna wraz z etykietą „Wkrótce”.
+        Natywne <code>disabled</code> wyjęłoby ją z nawigacji klawiaturą i nie powiedziałoby użytkownikowi
+        <i>dlaczego</i>. Kliknięcie nie robi nic — i nic nie komunikuje, bo plakietka już to powiedziała.
+      </p>
+    </section>
+
+    <section>
+      <h3 class="headline-md" style="margin-bottom:var(--space-sm)">Pole danych — natywne <code>disabled</code></h3>
+      <div class="stack stack--sm">
+        <div class="field">
+          <label for="p-conf">Numer rezerwacji</label>
+          <input class="input" id="p-conf" disabled placeholder="—">
+        </div>
+        <div class="row" style="align-items:flex-end">
+          <div class="field" style="flex:2"><label for="p-amt">Kwota</label><input class="input" id="p-amt" disabled placeholder="—"></div>
+          <div class="field" style="flex:1"><label for="p-cur">Waluta</label><input class="input" id="p-cur" disabled placeholder="—"></div>
+        </div>
+      </div>
+      <p class="hint" style="margin-top:var(--space-sm)">
+        Tu natywne <code>disabled</code> jest właściwe: pole, które przyjmuje wpisany numer rezerwacji
+        i zaraz go wyrzuca, jest gorsze niż pole, które go nie przyjmuje.
+      </p>
+    </section>
+  </div>
+
+  <h3 class="headline-md" style="margin:var(--space-xl) 0 var(--space-sm)">Cała powierzchnia — <code>PreviewNotice</code></h3>
+  <p class="preview-notice" style="max-width:44rem">
+    <b>Ta część powstaje.</b>
+    Plan jest już napisany — zobacz <code>.ai/specs/2026-09-05-attachments-and-reservation-data.md</code>.
+  </p>
+  <p class="hint" style="margin-top:var(--space-sm);max-width:44rem">
+    Szuflady, panelu ani dialogu nie da się „wyłączyć”. Renderują się z prawdziwym obramowaniem i nagłówkiem,
+    a w miejscu treści dostają jedno zdanie i wskazanie specyfikacji. Nigdy nie ma tu przykładowych danych:
+    żadnej udawanej rozmowy, żadnego przykładowego załącznika, żadnego licznika, żadnego paska postępu, który
+    nigdy się nie kończy.
+  </p>
 </div>
 </body>
 </html>

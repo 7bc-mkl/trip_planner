@@ -487,3 +487,129 @@ textarea.input { height: auto; padding: var(--space-xs) var(--space-sm); line-he
 .divider { height: 1px; margin: var(--space-xl) 0; background: var(--hairline); border: 0; }
 
 .section-title { margin-bottom: var(--space-md); }
+
+/* ---------------------------------------------------------------------------
+   The preview pattern — surfaces for V1 capabilities that have no backend yet.
+   Everything here carries data-preview="true" in the real implementation.
+   --------------------------------------------------------------------------- */
+
+.preview-badge {
+  display: inline-flex;
+  align-items: center;
+  height: 18px;
+  padding: 0 var(--space-2xs);
+  border: 1px solid var(--hairline-strong);
+  border-radius: 9999px;
+  background: var(--draft-bg);
+  color: var(--draft-text);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.025em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* A preview control keeps its shape and its place in the tab order. The state is
+   carried by the badge text, never by the opacity alone — dimming is decoration. */
+[data-preview='true'][aria-disabled='true'] {
+  color: var(--text-subtle);
+  border-color: var(--hairline);
+  background: var(--surface);
+  cursor: default;
+}
+.btn[data-preview='true'][aria-disabled='true'] { gap: var(--space-xs); }
+
+.preview-notice {
+  margin: 0;
+  padding: var(--space-md);
+  border: 1px dashed var(--hairline-strong);
+  border-radius: var(--radius-lg);
+  background: var(--canvas);
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 18px;
+}
+.preview-notice b { display: block; margin-bottom: var(--space-2xs); color: var(--text); font-weight: 600; }
+.preview-notice code { font-size: 12px; color: var(--text-subtle); }
+
+.input:disabled,
+textarea.input:disabled {
+  background: var(--draft-bg);
+  color: var(--text-subtle);
+  border-color: var(--hairline);
+  cursor: not-allowed;
+}
+
+/* --- the assistant drawer (preview) --- */
+
+.drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  background: rgb(15 23 42 / 20%);
+  backdrop-filter: blur(12px);
+}
+.drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 21;
+  display: flex;
+  flex-direction: column;
+  width: var(--sidebar-width);
+  border-radius: var(--radius-xl) 0 0 var(--radius-xl);
+  background: rgb(255 255 255 / 95%);
+  box-shadow: var(--elevation-3);
+}
+.drawer__head {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
+  padding: var(--space-md);
+  border-bottom: 1px solid var(--hairline);
+}
+.drawer__head h2 { font-size: 16px; font-weight: 600; line-height: 24px; letter-spacing: -0.005em; }
+.drawer__body { flex: 1; display: grid; align-content: center; padding: var(--space-md); }
+.drawer__composer {
+  display: grid;
+  gap: var(--space-xs);
+  padding: var(--space-md);
+  border-top: 1px solid var(--hairline);
+}
+
+/* --- the day-documents panel (preview) --- */
+
+.dropzone {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-2xs);
+  padding: var(--space-lg);
+  border: 1.5px dashed var(--hairline-strong);
+  border-radius: var(--radius-lg);
+  background: var(--canvas);
+  color: var(--text-subtle);
+  text-align: center;
+  cursor: not-allowed;
+}
+.dropzone b { color: var(--text-muted); font-size: 15px; font-weight: 600; }
+
+/* --- the reservation disclosure (preview) --- */
+
+.disclosure {
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+.disclosure__summary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-sm);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+}
+.disclosure__summary::marker { content: ''; }
+.disclosure__body { display: grid; gap: var(--space-sm); padding: 0 var(--space-sm) var(--space-sm); }

@@ -14,12 +14,18 @@
   <symbol id="i-activity" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m13 4 4.5 7.5M13 4l-6 5.5M7 9.5 3 20l9-3 8 3-2.5-8.5M7 9.5l5 7.5"/></symbol>
   <symbol id="i-meal" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3v8a2.5 2.5 0 0 0 5 0V3M8.5 11v10M17 3c-1.5 1.5-2 3.5-2 5.5S15.5 12 17 12v9"/></symbol>
   <symbol id="i-other" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 8v4.5l3 2"/></symbol>
+  <symbol id="i-chat" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8 8 0 0 1-8 8H8l-4.5 3v-4.4A8 8 0 0 1 13 3.5h.5a8 8 0 0 1 7.5 8Z"/></symbol>
+  <symbol id="i-share" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a3.5 3.5 0 0 0 5.3.4l3-3A3.5 3.5 0 0 0 13.4 5.5l-1.7 1.7M14 11a3.5 3.5 0 0 0-5.3-.4l-3 3A3.5 3.5 0 0 0 10.6 18.5l1.7-1.7"/></symbol>
 </defs></svg>
 
 <header class="chrome">
   <span class="wordmark">Smart Trip Planner</span>
   <span class="chrome__context"><b>Malezja: Kuala Lumpur, Penang i Langkawi</b>10–24 paź 2026</span>
   <span class="chrome__right">
+    <button class="btn btn--ghost btn--sm" data-preview="true" aria-disabled="true">
+      <svg width="16" height="16" aria-hidden="true"><use href="#i-chat"/></svg>
+      Asystent <span class="preview-badge">Wkrótce</span>
+    </button>
     <span class="body-sm subtle">Język</span>
     <span class="segmented"><span data-selected>PL</span><span>EN</span></span>
     <button class="btn btn--ghost btn--sm">Wyloguj się</button>
@@ -48,6 +54,16 @@
         </div>
       </div>
     </section>
+
+    <div class="row" style="margin-top:var(--space-md);flex-wrap:wrap">
+      <button class="btn btn--ghost btn--sm" data-preview="true" aria-disabled="true">
+        <svg width="15" height="15" aria-hidden="true"><use href="#i-share"/></svg>
+        Udostępnij <span class="preview-badge">Wkrótce</span>
+      </button>
+      <span class="hint" style="margin-left:var(--space-2xs)">
+        Jeden link na podróż, tylko do odczytu — specyfikacja jest napisana (PR #3).
+      </span>
+    </div>
 
     <div class="filter-bar">
       <span class="filter-bar__legend">Pokaż</span>
@@ -269,6 +285,7 @@
       <p class="body-sm" style="margin:0">Katowice → Kuala Lumpur → Penang → Langkawi → Katowice</p>
     </div>
   </aside>
+</div>
 </div>
 </body>
 </html>

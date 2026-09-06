@@ -28,6 +28,13 @@ promise about markup.
 | `mockup-02-timeline.*` | `/trips/:id` — trip banner, readiness tile and ring, sticky filter bar, the timeline rail, the dock (Polish) |
 | `mockup-03-day-detail.*` | `/trips/:id/days/:date` — day header, item cards, the item editor dialog (English) |
 | `mockup-04-trip-creator.*` | `/trips/new` — grouped field cards, the segmented route mode, numbered stages, the summary dock (Polish) |
+| `mockup-05-preview-surfaces.*` | The share dialog and the assistant drawer, both in their preview state (Polish). Its own file because both are fixed-position overlays that a full-page capture cannot show honestly alongside the page behind them. |
+
+The preview surfaces — the V1 capabilities that have no backend yet — appear in `mockup-01` (the three
+mechanisms side by side), `mockup-02` (the share action in the timeline's action row, the assistant
+toggle in the header), `mockup-03` (the day-documents panel and the reservation disclosure) and
+`mockup-05`. Nothing in them is fabricated: no example link, no example message, no sample document,
+no count and no progress bar.
 
 `_mockup.css` is shared by all four.
 
