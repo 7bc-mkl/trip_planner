@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next'
 
 import type { ItemStatus } from '../../api/items'
+import { STATUS_GLYPH } from './statusGlyph'
 
 /**
  * The status chip.
@@ -26,13 +27,6 @@ import type { ItemStatus } from '../../api/items'
  * glyph and the translated word both stay, which is the whole contract.
  */
 
-/** One distinct shape per status — distinguishable without colour. */
-const GLYPH: Record<ItemStatus, string> = {
-  to_plan: '○',
-  to_book: '◐',
-  done: '●',
-}
-
 export function StatusChip({ status }: { status: ItemStatus }) {
   const { t } = useTranslation()
 
@@ -40,7 +34,7 @@ export function StatusChip({ status }: { status: ItemStatus }) {
     <span className="status-chip" data-status={status}>
       <span aria-hidden="true" className="status-chip__dot" />
       <span aria-hidden="true" className="status-chip__glyph">
-        {GLYPH[status]}
+        {STATUS_GLYPH[status]}
       </span>
       {t(`item.status.${status}`)}
     </span>

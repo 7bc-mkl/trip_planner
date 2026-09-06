@@ -155,12 +155,27 @@ export function DayDetailPage() {
               ),
             })
       }
+      /*
+       * BOTH lines above the heading go through the shell's one existing slot,
+       * as siblings: the breadcrumb first, then the derived stage as the
+       * eyebrow. This screen is the only one that needs two of them, and a
+       * second prop on a component four screens share would be a new API bought
+       * for one caller — the spec's Scope names `dock`, `context` and `drawer`
+       * as the additive props and nothing else.
+       *
+       * The `<h1>` is untouched by the arrangement: it stays the single heading
+       * with the formatted date as its single accessible name, and neither the
+       * `<nav>` nor the eyebrow paragraph is part of it.
+       */
       breadcrumb={
-        <nav aria-label={t('nav.breadcrumb')} className="breadcrumb">
-          <Link to="/trips">{t('trips.title')}</Link>
-          {' / '}
-          <Link to={`/trips/${tripId}`}>{t('day.backToTimeline')}</Link>
-        </nav>
+        <>
+          <nav aria-label={t('nav.breadcrumb')} className="breadcrumb">
+            <Link to="/trips">{t('trips.title')}</Link>
+            {' / '}
+            <Link to={`/trips/${tripId}`}>{t('day.backToTimeline')}</Link>
+          </nav>
+          {stages !== '' && <p className="day-stages">{stages}</p>}
+        </>
       }
       actions={
         <button
@@ -172,20 +187,41 @@ export function DayDetailPage() {
         </button>
       }
     >
-      {stages !== '' && <p className="day-stages">{stages}</p>}
-
       {/* Real prev/next links, disabled at the trip's boundaries — the server
-          sends null there rather than making the SPA guess where the trip ends. */}
+          sends null there rather than making the SPA guess where the trip ends.
+          They wear the ghost recipe now, and each carries an empty, `aria-hidden`
+          glyph slot the chevron lands in at step 6.1 — no sprite is invented
+          here. The slot is decoration in both cases: the control's name is the
+          VISIBLE word beside it, which is why the disabled boundary still reads
+          "previous day" rather than a greyed-out arrow. */}
       <nav className="day-nav" aria-label={t('day.navLabel')}>
         {day.previous_date === null ? (
-          <span className="day-nav__disabled">{t('day.previous')}</span>
+          <span className="day-nav__link day-nav__disabled">
+            <span className="day-nav__icon" aria-hidden="true" />
+            {t('day.previous')}
+          </span>
         ) : (
-          <Link to={`/trips/${tripId}/days/${day.previous_date}`}>{t('day.previous')}</Link>
+          <Link
+            className="button-quiet day-nav__link"
+            to={`/trips/${tripId}/days/${day.previous_date}`}
+          >
+            <span className="day-nav__icon" aria-hidden="true" />
+            {t('day.previous')}
+          </Link>
         )}
         {day.next_date === null ? (
-          <span className="day-nav__disabled">{t('day.next')}</span>
+          <span className="day-nav__link day-nav__disabled">
+            {t('day.next')}
+            <span className="day-nav__icon" aria-hidden="true" />
+          </span>
         ) : (
-          <Link to={`/trips/${tripId}/days/${day.next_date}`}>{t('day.next')}</Link>
+          <Link
+            className="button-quiet day-nav__link"
+            to={`/trips/${tripId}/days/${day.next_date}`}
+          >
+            {t('day.next')}
+            <span className="day-nav__icon" aria-hidden="true" />
+          </Link>
         )}
       </nav>
 

@@ -803,25 +803,78 @@ fieldset.field-card {
   letter-spacing: var(--tracking-body-sm);
 }
 
-/* --- the day detail --- */
+/* --- the day detail ---------------------------------------------------
+ *
+ * The export's day heading: a breadcrumb, the derived stage as an eyebrow, and
+ * the date itself at `headline-xl`. Both lines above the heading ride the
+ * shell's single existing slot as siblings — see `DayDetailPage` for why that
+ * is preferable to a fourth prop on a component four screens share.
+ *
+ * The screen hook is `:has(> .day-nav)`, the same `:has()` scoping the trip
+ * banner and the creator use: the shell offers no screen-specific class, and a
+ * paint job does not earn a new prop.
+ */
 
+/* The eyebrow: the day's derived stage, immediately above the date it belongs
+   to. Same treatment as the creator's eyebrow — this is the export's one
+   eyebrow style, not two. */
 .day-stages {
-  margin: 0 0 var(--space-md);
-  font-weight: 600;
+  margin: 0 0 var(--space-2xs);
+  color: var(--text-muted);
+  font: var(--type-label-md);
+  letter-spacing: var(--tracking-label-md);
+  text-transform: uppercase;
+}
+
+.page__canvas:has(> .day-nav) > .page-heading {
+  margin-bottom: var(--space-md);
+}
+
+/* The date at its full `headline-xl` size, undoing the component layer's
+   1.75rem cap for this screen only. */
+.page__canvas:has(> .day-nav) > .page-heading h1 {
+  font: var(--type-headline-xl);
+  letter-spacing: var(--tracking-headline-xl);
 }
 
 .day-nav {
   display: flex;
   justify-content: space-between;
   gap: var(--space-md);
+  margin-bottom: var(--space-md);
   padding-bottom: var(--space-md);
   border-bottom: 1px solid var(--hairline);
-  font-size: 0.875rem;
+}
+
+/* The two controls wear the ghost recipe from `components.css`; this adds only
+   the glyph gap and undoes the link underline. */
+.day-nav__link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  min-height: 40px;
+  padding: var(--space-xs) var(--space-sm);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius);
+  font: var(--type-label-lg);
+  letter-spacing: var(--tracking-label-lg);
+  text-decoration: none;
+}
+
+/* The glyph slot: reserved, empty, and `aria-hidden` in the markup. Step 6.1
+   puts the chevron in it; nothing is invented here, and the control is already
+   usable without one because its VISIBLE name is the word beside it. */
+.day-nav__icon {
+  flex: none;
+  width: 1rem;
+  height: 1rem;
 }
 
 /* Disabled rather than hidden: the trip's first and last days should look like
-   boundaries, not like a navigator that lost half its controls. */
+   boundaries, not like a navigator that lost half its controls. A missing
+   control teaches nothing; a dimmed one says "this is the first day". */
 .day-nav__disabled {
   color: var(--text-muted);
   opacity: 0.5;
+  cursor: not-allowed;
 }

@@ -188,13 +188,22 @@ textarea:disabled {
   letter-spacing: -0.02em;
 }
 
+/* The breadcrumb: the design's `label-md` role in `--text-subtle`, the quietest
+   line on the page. It sits above the heading rather than beside it, so it is
+   read before the title and never competes with it. */
 .breadcrumb {
-  margin-bottom: var(--space-sm);
-  font-size: 0.875rem;
+  margin-bottom: var(--space-2xs);
+  color: var(--text-subtle);
+  font: var(--type-label-md);
+  letter-spacing: var(--tracking-label-md);
 }
 
 .breadcrumb a {
-  color: var(--text-muted);
+  color: var(--text-subtle);
+}
+
+.breadcrumb a:hover {
+  color: var(--primary);
 }
 
 /* --- the button recipes (DESIGN.md, "Components" → Buttons) -----------
@@ -639,7 +648,8 @@ textarea:disabled {
 
 .dialog h2 {
   margin-bottom: var(--space-md);
-  font-size: 1.25rem;
+  font: var(--type-headline-md);
+  letter-spacing: var(--tracking-headline-md);
 }
 
 .dialog form {
@@ -649,8 +659,8 @@ textarea:disabled {
 }
 
 .dialog label {
-  font-size: 0.875rem;
-  font-weight: 600;
+  font: var(--type-label-lg);
+  letter-spacing: var(--tracking-label-lg);
 }
 
 /* The dialog's inputs, selects and textareas declare nothing of their own: they
@@ -669,6 +679,126 @@ textarea:disabled {
   margin: 0;
   color: var(--text-muted);
   font-size: 0.8125rem;
+}
+
+/* --- the status control, as a segmented group of pills ---------------
+ *
+ * PAINT ON A RADIO GROUP — the pattern the filter bar and the creator's
+ * route-mode control already established, applied to the one control this
+ * screen exists for. The markup is a `<fieldset>` with a `<legend>` and three
+ * radios, each inside its `<label>` with its glyph and its translated word;
+ * every rule below could be deleted and the control would still be an
+ * announced, arrow-navigable group with the same accessible names.
+ *
+ * `label:has(:checked)` rather than `:checked + label`: the input is a child of
+ * the label, so there is no sibling to select.
+ */
+.status-choice {
+  min-width: 0;
+  margin: var(--space-2xs) 0 0;
+  padding: 0;
+  border: 0;
+}
+
+.status-choice legend {
+  padding: 0;
+  margin-bottom: var(--space-2xs);
+  font: var(--type-label-lg);
+  letter-spacing: var(--tracking-label-lg);
+}
+
+.status-choice__options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2xs);
+}
+
+.status-choice__options label {
+  position: relative;
+  flex: 1 1 8rem;
+  cursor: pointer;
+}
+
+/* Out of sight, NEVER out of the accessibility tree: `display: none` would take
+   the radio out of the tab order and out of the group. */
+.status-choice__options input[type='radio'] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* The unselected pill: an outline, so three of them do not read as three
+   selections. Same 40px control height as every other action in the dialog. */
+.status-choice__pill {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2xs);
+  min-height: 40px;
+  padding: var(--space-2xs) var(--space-xs);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--text-muted);
+  font: var(--type-label-sm);
+  letter-spacing: var(--tracking-label-sm);
+  text-align: center;
+}
+
+/* The glyph, the same shape the chip shows afterwards. `aria-hidden` in the
+   markup: the word beside it already says the status. */
+.status-choice__glyph {
+  flex: none;
+}
+
+/* The selected pill, FILLED IN ITS CHIP COLOUR — the exact background, border
+   and foreground trio `.status-chip` wears, so the status a person picks and
+   the status they read back on the card are the same colour and the same
+   shape. Colour is an addition here too: the checked radio is the state a
+   screen reader reads, and the glyph and the word are what a reader who cannot
+   see the fill gets. */
+.status-choice__options label[data-status='to_plan']:has(:checked) .status-choice__pill {
+  border-color: var(--status-draft-border);
+  background: var(--status-draft-bg);
+  color: var(--status-draft-text);
+}
+
+.status-choice__options label[data-status='to_book']:has(:checked) .status-choice__pill {
+  border-color: var(--status-progress-border);
+  background: var(--status-progress-bg);
+  color: var(--status-progress-text);
+}
+
+.status-choice__options label[data-status='done']:has(:checked) .status-choice__pill {
+  border-color: var(--status-confirmed-border);
+  background: var(--status-confirmed-bg);
+  color: var(--status-confirmed-text);
+}
+
+.status-choice__options label:hover:not(:has(:checked)) .status-choice__pill {
+  border-color: var(--hairline-strong);
+  color: var(--text);
+}
+
+/* The ring follows the hidden radio onto the pill, so keyboard focus is visible
+   on the thing that can actually be seen. */
+.status-choice__options label:has(:focus-visible) .status-choice__pill {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .status-choice__pill {
+    transition:
+      background-color 150ms ease,
+      border-color 150ms ease,
+      color 150ms ease;
+  }
 }
 
 .dialog__actions {

@@ -266,7 +266,11 @@ describe('the item editor', () => {
     expect(screen.getByLabelText('Nazwa')).toHaveValue('Batu Caves')
     expect(screen.getByLabelText('Godzina rozpoczęcia')).toHaveValue('10:30')
 
-    await user.selectOptions(screen.getByLabelText('Status'), 'done')
+    // The status control is a segmented row of pills and still a real radio
+    // group: the pills are paint, so this queries the group and the option by
+    // role rather than by the class that colours them.
+    expect(screen.getByRole('group', { name: 'Status' })).toBeInTheDocument()
+    await user.click(screen.getByRole('radio', { name: /Gotowe/u }))
     await user.click(screen.getByRole('button', { name: 'Zapisz' }))
 
     await waitFor(() => expect(patched()).not.toBeUndefined())
