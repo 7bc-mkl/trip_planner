@@ -120,6 +120,24 @@
       "done": "Gotowe"
     }
   },
+  "upload": {
+    "add": "Dodaj plik / zdjęcie / bilet",
+    "hint": "PDF, JPEG lub PNG, do 10 MB",
+    "list": "Wybrane pliki",
+    "cancel": "Anuluj",
+    "retry": "Spróbuj ponownie",
+    "dismiss": "Usuń z listy",
+    "progressLabel": "Postęp wysyłania pliku {filename}",
+    "announceUploading": "Wysyłanie {filename}: {ratio, number, percent}",
+    "announceDone": "Dodano {filename}",
+    "announceCancelled": "Anulowano wysyłanie {filename}",
+    "state": {
+      "selected": "Wybrany",
+      "uploading": "Wysyłanie",
+      "done": "Dodany",
+      "failed": "Nie dodano"
+    }
+  },
   "filter": {
     "legend": "Pokaż",
     "all": "Wszystko",

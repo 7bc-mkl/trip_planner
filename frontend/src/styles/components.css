@@ -1091,3 +1091,195 @@ textarea:disabled {
   width: 1.25rem;
   height: 1.25rem;
 }
+
+/* --- the upload drop zone (`features/trips/UploadDropzone.tsx`) -----------
+ *
+ * THIS RECIPE INVENTS NOTHING. The design system reserved its three tokens
+ * before the feature had any code: `--hairline-strong` is annotated "dropzone
+ * border", `--surface-sunken` "drag-over dropzone", `--radius-lg` "cards, day
+ * modules, dropzones". Those three are the whole visual language here.
+ *
+ * `--hairline-strong` is 1.48:1 on `--surface` and that is deliberate: a dashed
+ * drop-zone outline is decoration around a control the `<label>`'s own words
+ * already identify, not the boundary WCAG 1.4.11 governs. `check_contrast.py`
+ * names this exact case in its docstring — do not "correct" it here.
+ *
+ * The state pills wear the shipped status-chip triples (background, text,
+ * border) rather than a new palette, and the failure pill wears
+ * `--danger-surface` / `--on-danger-surface`, which is already a declared pair
+ * in `check_contrast.py`. No pair in this block is new, which is why the script
+ * gains no row this commit.
+ */
+
+.upload-dropzone {
+  display: grid;
+  gap: var(--space-sm);
+}
+
+/* The label IS the drop zone. It wraps the input, so the whole surface is the
+   control's own hit area — no click handler, no `<div role="button">`. */
+.upload-dropzone__label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2xs);
+  padding: var(--space-lg);
+  border: 2px dashed var(--hairline-strong);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  text-align: center;
+  cursor: pointer;
+}
+
+.upload-dropzone__label:hover {
+  background: var(--surface-sunken);
+}
+
+/* Focus lives on the input, which is clipped out of sight, so the zone has to
+   wear the ring on its behalf — otherwise the keyboard path is invisible. */
+.upload-dropzone__label:focus-within {
+  border-color: var(--primary);
+  background: var(--surface-sunken);
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* Clipped, not `display: none` and not `visibility: hidden`: both of those
+   remove the input from the accessibility tree and from the tab order, which
+   would delete the keyboard path this component exists to keep. */
+.upload-dropzone__input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.upload-dropzone__title {
+  color: var(--text);
+  font: var(--type-label-lg);
+  letter-spacing: var(--tracking-label-lg);
+}
+
+.upload-dropzone__hint {
+  color: var(--text-muted);
+  font: var(--type-body-sm);
+  letter-spacing: var(--tracking-body-sm);
+}
+
+/* The live region. It is always in the DOM and usually empty, so it takes no
+   space of its own until it has something to say. */
+.upload-dropzone__announcement {
+  margin: 0;
+  color: var(--text-muted);
+  font: var(--type-body-sm);
+  letter-spacing: var(--tracking-body-sm);
+}
+
+.upload-dropzone__list {
+  display: grid;
+  gap: var(--space-xs);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* One row per file: name and pill on the first line, the bar and any refusal
+   message spanning both columns beneath them. */
+.upload-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-sm);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.upload-row__name {
+  color: var(--text);
+  font: var(--type-body-md);
+  letter-spacing: var(--tracking-body-md);
+  overflow-wrap: anywhere;
+}
+
+/* The status-chip recipe, reused in shape as well as in colour. Colour is an
+   addition to the translated word and the glyph, never a replacement. */
+.upload-row__pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2xs);
+  padding: var(--space-2xs) var(--space-xs);
+  border: 1px solid var(--status-draft-border);
+  border-radius: var(--radius-full);
+  background: var(--status-draft-bg);
+  color: var(--status-draft-text);
+  font: var(--type-label-sm);
+  letter-spacing: var(--tracking-label-sm);
+  white-space: nowrap;
+}
+
+.upload-row__glyph {
+  flex: none;
+}
+
+.upload-row__pill[data-state='uploading'] {
+  border-color: var(--status-progress-border);
+  background: var(--status-progress-bg);
+  color: var(--status-progress-text);
+}
+
+.upload-row__pill[data-state='done'] {
+  border-color: var(--status-confirmed-border);
+  background: var(--status-confirmed-bg);
+  color: var(--status-confirmed-text);
+}
+
+/* The one text-on-colour pair outside the chip triples — and it is a shipped,
+   already-declared one. */
+.upload-row__pill[data-state='failed'] {
+  border-color: var(--on-danger-surface);
+  background: var(--danger-surface);
+  color: var(--on-danger-surface);
+}
+
+.upload-row__track {
+  grid-column: 1 / -1;
+  height: 6px;
+  border-radius: var(--radius-full);
+  background: var(--hairline);
+  overflow: hidden;
+}
+
+/* Determinate, and only ever rendered once a real byte count exists. The width
+   is set inline by the component; the default here is what keeps the property
+   defined in this file, so `check_css_tokens.py` can resolve it — and the bar
+   still has a value on a render where the component has not set one. */
+.upload-row__bar {
+  --upload-progress: 0%;
+
+  display: block;
+  width: var(--upload-progress);
+  height: 100%;
+  background: var(--primary);
+}
+
+/* The same colour the shipped `[role='alert']` recipe already renders on this
+   surface — the refusal message is not a new pair, it is that one. */
+.upload-row__error {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--danger);
+  font: var(--type-body-sm);
+  letter-spacing: var(--tracking-body-sm);
+}
+
+.upload-row__actions {
+  display: flex;
+  gap: var(--space-xs);
+}

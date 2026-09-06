@@ -120,6 +120,24 @@
       "done": "Done"
     }
   },
+  "upload": {
+    "add": "Add file, photo or ticket",
+    "hint": "PDF, JPEG or PNG, up to 10 MB",
+    "list": "Selected files",
+    "cancel": "Cancel",
+    "retry": "Try again",
+    "dismiss": "Remove from the list",
+    "progressLabel": "Upload progress for {filename}",
+    "announceUploading": "Uploading {filename}: {ratio, number, percent}",
+    "announceDone": "{filename} was added",
+    "announceCancelled": "Uploading {filename} was cancelled",
+    "state": {
+      "selected": "Selected",
+      "uploading": "Uploading",
+      "done": "Added",
+      "failed": "Not added"
+    }
+  },
   "filter": {
     "legend": "Show",
     "all": "All",
