@@ -15,7 +15,7 @@
 | Phase | Step | Title | Exec | Status | Commit |
 |-------|------|-------|------|--------|--------|
 | 1 | 1.1 | Load Plus Jakarta Sans (spec step 1) | dispatch:cheap | done | e60b249 |
-| 1 | 1.2 | Transcribe the token layer into `styles/tokens.css` (spec step 2) | group:A | todo | — |
+| 1 | 1.2 | Transcribe the token layer into `styles/tokens.css` (spec step 2) | group:A | done | pending |
 | 1 | 1.3 | Add the compatibility bridge and the token-completeness check (spec step 3) | group:A | todo | — |
 | 1 | 1.4 | Split the base layer into `styles/base.css` (spec step 4) | dispatch | todo | — |
 | 1 | 1.5 | Contrast script over the token file (spec step 5) | dispatch:cheap | todo | — |
