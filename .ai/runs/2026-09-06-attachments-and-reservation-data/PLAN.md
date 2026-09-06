@@ -23,7 +23,7 @@
 | 1 | 1.8 | `attachment_count`, day/item `attachments` and the three reservation fields on the serialisers and `PATCH` | dispatch:capable | done | `eb423a8` |
 | 1 | 1.9 | Cascade behaviour end to end | dispatch:cheap | done | `5bec2c5` |
 | 1 | 1.10 | The `days_have_attachments` guard on the shipped `PATCH /trips/{tripId}` | dispatch:capable | done | `2ab94c6` |
-| 2 | 2.1 | `src/api/attachments.ts` — typed client with upload progress and abort | dispatch | todo | — |
+| 2 | 2.1 | `src/api/attachments.ts` — typed client with upload progress and abort | dispatch | done | `191a252` |
 | 2 | 2.2 | `UploadDropzone` — labelled file input, pre-check, state machine, `aria-live` | dispatch:capable | todo | — |
 | 2 | 2.3 | The day documents panel on `/trips/:id/days/:date` | dispatch | todo | — |
 | 2 | 2.4 | The item attachment strip inside the item editor | dispatch | todo | — |
