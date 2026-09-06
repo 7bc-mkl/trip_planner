@@ -9,6 +9,7 @@ path, so an item id belonging to another trip is a `404`, not a case to handle.
 from __future__ import annotations
 
 import uuid
+from collections.abc import Sequence
 from datetime import date as date_type
 from datetime import time
 
@@ -18,8 +19,16 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.orm import Session as OrmSession
 
 from trip_planner.api.deps import DbSession, OwnedTrip
-from trip_planner.api.schemas import DayDetail, ItemKind, ItemRead, ItemStatus, StageRead
-from trip_planner.db.models import Item, Trip, TripDay
+from trip_planner.api.schemas import (
+    AttachmentRead,
+    DayDetail,
+    ItemDetail,
+    ItemKind,
+    ItemRead,
+    ItemStatus,
+    StageRead,
+)
+from trip_planner.db.models import Attachment, Item, Trip, TripDay
 from trip_planner.domain.items import sorted_items, validate_span
 from trip_planner.domain.stages import stages_for_day
 from trip_planner.errors import ApiError, ErrorCode
@@ -117,6 +126,104 @@ def day_items(db: OrmSession, day: TripDay) -> list[Item]:
     )
 
 
+# --------------------------------------------------------------------------- #
+# Attachments on the item payloads
+# --------------------------------------------------------------------------- #
+#
+# Every function below reads `attachment` and **never** `attachment_blob`. The
+# bytes live in their own table precisely so that a listing cannot read them by
+# accident (`db/models.py` argues the split), and
+# `tests/test_attachments_api.py` records the statements a payload emits and
+# fails if the blob table appears in one.
+#
+# All of them take *every* id of the payload at once and answer in one
+# statement. A per-item count would be an N+1 on the screen a year-long trip
+# opens first: three hundred items, three hundred `SELECT count(*)`.
+
+
+def attachment_counts(
+    db: OrmSession, item_ids: Sequence[uuid.UUID]
+) -> dict[uuid.UUID, int]:
+    """How many attachments each of `item_ids` has — one `GROUP BY`, never one per item.
+
+    Items with none are simply absent from the result; callers default to `0`
+    rather than this padding the map, so the query stays a plain aggregate.
+    """
+    if not item_ids:
+        return {}
+
+    rows = db.execute(
+        sa.select(Attachment.item_id, sa.func.count())
+        .where(Attachment.item_id.in_(item_ids))
+        .group_by(Attachment.item_id)
+    ).all()
+
+    return {item_id: count for item_id, count in rows if item_id is not None}
+
+
+def attachments_by_item(
+    db: OrmSession, item_ids: Sequence[uuid.UUID]
+) -> dict[uuid.UUID, list[Attachment]]:
+    """The attachments of `item_ids`, grouped — one statement for the whole day.
+
+    Every id gets a key, including the items with no files, so a serialiser reads
+    the map directly instead of remembering to default.
+    """
+    grouped: dict[uuid.UUID, list[Attachment]] = {item_id: [] for item_id in item_ids}
+    if not item_ids:
+        return grouped
+
+    rows = db.execute(
+        sa.select(Attachment)
+        .where(Attachment.item_id.in_(item_ids))
+        # `created_at` alone is not a total order — two files uploaded inside the
+        # same clock tick would swap places between requests — so the id breaks
+        # the tie and the list is stable.
+        .order_by(Attachment.created_at, Attachment.id)
+    ).scalars()
+
+    for attachment in rows:
+        if attachment.item_id is not None:
+            grouped[attachment.item_id].append(attachment)
+
+    return grouped
+
+
+def day_attachments(db: OrmSession, day: TripDay) -> list[Attachment]:
+    """The files pinned to the day itself, which is not the same set as its items'."""
+    return list(
+        db.execute(
+            sa.select(Attachment)
+            .where(Attachment.trip_day_id == day.id)
+            .order_by(Attachment.created_at, Attachment.id)
+        ).scalars()
+    )
+
+
+def item_read(item: Item, attachment_count: int) -> ItemRead:
+    """The timeline's shape of an item, carrying its counted attachments.
+
+    The count is injected rather than read off the row: `Item` has no such column
+    — it is an aggregate over another table — and the aggregate belongs to the
+    payload as a whole, not to one row of it.
+    """
+    return ItemRead.model_validate(item).model_copy(
+        update={"attachment_count": attachment_count}
+    )
+
+
+def item_detail(item: Item, attachments: Sequence[Attachment]) -> ItemDetail:
+    """The day detail's shape: the same item, plus the files themselves.
+
+    The count is `len()` of the list already loaded, so the day detail never pays
+    for a second aggregate to answer a question it is holding the answer to.
+    """
+    return ItemDetail(
+        **item_read(item, len(attachments)).model_dump(),
+        attachments=[AttachmentRead.model_validate(one) for one in attachments],
+    )
+
+
 def next_position(db: OrmSession, day: TripDay) -> int:
     """`max(position) + 1` within the day.
 
@@ -136,17 +243,27 @@ def next_position(db: OrmSession, day: TripDay) -> int:
 
 
 def day_payload(db: OrmSession, trip: Trip, day: TripDay) -> DayDetail:
-    """The day detail, with its derived stages and its prev/next neighbours."""
+    """The day detail, with its derived stages, its files and its prev/next neighbours.
+
+    Two statements cover every attachment on the payload however many items the
+    day holds: one for the day's own files, one for all of its items' — never one
+    per item.
+    """
     dates = sorted(existing.date for existing in trip.days)
     index = dates.index(day.date)
     stages = sorted(trip.stages, key=lambda stage: stage.position)
+    items = sorted_items(day_items(db, day))
+    per_item = attachments_by_item(db, [item.id for item in items])
 
     return DayDetail(
         id=day.id,
         trip_id=trip.id,
         date=day.date,
         stages=[StageRead.model_validate(stage) for stage in stages_for_day(stages, day.date)],
-        items=[ItemRead.model_validate(item) for item in sorted_items(day_items(db, day))],
+        items=[item_detail(item, per_item[item.id]) for item in items],
+        attachments=[
+            AttachmentRead.model_validate(one) for one in day_attachments(db, day)
+        ],
         # None at the boundaries, so the navigator can disable rather than guess.
         previous_date=dates[index - 1] if index > 0 else None,
         next_date=dates[index + 1] if index + 1 < len(dates) else None,
@@ -163,7 +280,7 @@ def get_day_detail(trip: OwnedTrip, day_date: date_type, db: DbSession) -> DayDe
 )
 def create_item(
     trip: OwnedTrip, day_date: date_type, payload: ItemCreate, db: DbSession
-) -> Item:
+) -> ItemRead:
     day = get_day(trip, day_date)
 
     validate_span(
@@ -188,18 +305,25 @@ def create_item(
     db.add(item)
     db.flush()
 
-    return item
+    # Zero, by construction: an item that did not exist a line ago has no files,
+    # so this is the counted truth rather than an assumed default.
+    return item_read(item, 0)
 
 
 @router.patch("/items/{item_id}", response_model=ItemRead)
 def update_item(
     trip: OwnedTrip, item_id: uuid.UUID, payload: ItemUpdate, db: DbSession
-) -> Item:
+) -> ItemRead:
     """Update any field of an item, including moving it to another day.
 
     The span is re-validated against the item's *resulting* day, not its current
     one: moving an item forward can push its `end_date` past the trip's end, and
     checking before the move would miss it.
+
+    A move carries the item's attachments with it and nothing here has to arrange
+    that: an attachment points at the *item*, so the file follows the item to its
+    new day for the same reason its title does. A day's own files stay on the day
+    they were pinned to — they are the day's, not any item's.
     """
     item = find_item(db, trip, item_id)
 
@@ -244,7 +368,7 @@ def update_item(
     db.flush()
     db.refresh(item)
 
-    return item
+    return item_read(item, attachment_counts(db, [item.id]).get(item.id, 0))
 
 
 @router.delete("/items/{item_id}", status_code=status.HTTP_204_NO_CONTENT)

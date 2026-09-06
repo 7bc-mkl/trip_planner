@@ -19,9 +19,9 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.orm import selectinload
 
 from trip_planner.api.deps import CurrentOwner, DbSession, OwnedTrip
+from trip_planner.api.items import attachment_counts, item_read
 from trip_planner.api.schemas import (
     DayRead,
-    ItemRead,
     ReadinessRead,
     StageRead,
     TripDetail,
@@ -107,14 +107,21 @@ def summary(trip: Trip) -> TripSummary:
     )
 
 
-def timeline(trip: Trip) -> TripDetail:
+def timeline(db: DbSession, trip: Trip) -> TripDetail:
     """Build the timeline payload, deriving each day's stages once.
 
-    Everything is read from the already-loaded relationships, so a trip of any
-    length costs the queries `get_owned_trip` already issued rather than one per
-    day.
+    Everything but the attachment counts is read from the already-loaded
+    relationships, so a trip of any length costs the queries `get_owned_trip`
+    already issued rather than one per day.
+
+    The counts are the one thing not already loaded, and they are fetched for the
+    **whole trip in a single `GROUP BY`** — a count per item would mean three
+    hundred statements for a year-long trip, on the screen the owner opens first.
+    The files themselves are deliberately not fetched: the timeline draws a
+    paperclip badge, so it needs the number and nothing else.
     """
     stages = sorted(trip.stages, key=lambda stage: stage.position)
+    counts = attachment_counts(db, [item.id for item in all_items(trip)])
 
     return TripDetail(
         **summary(trip).model_dump(),
@@ -124,7 +131,10 @@ def timeline(trip: Trip) -> TripDetail:
                 id=day.id,
                 date=day.date,
                 stage_ids=[stage.id for stage in stages_for_day(stages, day.date)],
-                items=[ItemRead.model_validate(item) for item in sorted_items(day.items)],
+                items=[
+                    item_read(item, counts.get(item.id, 0))
+                    for item in sorted_items(day.items)
+                ],
             )
             for day in sorted(trip.days, key=lambda day: day.date)
         ],
@@ -204,13 +214,13 @@ def create_trip(payload: TripCreate, db: DbSession, owner: CurrentOwner) -> Trip
     db.add(trip)
     db.flush()
 
-    return timeline(trip)
+    return timeline(db, trip)
 
 
 @router.get("/{trip_id}", response_model=TripDetail)
-def get_trip(trip: OwnedTrip) -> TripDetail:
+def get_trip(trip: OwnedTrip, db: DbSession) -> TripDetail:
     """The timeline payload. Ownership is resolved by the dependency, never here."""
-    return timeline(trip)
+    return timeline(db, trip)
 
 
 @router.patch("/{trip_id}", response_model=TripDetail)
@@ -267,7 +277,7 @@ def update_trip(trip: OwnedTrip, payload: TripUpdate, db: DbSession) -> TripDeta
     db.flush()
     db.refresh(trip)
 
-    return timeline(trip)
+    return timeline(db, trip)
 
 
 def _refuse_if_days_would_be_lost(trip: Trip, wanted: set[date]) -> None:

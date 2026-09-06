@@ -12,6 +12,14 @@ indistinguishable from "absent because there are none", which is the ambiguity
 - `TripSummary` — a row of `/trips`.
 - `TripDetail`  — the timeline payload for `/trips/{id}`.
 - `DayDetail`   — the day-detail payload for `/trips/{id}/days/{date}`.
+
+The same reasoning splits the item in two, for the same reason and along the same
+seam: `ItemRead` — every field the timeline needs, including how *many* files are
+pinned to the item — and `ItemDetail`, which adds the files themselves. A single
+`attachments: list | None` would make "absent because this is the timeline"
+indistinguishable from "absent because this item has no files", and the count is
+on **both** shapes so that no consumer has to ask a different question depending
+on which payload it happens to be holding.
 """
 
 from __future__ import annotations
@@ -28,6 +36,7 @@ __all__ = [
     "AttachmentRead",
     "DayDetail",
     "DayRead",
+    "ItemDetail",
     "ItemKind",
     "ItemRead",
     "ItemStatus",
@@ -113,6 +122,29 @@ class ItemRead(BaseModel):
     end_date: date | None
     title: str
     notes: str | None
+    #: How many files are pinned to this item — the paperclip badge's number.
+    #:
+    #: One integer rather than the list, because the timeline renders a badge and
+    #: never a filename: shipping the files themselves would put every filename of
+    #: a year-long trip on a payload for a screen that shows none of them.
+    #:
+    #: The default exists so that an `Item` — a database row, which has no such
+    #: attribute — still validates through `model_config.from_attributes`. Every
+    #: serialiser overrides it with the counted value via `api.items.item_read`,
+    #: and the count is always aggregated in one query for the whole payload.
+    attachment_count: int = 0
+
+
+class ItemDetail(ItemRead):
+    """An item on the day-detail payload: the same fields plus its files.
+
+    The day detail is the one screen that renders attachments, so it is the one
+    payload that carries them. `ItemRead` stays the timeline's shape — see the
+    module docstring for why this is a second model rather than an optional field
+    on the first.
+    """
+
+    attachments: list[AttachmentRead]
 
 
 class DayRead(BaseModel):
@@ -168,6 +200,10 @@ class DayDetail(BaseModel):
     trip_id: uuid.UUID
     date: date
     stages: list[StageRead]
-    items: list[ItemRead]
+    items: list[ItemDetail]
+    #: The files pinned to the **day itself** — the printed reservation for the
+    #: whole day, the ferry timetable — as opposed to the ones pinned to an item,
+    #: which travel with the item and are listed inside it.
+    attachments: list[AttachmentRead]
     previous_date: date | None
     next_date: date | None

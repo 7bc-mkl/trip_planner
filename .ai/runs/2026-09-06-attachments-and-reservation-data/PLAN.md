@@ -20,7 +20,7 @@
 | 1 | 1.5 | Nine new `ErrorCode` members with both locales' keys | dispatch:cheap | done | `da84350` |
 | 1 | 1.6 | The two upload endpoints, in the fixed check order | dispatch:capable | done | `9c47672` |
 | 1 | 1.7 | Attachment metadata, content download and delete routes | dispatch:capable | done | `c4d5f2a` |
-| 1 | 1.8 | `attachment_count`, day/item `attachments` and the three reservation fields on the serialisers and `PATCH` | dispatch:capable | todo | — |
+| 1 | 1.8 | `attachment_count`, day/item `attachments` and the three reservation fields on the serialisers and `PATCH` | dispatch:capable | done | `0f1cb4e` |
 | 1 | 1.9 | Cascade behaviour end to end | dispatch:cheap | todo | — |
 | 1 | 1.10 | The `days_have_attachments` guard on the shipped `PATCH /trips/{tripId}` | dispatch:capable | todo | — |
 | 2 | 2.1 | `src/api/attachments.ts` — typed client with upload progress and abort | dispatch | todo | — |
@@ -179,14 +179,17 @@ belonging to another trip.
 
 **1.8 `attachment_count`, day/item `attachments` and the three reservation fields on the serialisers
 and `PATCH`.** `attachment_count` per item on the timeline payload; `attachments` arrays on the day
-and on each item of the day-detail payload; `confirmation_number`, `cost_amount`, `cost_currency` on
-`ItemRead` and as optional fields on `ItemUpdate`, cleared with an explicit `null` and left alone
-when omitted (`model_fields_set`, as the existing `NULLABLE_FIELDS` does). Cost halves must be set
-and cleared together or `422 invalid_cost`; a confirmation number over 500 characters is
-`422 invalid_reservation_field`; `""` means clear. Counts are aggregated in one query, never
-per item. Verify: API tests that the count matches, that an item move carries its attachments, that
-a day attachment does not move, that clearing a cost requires clearing both halves, and that
-omitting a field leaves it unchanged.
+and on each item of the day-detail payload. Counts are aggregated in one query, never per item.
+Verify: API tests that the count matches for zero, one and several files, that an item move carries
+its attachments, that a day attachment does not move, and that neither payload issues a query per
+item or reads `attachment_blob`.
+
+**The reservation half of this Step landed in 3.1, not here** (decision recorded in `NOTIFY.md`,
+2026-09-06). `confirmation_number`, `cost_amount` and `cost_currency` are serialised from `item`
+columns that Step 3.1 adds on its own Alembic revision — deliberately, so Phase 3 rolls back alone
+(A1). Adding them to `ItemRead`/`ItemUpdate` here would have required either pulling that migration
+forward into Phase 1 or serialising columns that do not exist. So the contract half moved to the
+Step that owns the columns rather than the phase split being broken for it.
 
 **1.9 Cascade behaviour end to end.** Verify: tests that deleting an item, a day's parent trip, and
 a trip each remove the attachment rows **and** the blob rows in one transaction, and that no other
@@ -264,6 +267,18 @@ and `cost_currency CHAR(3) NULL` with the length, non-negative, ISO-4217 and pai
 upgrade/downgrade round trip against a database already holding items and attachments; tests that
 the database itself rejects a cost amount without a currency, a negative amount, and a
 501-character confirmation number.
+
+**This Step also carries the API half moved out of 1.8**, in the same commit as the columns it
+depends on: `confirmation_number`, `cost_amount` (a `Decimal` on the wire, never a `float`) and
+`cost_currency` on `ItemRead` — on **both** payloads, so the timeline's item and the day detail's
+item stay one shape — and as three optional fields on `ItemUpdate`, cleared with an explicit `null`
+and left alone when omitted through the existing `model_fields_set` / `NULLABLE_FIELDS` mechanism.
+The cost halves must be supplied and cleared together or `422 invalid_cost`, routed through
+`domain/money.py`; a confirmation number over 500 characters is `422 invalid_reservation_field`;
+`""` means clear, because the database `CHECK` rejects it. No `reservation_start`/`reservation_end`
+of any kind — the reservation's dates are the item's existing span. Verify, in addition to the
+migration tests above: that clearing a cost requires clearing both halves, that one half alone is
+`422 invalid_cost`, and that omitting a reservation field leaves it unchanged.
 
 **3.2 The `ReservationPanel` disclosure inside the item editor.**
 Confirmation number, amount, currency; collapsed by default; nothing required. Verify: component

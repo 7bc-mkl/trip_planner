@@ -914,3 +914,200 @@ class TestThereIsNoPatch:
         )
 
         assert response.status_code == 405
+
+
+# --------------------------------------------------------------------------- #
+# The counts and the lists on the trip and day payloads
+# --------------------------------------------------------------------------- #
+
+
+def timeline_items(client: TestClient, trip: dict, day: str = DAY) -> list[dict]:
+    """The items of one day, as the *timeline* payload serves them."""
+    response = client.get(f"{TRIPS}/{trip['id']}")
+    assert response.status_code == 200, response.text
+    days = [one for one in response.json()["days"] if one["date"] == day]
+    assert days, f"{day} is not a day of this trip"
+    return days[0]["items"]
+
+
+def day_detail(client: TestClient, trip: dict, day: str = DAY) -> dict:
+    response = client.get(f"{TRIPS}/{trip['id']}/days/{day}")
+    assert response.status_code == 200, response.text
+    return response.json()
+
+
+class TestAttachmentCountOnTheTimeline:
+    @pytest.mark.parametrize("count", [0, 1, 3])
+    def test_the_count_matches_what_was_uploaded(
+        self, signed_in_client: TestClient, trip: dict, count: int
+    ) -> None:
+        item = add_item(signed_in_client, trip)
+        for index in range(count):
+            assert (
+                upload(
+                    signed_in_client,
+                    item_attachments_url(trip, item),
+                    make_pdf(),
+                    filename=f"voucher-{index}.pdf",
+                ).status_code
+                == 201
+            )
+
+        served = timeline_items(signed_in_client, trip)
+
+        assert [one["attachment_count"] for one in served] == [count]
+
+    def test_a_days_own_file_is_not_counted_against_its_items(
+        self, signed_in_client: TestClient, trip: dict
+    ) -> None:
+        """A day's ferry timetable belongs to the day, not to the hotel booked on it."""
+        item = add_item(signed_in_client, trip)
+        assert upload(signed_in_client, day_attachments_url(trip), make_pdf()).status_code == 201
+
+        served = timeline_items(signed_in_client, trip)
+
+        assert [one["attachment_count"] for one in served] == [0]
+        assert item["attachment_count"] == 0, "and the item was created with none"
+
+    def test_the_timeline_carries_the_number_and_not_the_filenames(
+        self, signed_in_client: TestClient, trip: dict
+    ) -> None:
+        """The badge needs a number; a year-long trip must not ship every filename."""
+        item = add_item(signed_in_client, trip)
+        upload(signed_in_client, item_attachments_url(trip, item), make_pdf())
+
+        served = timeline_items(signed_in_client, trip)[0]
+
+        assert served["attachment_count"] == 1
+        assert "attachments" not in served
+
+    def test_the_payload_does_not_issue_a_query_per_item(
+        self, signed_in_client: TestClient, trip: dict
+    ) -> None:
+        """One aggregate for the whole trip, whatever the trip's length.
+
+        The failure this guards is not a wrong answer, it is a payload that
+        answers correctly and costs one `SELECT count(*)` per item — three hundred
+        statements for a year-long trip, on the screen the owner opens first. So
+        the statements are recorded and the ones touching `attachment` are
+        counted, with more items than any per-item implementation could hide in.
+        """
+        for index in range(5):
+            item = add_item(signed_in_client, trip, title=f"Item {index}")
+            upload(signed_in_client, item_attachments_url(trip, item), make_pdf())
+
+        with recorded_statements() as statements:
+            served = timeline_items(signed_in_client, trip)
+
+        assert [one["attachment_count"] for one in served] == [1, 1, 1, 1, 1]
+        touching = [sql for sql in statements if " attachment" in sql.lower()]
+        assert len(touching) == 1, touching
+        assert not [sql for sql in statements if "attachment_blob" in sql], statements
+
+
+class TestAttachmentsOnTheDayDetail:
+    def test_the_day_lists_its_own_files_and_the_item_lists_its_own(
+        self, signed_in_client: TestClient, trip: dict
+    ) -> None:
+        item = add_item(signed_in_client, trip)
+        of_the_day = stored(signed_in_client, trip, make_pdf(), filename="ferry.pdf")
+        of_the_item = upload(
+            signed_in_client,
+            item_attachments_url(trip, item),
+            make_png(),
+            filename="hotel.png",
+        ).json()
+
+        body = day_detail(signed_in_client, trip)
+
+        assert [one["filename"] for one in body["attachments"]] == ["ferry.pdf"]
+        assert body["attachments"][0]["id"] == of_the_day["id"]
+        assert [one["filename"] for one in body["items"][0]["attachments"]] == ["hotel.png"]
+        assert body["items"][0]["attachments"][0]["id"] == of_the_item["id"]
+        assert body["items"][0]["attachment_count"] == 1
+
+    def test_an_item_with_no_files_lists_an_empty_array(
+        self, signed_in_client: TestClient, trip: dict
+    ) -> None:
+        """Empty, never absent: "none" and "not served here" must stay distinct."""
+        add_item(signed_in_client, trip)
+
+        body = day_detail(signed_in_client, trip)
+
+        assert body["attachments"] == []
+        assert body["items"][0]["attachments"] == []
+        assert body["items"][0]["attachment_count"] == 0
+
+    def test_the_day_detail_does_not_issue_a_query_per_item(
+        self, signed_in_client: TestClient, trip: dict
+    ) -> None:
+        """Two statements cover every attachment on the payload, however many items."""
+        for index in range(5):
+            item = add_item(signed_in_client, trip, title=f"Item {index}")
+            upload(signed_in_client, item_attachments_url(trip, item), make_pdf())
+
+        with recorded_statements() as statements:
+            body = day_detail(signed_in_client, trip)
+
+        assert [len(one["attachments"]) for one in body["items"]] == [1, 1, 1, 1, 1]
+        touching = [sql for sql in statements if " attachment" in sql.lower()]
+        assert len(touching) == 2, touching
+        assert not [sql for sql in statements if "attachment_blob" in sql], statements
+
+    def test_the_lists_never_carry_the_bytes(
+        self, signed_in_client: TestClient, trip: dict
+    ) -> None:
+        item = add_item(signed_in_client, trip)
+        upload(signed_in_client, item_attachments_url(trip, item), make_png())
+        stored(signed_in_client, trip, make_pdf())
+
+        with recorded_statements() as statements:
+            body = day_detail(signed_in_client, trip)
+
+        assert len(body["items"][0]["attachments"]) == 1
+        assert not [sql for sql in statements if "attachment_blob" in sql], statements
+
+
+class TestMovingAnItem:
+    """`PATCH … {"date": …}` moves the item; its files go with it, the day's do not."""
+
+    OTHER_DAY = "2026-10-12"
+
+    def move(self, client: TestClient, trip: dict, item: dict) -> dict:
+        response = client.patch(
+            f"{TRIPS}/{trip['id']}/items/{item['id']}", json={"date": self.OTHER_DAY}
+        )
+        assert response.status_code == 200, response.text
+        return response.json()
+
+    def test_an_items_attachments_travel_with_it(
+        self, signed_in_client: TestClient, trip: dict
+    ) -> None:
+        item = add_item(signed_in_client, trip)
+        attachment = upload(
+            signed_in_client,
+            item_attachments_url(trip, item),
+            make_pdf(),
+            filename="boarding.pdf",
+        ).json()
+
+        moved = self.move(signed_in_client, trip, item)
+
+        assert moved["attachment_count"] == 1, "the PATCH response counts them too"
+        assert day_detail(signed_in_client, trip)["items"] == []
+        arrived = day_detail(signed_in_client, trip, self.OTHER_DAY)["items"]
+        assert [one["id"] for one in arrived[0]["attachments"]] == [attachment["id"]]
+
+    def test_a_days_own_attachment_does_not_move(
+        self, signed_in_client: TestClient, trip: dict
+    ) -> None:
+        """It was pinned to the day, and the day did not go anywhere."""
+        item = add_item(signed_in_client, trip)
+        of_the_day = stored(signed_in_client, trip, make_pdf(), filename="ferry.pdf")
+
+        self.move(signed_in_client, trip, item)
+
+        assert [one["id"] for one in day_detail(signed_in_client, trip)["attachments"]] == [
+            of_the_day["id"]
+        ]
+        assert day_detail(signed_in_client, trip, self.OTHER_DAY)["attachments"] == []
