@@ -42,9 +42,12 @@
 | 3 | 3.6 | Assert the absence of nagging | dispatch:cheap | done | `99bf220` |
 | 3 | 3.7 | End-to-end verification of the brief's own flow | inline | done | `25e9826` |
 | 3 | 3.4-review-fix-1 | The saved cost is actually rendered through `Intl`, giving the rule a call site | dispatch | done | `8d21299` |
-| 4 | 4.1 | Drag-and-drop layered on the existing input | dispatch | done | `051f618` |
-| 4 | 4.2 | The image lightbox — focus-trapped, `Escape` to close | dispatch | done | `b4173bf` |
-| 4 | 4.3 | The non-blocking duplicate hint | dispatch:cheap | done | `6ee16c1` |
+| 4 | 4.1 | Drag-and-drop layered on the existing input | dispatch | done | `c411709` |
+| 4 | 4.2 | The image lightbox — focus-trapped, `Escape` to close | dispatch | done | `ed6d6f4` |
+| 4 | 4.3 | The non-blocking duplicate hint | dispatch:cheap | done | `3c17e05` |
+| 1 | 1.6-review-fix-1 | Concurrent uploads must not block the event loop | dispatch:capable | done | `f560efd` |
+| 4 | 4.3-review-fix-1 | The duplicate hint actually renders instead of being retired first | dispatch:capable | todo | — |
+| 3 | 3.4-review-fix-2 | A comma decimal is accepted, and a rejected field is actually marked | dispatch:capable | todo | — |
 
 ## Goal
 
@@ -377,3 +380,39 @@ em dash, no "not set". That keeps Step 3.6's assertion (no marker keyed on an *e
 field) true, and it is the reason this is safe to do at all. Verify: a component test that the
 formatted cost appears in the collapsed summary in both locales when set, and that an item without a
 cost renders no cost-shaped element whatsoever.
+
+### Fix Steps appended at the final gate
+
+The final gate's browser walk — the last look before review — found four defects that the full
+eight-command gate (635 backend / 0 skips, 293 frontend, clean build) had passed. Three are fixed
+here; the fourth is recorded for the reviewer.
+
+**1.6-review-fix-1 Concurrent uploads must not block the event loop.** *Critical.* Two concurrent
+uploads to the same trip **permanently hang the whole server** — reproduced three times, twice
+through a multi-file drop and once deterministically with two parallel requests. One backend sits
+`active / wait_event=advisory` on `pg_advisory_xact_lock(hashtext(trip_id))` while the other is
+`idle in transaction / ClientRead`; `/api/v1/health` then times out for every client and only killing
+the database backend recovers it. The cause is a mismatch this run introduced: the upload handlers
+are `async def` — they have to be, to consume `request.stream()` before the body is read — but they
+then do **synchronous psycopg work on the event loop**. FastAPI runs a sync `def` endpoint in a
+threadpool and an `async def` endpoint on the loop, so the request waiting on the advisory lock
+freezes the loop and the lock *holder* can never be served to commit. The lock is correct; running
+it on the event loop is not. Note this is **not** exclusive to drag-and-drop — the multi-file picker
+path hits the same race — but Step 4.1 makes it far easier to trigger.
+
+**4.3-review-fix-1 The duplicate hint actually renders instead of being retired first.**
+Step 4.3 is **dead code in the shipped app**: the hint never renders anywhere. `DayDetailPage`
+appends the new attachment in the same React batch as `UploadDropzone`'s transition to `done`, so
+`retired(row)` is already true on the first render that could have painted the done row. This is the
+queue-retirement machinery from `2.2-review-fix-2` working exactly as designed and, as a side
+effect, eating the only surface the hint had. Any fix must keep both earlier guarantees intact: a
+successful upload is shown exactly once, and never zero times.
+
+**3.4-review-fix-2 A comma decimal is accepted, and a rejected field is actually marked.**
+Two defects in one input. `formatCurrency` calls `Number(amount)` unguarded, so typing `249,50` —
+**the standard Polish decimal separator, in the Polish UI** — renders a literal `NaN €` in the
+disclosure summary. The same input then fails to save with "Część danych jest nieprawidłowa. Sprawdź
+zaznaczone pola." while **no** field carries `aria-invalid` or `aria-describedby` and no field-level
+message renders: the user is told to check the marked fields, and nothing is marked. Accepting a
+comma decimal in a Polish-first product is the fix; never rendering `NaN` and always marking the
+field the message refers to are the guarantees.

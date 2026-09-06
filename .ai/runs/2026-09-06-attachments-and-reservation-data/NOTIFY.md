@@ -329,3 +329,37 @@
 - Not a blocker: `check_locales.py` passes with the new keys in sync; flagging for the record since
   a future reader comparing the diff against the spec's literal bullet list would otherwise wonder
   where the extra string came from.
+
+## 2026-09-07T02:10:00Z — `1.6-review-fix-1`: uploads did their database work on the event loop
+- **The defect (critical, found at the final gate).** Two concurrent uploads to the same trip hung
+  the whole server permanently; `/api/v1/health` then timed out for every client. The upload
+  handlers are `async def` — they must be, because Step 1.6 drives `request.stream()` itself to
+  check the rate window and `Content-Length` before the body is read and to keep every byte out of a
+  `SpooledTemporaryFile` — but they then ran **synchronous psycopg work on the event loop**.
+  FastAPI runs a sync `def` endpoint in a threadpool and an `async def` endpoint on the loop, so the
+  upload waiting on `pg_advisory_xact_lock(hashtext(trip_id))` froze the loop, and the transaction
+  *holding* that lock could never be scheduled to reach `get_db`'s commit and release it.
+- **The fix.** Every synchronous database call in the upload path is now awaited through
+  `starlette.concurrency.run_in_threadpool` — `check_rate` (still before the read), `find_item`, and
+  `store_attachment` (the locking transaction). Only the streaming stays on the loop. The advisory
+  lock is untouched and `SERIALIZABLE` was not considered; the lock was never the problem. The check
+  order is byte-for-byte the same, and both `TestTheOrderOfChecks` and
+  `TestNothingTouchesTheFilesystem` pass unmodified, as does `test_quota.py`'s two-connection
+  concurrency test.
+- **Transaction lifecycle.** The request's session is still touched by one thread at a time: each
+  threadpool hop is awaited to completion before the next begins. `get_db` is a sync generator
+  dependency, so FastAPI already runs both its body and its teardown — the `commit` that releases
+  the lock — in a threadpool. Nothing about the commit-on-success / rollback-on-failure contract
+  moved.
+- **Why the green suite missed it, and what now catches it.** Every existing endpoint test runs
+  through `TestClient` against `conftest`'s single shared, never-committed session: one connection,
+  one request at a time, so no second transaction can ever exist. `tests/test_upload_concurrency.py`
+  builds the missing harness — the *real* `get_db` bound to the test engine, the app driven over
+  `ASGITransport` on a real loop in a daemon thread, and the assertion in the main thread behind a
+  `join(timeout=30)` so a frozen loop is a **failure** and not an infinite CI run.
+- **Worth knowing for the future:** simply gathering two uploads does **not** reproduce this. Under
+  `ASGITransport` the first upload runs through to its commit before the second is scheduled, so
+  that test passes with the bug present (verified). The deterministic reproduction holds the trip's
+  advisory lock on a third, separate connection and then asks whether `/api/v1/health` still
+  answers while an upload waits on it. Both tests fail without the fix; the lock-holder one fails
+  for the right reason on its own.

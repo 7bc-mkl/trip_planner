@@ -29,6 +29,20 @@ Two properties of that order are load-bearing, and FastAPI's ergonomic
   counter so that a chunked request lying about (or omitting) its length is
   refused mid-flight rather than believed.
 
+Being `async def` has one consequence that is not optional to handle. FastAPI
+runs a sync `def` endpoint in a threadpool and an `async def` endpoint **on the
+event loop**, and `store_attachment` takes `pg_advisory_xact_lock` on the trip —
+so a second upload to the same trip, run on the loop, would block the whole
+process on that lock while the transaction *holding* it is waiting for the very
+same loop to be scheduled so it can commit. That is a permanent deadlock which
+takes every other request, `/health` included, down with it. So **every
+synchronous database call in this module's upload path is awaited through
+`run_in_threadpool`** and only the genuinely asynchronous streaming stays on the
+loop. See `_receive` and the two handlers; the session is never touched by two
+threads at once because each of those hops is awaited to completion before the
+next begins, and `get_db`'s commit — the point at which the lock is released —
+is itself run in a threadpool by FastAPI's dependency teardown.
+
 The multipart bytes are then parsed **in memory** by `python-multipart`'s own
 low-level parser — the same parser Starlette uses, driven directly so that no
 `UploadFile` and no spooled file exists at any point.
@@ -59,6 +73,7 @@ from python_multipart.exceptions import MultipartParseError
 from python_multipart.multipart import MultipartParser, parse_options_header
 from sqlalchemy.orm import Session as OrmSession
 from sqlalchemy.orm import aliased
+from starlette.concurrency import run_in_threadpool
 
 from trip_planner.api.deps import CurrentOwner, DbSession, OwnedTrip
 from trip_planner.api.items import find_item, get_day
@@ -292,8 +307,14 @@ def store_attachment(
 
 
 async def _receive(request: Request, db: OrmSession, owner: Owner) -> UploadedFile:
-    """The pre-transaction half of the order: rate window, then length, then read."""
-    rejection = get_upload_quota().check_rate(db, owner_id=owner.id)
+    """The pre-transaction half of the order: rate window, then length, then read.
+
+    `check_rate` queries `upload_event`, so it goes to the threadpool like every
+    other database call here — but it is still awaited **before** `read_body`, so
+    the order the spec fixes is untouched: a full window is refused before a byte
+    of the body is pulled into memory.
+    """
+    rejection = await run_in_threadpool(get_upload_quota().check_rate, db, owner_id=owner.id)
     if rejection is not None:
         raise _refuse(rejection)
 
@@ -310,10 +331,14 @@ async def upload_day_attachment(
     trip: OwnedTrip, day_date: date_type, request: Request, db: DbSession, owner: CurrentOwner
 ) -> Attachment:
     """Attach a file to a day. A date outside the trip is a `404` before any read."""
+    # `get_day` reads the already-loaded `trip.days`; it issues no query and so
+    # needs no threadpool hop. `store_attachment` — the locking transaction — does.
     day = get_day(trip, day_date)
     upload = await _receive(request, db, owner)
 
-    return store_attachment(db, owner=owner, trip=trip, upload=upload, trip_day_id=day.id)
+    return await run_in_threadpool(
+        store_attachment, db, owner=owner, trip=trip, upload=upload, trip_day_id=day.id
+    )
 
 
 @router.post(
@@ -325,10 +350,13 @@ async def upload_item_attachment(
     trip: OwnedTrip, item_id: uuid.UUID, request: Request, db: DbSession, owner: CurrentOwner
 ) -> Attachment:
     """Attach a file to an item of this trip. Another trip's item is a `404`."""
-    item = find_item(db, trip, item_id)
+    # `find_item` queries, unlike `get_day`, so it takes the threadpool too.
+    item = await run_in_threadpool(find_item, db, trip, item_id)
     upload = await _receive(request, db, owner)
 
-    return store_attachment(db, owner=owner, trip=trip, upload=upload, item_id=item.id)
+    return await run_in_threadpool(
+        store_attachment, db, owner=owner, trip=trip, upload=upload, item_id=item.id
+    )
 
 
 # --------------------------------------------------------------------------- #
