@@ -151,16 +151,16 @@ textarea:disabled {
 .locale-switch {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: var(--space-xs);
   font-size: 0.875rem;
-  color: var(--colour-text-muted);
+  color: var(--text-muted);
 }
 
 .locale-switch select {
-  padding: var(--space-1) var(--space-2);
-  border: 1px solid var(--colour-border);
+  padding: var(--space-2xs) var(--space-xs);
+  border: 1px solid var(--hairline);
   border-radius: var(--radius-sm);
-  background: var(--colour-surface);
+  background: var(--surface);
   color: inherit;
   font: inherit;
   font-size: 0.875rem;
@@ -170,16 +170,16 @@ textarea:disabled {
 
 .app-shell {
   min-height: 100dvh;
-  padding: var(--space-6);
+  padding: var(--space-lg);
 }
 
 .app-shell > header {
   display: flex;
   align-items: center;
-  gap: var(--space-4);
-  margin-bottom: var(--space-6);
-  padding-bottom: var(--space-4);
-  border-bottom: 1px solid var(--colour-border);
+  gap: var(--space-md);
+  margin-bottom: var(--space-lg);
+  padding-bottom: var(--space-md);
+  border-bottom: 1px solid var(--hairline);
 }
 
 /* SCOPE CORRECTION. This was `.app-shell button` — an element catch-all at
@@ -228,8 +228,8 @@ textarea:disabled {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--space-4);
-  margin-bottom: var(--space-6);
+  gap: var(--space-md);
+  margin-bottom: var(--space-lg);
 }
 
 .page-heading h1 {
@@ -238,12 +238,12 @@ textarea:disabled {
 }
 
 .breadcrumb {
-  margin-bottom: var(--space-3);
+  margin-bottom: var(--space-sm);
   font-size: 0.875rem;
 }
 
 .breadcrumb a {
-  color: var(--colour-text-muted);
+  color: var(--text-muted);
 }
 
 /* --- the button recipes (DESIGN.md, "Components" → Buttons) -----------
@@ -351,45 +351,45 @@ textarea:disabled {
 }
 
 [role='alert'] {
-  margin: var(--space-2) 0 0;
-  color: var(--colour-danger);
+  margin: var(--space-xs) 0 0;
+  color: var(--danger);
   font-size: 0.875rem;
 }
 
 /* An empty state is a designed state, not a blank page. */
 .empty-state {
-  padding: var(--space-8);
-  border: 1px dashed var(--colour-border);
+  padding: var(--space-xl);
+  border: 1px dashed var(--hairline);
   border-radius: var(--radius-lg);
-  background: var(--colour-surface);
+  background: var(--surface);
   text-align: center;
 }
 
 .empty-state h2 {
-  margin-bottom: var(--space-2);
+  margin-bottom: var(--space-xs);
   font-size: 1.25rem;
 }
 
 .empty-state p {
-  margin: 0 0 var(--space-4);
-  color: var(--colour-text-muted);
+  margin: 0 0 var(--space-md);
+  color: var(--text-muted);
 }
 
 .empty-state--inline {
-  margin-bottom: var(--space-6);
-  padding: var(--space-4);
-  color: var(--colour-text-muted);
+  margin-bottom: var(--space-lg);
+  padding: var(--space-md);
+  color: var(--text-muted);
 }
 
 /* --- the readiness counter (R02) --- */
 
 .readiness {
-  margin: var(--space-3) 0 0;
+  margin: var(--space-sm) 0 0;
 }
 
 .readiness__label {
   display: block;
-  color: var(--colour-text-muted);
+  color: var(--text-muted);
   font-size: 0.75rem;
   font-weight: 600;
   letter-spacing: 0.06em;
@@ -410,7 +410,7 @@ textarea:disabled {
    deliberately no bar and no percentage here: the percentage is undefined at a
    zero denominator, and "0%" would read as failure. */
 .readiness[data-nothing-tracked='true'] .readiness__value {
-  color: var(--colour-text-muted);
+  color: var(--text-muted);
   font-weight: 600;
 }
 
@@ -492,8 +492,8 @@ textarea:disabled {
 .item-list,
 .timeline__items {
   display: grid;
-  gap: var(--space-2);
-  margin: var(--space-3) 0 0;
+  gap: var(--space-xs);
+  margin: var(--space-sm) 0 0;
   padding: 0;
   list-style: none;
 }
@@ -502,9 +502,9 @@ textarea:disabled {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
-  gap: var(--space-2) var(--space-3);
+  gap: var(--space-xs) var(--space-sm);
   width: 100%;
-  padding: var(--space-3);
+  padding: var(--space-sm);
   color: inherit;
   font: inherit;
   text-align: start;
@@ -518,17 +518,17 @@ textarea:disabled {
 
 .item-row__time {
   min-width: 6.5rem;
-  color: var(--colour-text-muted);
+  color: var(--text-muted);
   font-size: 0.875rem;
   font-variant-numeric: tabular-nums;
 }
 
 .item-row__kind {
-  padding: var(--space-1) var(--space-2);
+  padding: var(--space-2xs) var(--space-xs);
   border-radius: var(--radius-sm);
-  background: var(--colour-bg);
+  background: var(--canvas);
   font-size: 0.75rem;
-  color: var(--colour-text-muted);
+  color: var(--text-muted);
 }
 
 .item-row__title {
@@ -537,14 +537,14 @@ textarea:disabled {
 }
 
 .item-row__spans {
-  color: var(--colour-text-muted);
+  color: var(--text-muted);
   font-size: 0.8125rem;
   font-weight: 600;
 }
 
 .item-row__notes {
   flex-basis: 100%;
-  color: var(--colour-text-muted);
+  color: var(--text-muted);
   font-size: 0.875rem;
 }
 
@@ -559,7 +559,7 @@ textarea:disabled {
   inset: 0;
   display: grid;
   place-items: center;
-  padding: var(--space-4);
+  padding: var(--space-md);
   background: var(--scrim);
   z-index: 10;
 }
@@ -568,7 +568,7 @@ textarea:disabled {
   width: min(32rem, 100%);
   max-height: 90dvh;
   overflow-y: auto;
-  padding: var(--space-6);
+  padding: var(--space-lg);
 }
 
 /* The frosted treatment, and only where the browser can actually frost.
@@ -596,14 +596,14 @@ textarea:disabled {
 }
 
 .dialog h2 {
-  margin-bottom: var(--space-4);
+  margin-bottom: var(--space-md);
   font-size: 1.25rem;
 }
 
 .dialog form {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: var(--space-xs);
 }
 
 .dialog label {
@@ -616,7 +616,7 @@ textarea:disabled {
 
 .dialog .field-row {
   display: flex;
-  gap: var(--space-4);
+  gap: var(--space-md);
 }
 
 .dialog .field-row > div {
@@ -625,15 +625,15 @@ textarea:disabled {
 
 .dialog .hint {
   margin: 0;
-  color: var(--colour-text-muted);
+  color: var(--text-muted);
   font-size: 0.8125rem;
 }
 
 .dialog__actions {
   display: flex;
   justify-content: flex-end;
-  gap: var(--space-2);
-  margin-top: var(--space-4);
+  gap: var(--space-xs);
+  margin-top: var(--space-md);
 }
 
 /* Danger: the ghost shape in the danger role. It is a destructive action, so it
@@ -666,15 +666,15 @@ textarea:disabled {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-3) var(--space-4);
-  margin-bottom: var(--space-4);
-  padding: var(--space-3);
+  gap: var(--space-sm) var(--space-md);
+  margin-bottom: var(--space-md);
+  padding: var(--space-sm);
 }
 
 .filter-bar__filters {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--space-sm);
   margin: 0;
   padding: 0;
   border: none;
@@ -682,9 +682,9 @@ textarea:disabled {
 
 .filter-bar__filters legend {
   float: left;
-  margin-right: var(--space-3);
+  margin-right: var(--space-sm);
   padding: 0;
-  color: var(--colour-text-muted);
+  color: var(--text-muted);
   font-size: 0.8125rem;
   font-weight: 600;
 }
@@ -692,7 +692,7 @@ textarea:disabled {
 .filter-bar__filters label {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-1);
+  gap: var(--space-2xs);
   font-size: 0.875rem;
 }
 
@@ -700,17 +700,17 @@ textarea:disabled {
 .filter-bar__chips {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-2);
+  gap: var(--space-xs);
   margin: 0 0 0 auto;
   padding: 0;
   list-style: none;
 }
 
 .kind-chip {
-  padding: var(--space-1) var(--space-2);
+  padding: var(--space-2xs) var(--space-xs);
   border-radius: 999px;
-  background: var(--colour-bg);
-  color: var(--colour-text-muted);
+  background: var(--canvas);
+  color: var(--text-muted);
   font-size: 0.75rem;
   font-weight: 600;
 }
@@ -719,7 +719,7 @@ textarea:disabled {
 
 .dialog--confirm p {
   margin: 0;
-  color: var(--colour-text-muted);
+  color: var(--text-muted);
 }
 
 /* Solid, so the destructive action is unmistakable — but it is not the one that

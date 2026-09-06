@@ -24,7 +24,7 @@
 | 2 | 2.2 | Rewrite the input, select, textarea and date recipes (spec step 8) | group:B | done | pending |
 | 2 | 2.3 | Rewrite the status chip recipes and add the dot (spec step 9) | group:B | done | pending |
 | 2 | 2.4 | Elevation utilities, cards, dialogs and the frosted backdrop (spec step 10) | group:B | done | pending |
-| 2 | 2.5 | Migrate off the bridge aliases and delete the bridge (spec step 11) | dispatch | todo | — |
+| 2 | 2.5 | Migrate off the bridge aliases and delete the bridge (spec step 11) | dispatch | done | pending |
 | 2 | 2.6 | Phase-2 screenshot set (spec step 12) | inline | todo | — |
 | 3 | 3.1 | Rebuild the header in `styles/chrome.css` and `AppShell` (spec step 13) | group:C | todo | — |
 | 3 | 3.2 | The optional `context` prop on trip-scoped routes (spec step 14) | group:C | todo | — |

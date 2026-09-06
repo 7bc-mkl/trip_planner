@@ -211,48 +211,6 @@
      the same column, docked rather than in flow. Aliased rather than repeated
      so the two can never drift. */
   --drawer-width: var(--sidebar-width);
-
-  /* ===================================================================== *
-   * Bridge — created in Phase 1 step 3, deleted in Phase 2 step 11.
-   * Nothing new may reference these; they exist so the palette change and
-   * the rule rewrite are two reviewable diffs instead of one.
-   *
-   * Every skeleton token name that still has a `var()` reference under
-   * `frontend/src` is aliased here, so Phase 1 repoints all 798 lines of
-   * `index.css` at the design's palette without touching a single rule.
-   * ===================================================================== */
-
-  --colour-bg: var(--canvas);
-  --colour-surface: var(--surface);
-  --colour-border: var(--hairline);
-  --colour-text: var(--text);
-  --colour-text-muted: var(--text-muted);
-  --colour-accent: var(--primary);
-  --colour-accent-text: var(--on-primary);
-  --colour-danger: var(--danger);
-  --colour-danger-bg: var(--danger-surface);
-
-  /* TRAP 1: the new scale renames `--space-N` to `--space-{2xs..3xl}`. These
-     six are the full set actually referenced by the skeleton. */
-  --space-1: var(--space-2xs); /* 0.25rem */
-  --space-2: var(--space-xs); /* 0.5rem  */
-  --space-3: var(--space-sm); /* 0.75rem */
-  --space-4: var(--space-md); /* 1rem    */
-  --space-6: var(--space-lg); /* 1.5rem  */
-  --space-8: var(--space-xl); /* 2rem    */
-
-  /* TRAP 2: `--radius-md` CHANGES MEANING under the same name — the skeleton's
-     10px becomes the design's 0.75rem/12px. Pinned explicitly here so the move
-     is visible in the diff rather than silent, which is the failure mode
-     `BACKWARD_COMPATIBILITY.md` calls the worst kind. `--radius-sm` and
-     `--radius-lg` are declared above and need no alias; `--radius-sm` shifts
-     6px -> 0.25rem/4px and `--radius-lg` keeps 1rem/16px. */
-  --radius-md: 0.75rem;
-
-  --shadow-card: var(--elevation-1);
-
-  /* `--font-sans` is declared above and already carries the variable family
-     name, so the skeleton's single reference needs no alias. */
 }
 
 /* The two `-mobile` type roles exist because DESIGN.md declares them; below the

@@ -55,15 +55,15 @@
   min-height: 100dvh;
   display: grid;
   grid-template-rows: auto 1fr;
-  gap: var(--space-8);
-  padding: var(--space-6);
+  gap: var(--space-xl);
+  padding: var(--space-lg);
 }
 
 .login > header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--space-4);
+  gap: var(--space-md);
 }
 
 .login > header h1 {
@@ -77,8 +77,8 @@
   align-self: start;
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
-  padding: var(--space-8);
+  gap: var(--space-sm);
+  padding: var(--space-xl);
 }
 
 .login form h2 {
@@ -87,13 +87,13 @@
 
 .login form p {
   margin: 0;
-  color: var(--colour-text-muted);
+  color: var(--text-muted);
 }
 
 .login label {
   font-size: 0.875rem;
   font-weight: 600;
-  margin-bottom: calc(var(--space-1) * -1);
+  margin-bottom: calc(var(--space-2xs) * -1);
 }
 
 /* The card's two inputs declare nothing of their own — they wear the field
@@ -108,7 +108,7 @@
   align-items: center;
   justify-content: center;
   min-height: 40px;
-  margin-top: var(--space-2);
+  margin-top: var(--space-xs);
   padding: var(--space-xs) var(--space-md);
   border: 1px solid transparent;
   border-radius: var(--radius);
@@ -144,11 +144,11 @@
    conveyed by colour alone. */
 .login [role='alert'] {
   margin: 0;
-  padding: var(--space-3);
-  border: 1px solid var(--colour-danger);
+  padding: var(--space-sm);
+  border: 1px solid var(--danger);
   border-radius: var(--radius-sm);
-  background: var(--colour-danger-bg);
-  color: var(--colour-danger);
+  background: var(--danger-surface);
+  color: var(--danger);
   font-size: 0.875rem;
 }
 
@@ -156,7 +156,7 @@
 
 .trip-list {
   display: grid;
-  gap: var(--space-3);
+  gap: var(--space-sm);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -164,7 +164,7 @@
 
 .trip-list a {
   display: block;
-  padding: var(--space-4);
+  padding: var(--space-md);
   color: inherit;
   text-decoration: none;
 }
@@ -174,8 +174,8 @@
 }
 
 .trip-list p {
-  margin: var(--space-1) 0 0;
-  color: var(--colour-text-muted);
+  margin: var(--space-2xs) 0 0;
+  color: var(--text-muted);
   font-size: 0.875rem;
 }
 
@@ -184,8 +184,8 @@
 .trip-form {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
-  padding: var(--space-6);
+  gap: var(--space-sm);
+  padding: var(--space-lg);
 }
 
 .trip-form label {
@@ -197,7 +197,7 @@
 
 .trip-form .field-row {
   display: flex;
-  gap: var(--space-4);
+  gap: var(--space-md);
 }
 
 .trip-form .field-row > div {
@@ -206,13 +206,13 @@
 
 .trip-form fieldset {
   margin: 0;
-  padding: var(--space-4);
-  border: 1px solid var(--colour-border);
+  padding: var(--space-md);
+  border: 1px solid var(--hairline);
   border-radius: var(--radius-md);
 }
 
 .trip-form legend {
-  padding-inline: var(--space-2);
+  padding-inline: var(--space-xs);
   font-size: 0.875rem;
   font-weight: 600;
 }
@@ -220,14 +220,14 @@
 .route-mode label {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-1) 0;
+  gap: var(--space-xs);
+  padding: var(--space-2xs) 0;
   font-weight: 400;
 }
 
 .trip-form .hint {
-  margin: 0 0 var(--space-3);
-  color: var(--colour-text-muted);
+  margin: 0 0 var(--space-sm);
+  color: var(--text-muted);
   font-size: 0.8125rem;
 }
 
@@ -235,9 +235,9 @@
   display: grid;
   grid-template-columns: 2fr 1fr 1fr auto;
   align-items: end;
-  gap: var(--space-2);
-  padding: var(--space-3) 0;
-  border-top: 1px solid var(--colour-border);
+  gap: var(--space-xs);
+  padding: var(--space-sm) 0;
+  border-top: 1px solid var(--hairline);
 }
 
 .stage-row [role='alert'] {
@@ -246,39 +246,39 @@
 
 .trip-form__summary {
   margin: 0;
-  padding: var(--space-3);
+  padding: var(--space-sm);
   border-radius: var(--radius-sm);
-  background: var(--colour-bg);
-  color: var(--colour-text-muted);
+  background: var(--canvas);
+  color: var(--text-muted);
   font-size: 0.875rem;
 }
 
 /* --- /trips/:id --- */
 
 .trip-header {
-  margin-bottom: var(--space-6);
+  margin-bottom: var(--space-lg);
 }
 
 .trip-header p {
   margin: 0;
-  color: var(--colour-text-muted);
+  color: var(--text-muted);
 }
 
 .trip-header__route {
   font-weight: 600;
-  color: var(--colour-text) !important;
+  color: var(--text) !important;
 }
 
 .timeline {
   display: grid;
-  gap: var(--space-3);
+  gap: var(--space-sm);
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
 .timeline__day {
-  padding: var(--space-4);
+  padding: var(--space-md);
 }
 
 .timeline__day h2 {
@@ -288,50 +288,50 @@
 .timeline__day h2 a {
   display: flex;
   align-items: baseline;
-  gap: var(--space-3);
+  gap: var(--space-sm);
   color: inherit;
   text-decoration: none;
 }
 
 .timeline__chip {
-  padding: var(--space-1) var(--space-2);
+  padding: var(--space-2xs) var(--space-xs);
   border-radius: var(--radius-sm);
-  background: var(--colour-bg);
+  background: var(--canvas);
   font-size: 0.8125rem;
   font-weight: 600;
   white-space: nowrap;
 }
 
 .timeline__stages {
-  color: var(--colour-text-muted);
+  color: var(--text-muted);
   font-weight: 500;
 }
 
 .timeline__empty-day {
-  margin: var(--space-2) 0 0;
-  color: var(--colour-text-muted);
+  margin: var(--space-xs) 0 0;
+  color: var(--text-muted);
   font-size: 0.875rem;
 }
 
 /* --- the day detail --- */
 
 .day-stages {
-  margin: 0 0 var(--space-4);
+  margin: 0 0 var(--space-md);
   font-weight: 600;
 }
 
 .day-nav {
   display: flex;
   justify-content: space-between;
-  gap: var(--space-4);
-  padding-bottom: var(--space-4);
-  border-bottom: 1px solid var(--colour-border);
+  gap: var(--space-md);
+  padding-bottom: var(--space-md);
+  border-bottom: 1px solid var(--hairline);
   font-size: 0.875rem;
 }
 
 /* Disabled rather than hidden: the trip's first and last days should look like
    boundaries, not like a navigator that lost half its controls. */
 .day-nav__disabled {
-  color: var(--colour-text-muted);
+  color: var(--text-muted);
   opacity: 0.5;
 }
