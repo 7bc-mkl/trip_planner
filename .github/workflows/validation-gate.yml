@@ -1,6 +1,6 @@
 name: Validation gate
 
-# Runs the six commands from `validation.commands` in `.ai/agentic.config.json`,
+# Runs the seven commands from `validation.commands` in `.ai/agentic.config.json`,
 # in the order that file lists them. When the gate changes there, change it here
 # and in AGENTS.md in the same PR.
 
@@ -68,6 +68,9 @@ jobs:
 
       - name: python3 scripts/check_locales.py
         run: python3 scripts/check_locales.py
+
+      - name: python3 scripts/check_css_tokens.py
+        run: python3 scripts/check_css_tokens.py
 
       - name: backend — ruff
         run: (cd backend && uv run ruff check .)
