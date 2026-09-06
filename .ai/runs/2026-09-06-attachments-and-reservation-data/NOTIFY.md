@@ -177,3 +177,44 @@
   Phase 2 and Phase 3 create is new markup. Had workstream B shipped first, this Step would have
   deleted those two `<PreviewNotice>` blocks, removed the `disabled` attributes and the
   `data-preview` markers, and lowered that spec's census from four surfaces to two.
+
+## 2026-09-06T22:10:00Z — Step 2.3-review-fix-1: a stale day response could unshow a fresh upload
+- **The defect, from the browser walk.** On `/trips/:id/days/:date`, uploading a ~4.3 MB PNG
+  announced "Dodano big3.png" and then showed the file **nowhere** — neither as an attachment row
+  nor as a queue row. A reload proved the file was on the server all along. 75 B and 594 KB files
+  appeared instantly; the same 4.3 MB file uploaded through the *item* strip appeared instantly.
+  To the owner it looked exactly like silent data loss.
+- **Root cause — confirmed, not the drop zone.** `DayDetailPage.load()` let **whichever day response
+  arrived last win**, regardless of which request was newest. Several loads are in flight routinely
+  (the mount's, one per item save or delete, one per upload or attachment delete), and nothing
+  orders the answers. The losing ordering: an unrelated refetch is issued while the upload is still
+  in flight → the upload finishes and its own refetch renders the list *with* the new attachment →
+  `UploadDropzone` correctly retires the queue row against that list, **permanently**, as
+  `2.2-review-fix-2` designed it → the older request finally answers with the pre-upload list and
+  overwrites the fresh one. The attachment row is gone and the queue row is never coming back. A
+  slow upload widens that window, which is exactly why only large files showed it, and why the item
+  strip — which appends the created attachment to its own local list — never did.
+- **The fix.** `DayDetailPage` now tags every day request with a monotonic counter and drops any
+  response, success *or* failure, that is no longer the newest. That is the same discipline the file
+  already used on the other axis (state tagged with the date it was loaded for, so another day's
+  answer cannot render) extended to the request axis rather than a parallel mechanism. Alongside it,
+  a finished day upload is now appended to the day's own attachment list from the upload's own
+  answer before the refetch replies — the local-first shape `ItemAttachments` already had, so the
+  two hosts behave the same and the panel no longer depends on a round trip for a fact the server
+  has already confirmed. Queue retirement is untouched: the duplicate rows `2.2-review-fix-2` fixed
+  stay fixed, and both properties now hold at once — a file is shown exactly once, never zero times.
+- **Failing-first, on purpose.** `frontend/src/features/trips/dayAttachmentsRace.test.tsx` drives the
+  ordering through the real screen with the day responses held open by hand. It **fails on the
+  pre-fix code** ("expected `[]` to deeply equal `['rezerwacja.pdf']`" at the post-stale-response
+  assertion) and passes after. Verified a second time that the counter alone carries the fix, so it
+  is not the optimistic append masking the race. Three cases: the out-of-order refetch; the upload's
+  own answer rendering without waiting for a round trip; and an unrelated refresh landing *while*
+  the upload is in flight, which must not retire the queue row that is the file's only
+  representation at that moment.
+- **Deferred, still open.** The `aria-live` region keeps its previous message after an unrelated
+  action (a rejection message survives a later successful delete, item creation and locale
+  switches). Clearing it is not a consequence of this change — the announcement lives in
+  `UploadDropzone` and the actions that ought to supersede it happen outside it — so per this Step's
+  own scope note it is left as a deferred minor rather than widening the Step.
+- Gate: `typecheck`, `test --run` (**232 passed**, up from 229), `build`, `check_locales.py`,
+  `check_css_tokens.py`, `check_contrast.py` — all green.

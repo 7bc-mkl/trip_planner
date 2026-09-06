@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useParams } from 'react-router-dom'
 
+import type { Attachment } from '../../api/attachments'
 import { ApiError } from '../../api/client'
 import { createItem, deleteItem, fetchDay, updateItem } from '../../api/items'
 import type { DayDetail, Item, ItemInput } from '../../api/items'
@@ -52,15 +53,47 @@ export function DayDetailPage() {
   )
   const [editing, setEditing] = useState<Editing>({ mode: 'closed' })
 
+  /**
+   * Which day request is the newest, as a monotonic counter.
+   *
+   * The same discipline as the date tag above, on the other axis: a response is
+   * only allowed to render if it is still the newest request *for this same
+   * day*, not merely for the right day. Several loads are in flight routinely —
+   * the mount's, one per item save or delete, one per upload or attachment
+   * delete — and nothing makes the server answer them in the order they were
+   * asked. An older answer landing last used to win, which is how a file that
+   * had just uploaded disappeared: it was in the newest list, the drop zone
+   * retired its queue row against that list (permanently, by design), and then
+   * the pre-upload list overwrote it, leaving the file with no representation
+   * at all until a reload. A slow upload widens the window, which is why only
+   * large files showed it.
+   *
+   * A ref rather than state: it must be read and bumped synchronously as the
+   * request is issued, and changing it must never itself cause a render.
+   */
+  const newestRequest = useRef(0)
+
   const load = useCallback(
     (signal?: AbortSignal) => {
       if (tripId === undefined || date === undefined) {
         return Promise.resolve()
       }
+      const request = (newestRequest.current += 1)
+      const isNewest = () => request === newestRequest.current
       return fetchDay(tripId, date, signal)
-        .then((fresh) => setLoaded({ date, day: fresh, error: null }))
+        .then((fresh) => {
+          if (!isNewest()) {
+            return
+          }
+          setLoaded({ date, day: fresh, error: null })
+        })
         .catch((caught: unknown) => {
           if (signal?.aborted || (caught instanceof ApiError && caught.isUnauthenticated)) {
+            return
+          }
+          // A superseded request's failure is as stale as its success would
+          // have been: it must not replace a day that has since loaded.
+          if (!isNewest()) {
             return
           }
           setLoaded({
@@ -120,6 +153,36 @@ export function DayDetailPage() {
       await createItem(trip, dayDate, input)
     }
     await load()
+  }
+
+  /**
+   * A finished day upload appears from the upload's **own** answer, then the
+   * refetch catches the rest of the day up.
+   *
+   * That is the shape `ItemAttachments` already has — it appends the created
+   * attachment to its own list — and the two hosts differing was half of why
+   * the item strip never showed the disappearing-upload defect while this
+   * panel did. Appending here does not replace the guard above; it removes the
+   * panel's dependence on a round trip for a fact the server has already
+   * confirmed, so the file is on screen in the same commit the queue row
+   * retires in. The refetch that follows replaces the whole list, so a file
+   * appended here and then returned by the server is still listed once.
+   */
+  function handleDayUploaded(attachment: Attachment) {
+    setLoaded((previous) =>
+      previous.date !== dayDate || previous.day === null
+        ? previous
+        : {
+            ...previous,
+            day: {
+              ...previous.day,
+              attachments: previous.day.attachments.some((entry) => entry.id === attachment.id)
+                ? previous.day.attachments
+                : [...previous.day.attachments, attachment],
+            },
+          },
+    )
+    void load()
   }
 
   async function handleDelete(item: Item) {
@@ -252,7 +315,7 @@ export function DayDetailPage() {
         tripId={trip}
         date={dayDate}
         attachments={day.attachments}
-        onUploaded={() => void load()}
+        onUploaded={handleDayUploaded}
         onDeleted={() => void load()}
       />
 
