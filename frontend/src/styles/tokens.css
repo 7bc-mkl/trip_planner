@@ -42,7 +42,24 @@
   --surface-sunken: #f1f5f9; /* ghost-button hover, drag-over dropzone */
 
   --hairline: #e2e8f0; /* structural hairlines */
-  --hairline-strong: #cbd5e1; /* input borders, elevation-2 border shift */
+
+  /* Decorative only — the elevation-2 hover border shift and the dashed
+     dropzone border. WCAG 1.4.11 (non-text contrast) governs boundaries
+     required to identify a component; a hover-state border tint and a
+     dropzone's dashed outline are not that, so this token is not in
+     `scripts/check_contrast.py`'s pair table. Value is DESIGN.md's own,
+     unchanged. */
+  --hairline-strong: #cbd5e1;
+
+  /* The resting 1px boundary of inputs, selects, textareas and date inputs
+     (consumed by the field recipe in Step 2.2) — this IS required to
+     identify the control, so WCAG 1.4.11's 3:1 floor applies. Corrects
+     DESIGN.md's `#CBD5E1` here (1.48:1 on `--surface`, below the floor) the
+     same way the spec corrects its three chip foregrounds: the design's own
+     contrast failures are corrected, not shipped (spec `## 📝 Scope`,
+     workstream A, last bullet). 3.21:1 on `--surface`, per
+     `scripts/check_contrast.py`. */
+  --field-border: #84919f;
 
   /* --- colour: text ---------------------------------------------------- */
 
