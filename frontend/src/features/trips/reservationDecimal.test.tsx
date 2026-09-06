@@ -291,6 +291,53 @@ describe('a refused cost marks the field the message is about', () => {
     expect(document.body.textContent).not.toContain('NaN')
   })
 
+  /**
+   * The client mirror of the magnitude bound. `COST_AMOUNT_PATTERN` is a shape
+   * rule with no length in it, so `12345678901` used to pass the client check
+   * and come back as the server's generic "check the marked fields" with
+   * nothing marked — the exact dead end the rest of this file exists to
+   * remove. `NUMERIC(12,2)` stops at `9999999999.99`.
+   */
+  it('marks an amount too large for the column, in Polish, and refuses the save', async () => {
+    const user = userEvent.setup()
+    await openPanel(user, pl.item.reservation.heading)
+
+    const amount = screen.getByLabelText(pl.item.reservation.costLabel)
+    await user.type(amount, '12345678901')
+
+    expect(amount).toHaveAttribute('aria-invalid', 'true')
+    expect(describedBy(amount)).toHaveTextContent(pl.error.invalid_cost)
+    expect(describedBy(amount)).toHaveAttribute('role', 'alert')
+    // And the summary does not render a cost that cannot be saved.
+    expect(document.querySelector('.reservation-panel__cost')).toBeNull()
+
+    const save = screen.getByRole('button', { name: pl.item.save })
+    expect(save).toBeDisabled()
+    await user.click(save)
+    expect(patchCalls).toHaveLength(0)
+
+    // The largest amount the column *can* hold is not refused: the bound is
+    // inclusive on this side exactly as it is on the server's.
+    await user.clear(amount)
+    await user.type(amount, '9999999999,99')
+    expect(amount).not.toHaveAttribute('aria-invalid')
+    expect(screen.getByRole('button', { name: pl.item.save })).toBeEnabled()
+  })
+
+  it('marks an amount too large for the column, in English, with the English message', async () => {
+    ownerLocale = 'en'
+    await applyLocale('en')
+    const user = userEvent.setup()
+    await openPanel(user, en.item.reservation.heading)
+
+    const amount = screen.getByLabelText(en.item.reservation.costLabel)
+    await user.type(amount, '12345678901')
+
+    expect(amount).toHaveAttribute('aria-invalid', 'true')
+    expect(describedBy(amount)).toHaveTextContent(en.error.invalid_cost)
+    expect(screen.getByRole('button', { name: en.item.save })).toBeDisabled()
+  })
+
   it('marks nothing, and blocks nothing, while the cost is simply empty', async () => {
     const user = userEvent.setup()
     await openPanel(user, pl.item.reservation.heading)

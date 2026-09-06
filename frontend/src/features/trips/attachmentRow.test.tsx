@@ -179,6 +179,89 @@ describe('the delete action', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 
+  /**
+   * The failure path. `ConfirmDialog` does `void
+   * Promise.resolve(onConfirm()).finally(...)`, so a rejection used to be an
+   * unhandled one: the dialog stayed open with its button re-enabled, the row
+   * stayed put, and nothing on screen said why. A `503` and a `404` from a
+   * second tab that already deleted the file both land here.
+   */
+  async function failWith(status: number, code: string, locale: typeof pl | typeof en) {
+    const user = userEvent.setup()
+    const onDeleted = vi.fn()
+    mockApi(
+      () =>
+        new Response(JSON.stringify({ error: { code, field: null } }), {
+          status,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+    )
+    render(<AttachmentRow tripId="trip-1" attachment={ATTACHMENT} onDeleted={onDeleted} />)
+
+    await user.click(screen.getByRole('button', { name: locale.attachment.delete }))
+    await user.click(
+      within(screen.getByRole('dialog')).getByRole('button', {
+        name: locale.attachment.deleteConfirm,
+      }),
+    )
+
+    return { user, onDeleted }
+  }
+
+  it('a refused delete keeps the row and says why, in Polish', async () => {
+    const { onDeleted } = await failWith(503, 'service_unavailable', pl)
+
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent(pl.error.service_unavailable)
+    // Inside the dialog the owner is looking at, not somewhere behind it.
+    expect(screen.getByRole('dialog')).toContainElement(alert)
+    // The file may well still exist, so the row stays and the host is not told
+    // anything went.
+    expect(screen.getByText(ATTACHMENT.filename)).toBeInTheDocument()
+    expect(onDeleted).not.toHaveBeenCalled()
+  })
+
+  it('a refused delete keeps the row and says why, in English', async () => {
+    await applyLocale('en')
+    const { onDeleted } = await failWith(404, 'not_found', en)
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(en.error.not_found)
+    expect(screen.getByText(ATTACHMENT.filename)).toBeInTheDocument()
+    expect(onDeleted).not.toHaveBeenCalled()
+  })
+
+  it('retrying after a failure succeeds, and the message does not outlive it', async () => {
+    const user = userEvent.setup()
+    const onDeleted = vi.fn()
+    let attempt = 0
+    mockApi(() => {
+      attempt += 1
+      return attempt === 1
+        ? new Response(JSON.stringify({ error: { code: 'service_unavailable', field: null } }), {
+            status: 503,
+            headers: { 'Content-Type': 'application/json' },
+          })
+        : new Response(null, { status: 204 })
+    })
+    render(<AttachmentRow tripId="trip-1" attachment={ATTACHMENT} onDeleted={onDeleted} />)
+
+    const confirm = () =>
+      within(screen.getByRole('dialog')).getByRole('button', { name: pl.attachment.deleteConfirm })
+
+    await user.click(screen.getByRole('button', { name: pl.attachment.delete }))
+    await user.click(confirm())
+    expect(await screen.findByRole('alert')).toHaveTextContent(pl.error.service_unavailable)
+
+    // The confirm button is the retry — it is re-enabled, and the second
+    // attempt goes through.
+    await waitFor(() => expect(confirm()).toBeEnabled())
+    await user.click(confirm())
+
+    await waitFor(() => expect(onDeleted).toHaveBeenCalledTimes(1))
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
   it('returns focus to the trigger when the dialog closes on confirm', async () => {
     const user = userEvent.setup()
     mockApi()

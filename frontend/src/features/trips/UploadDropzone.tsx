@@ -80,6 +80,12 @@ import { ApiError } from '../../api/client'
  * state, so deleting the attachment afterwards (its id leaves the list) cannot
  * resurrect a queue row asserting a file that no longer exists.
  *
+ * **Nothing survives the panel.** Every in-flight upload is aborted when this
+ * component unmounts — closing the item dialog mid-upload cancels the request
+ * rather than leaving it to finish into a tree that is gone — and the two
+ * per-row maps below are pruned wherever a row leaves state, by cancellation,
+ * dismissal or retirement alike, so neither grows for the panel's lifetime.
+ *
  * **Only successful rows retire.** A failed or cancelled row is the only record
  * of what went wrong and it carries the retry action, so it stays until the
  * owner dismisses it.
@@ -308,12 +314,47 @@ export function UploadDropzone({
   // …and dropped from state right after, so it stays retired. Without this, the
   // id leaving the list on a delete would bring the queue row back, asserting a
   // file that no longer exists.
+  //
+  // The two per-row maps are pruned *with* the row, the same pair `drop` above
+  // deletes. A row can leave state by either route, and only one of them used
+  // to clean up after itself: every successful upload left its `announcedStep`
+  // entry — and, on any path that does not settle through `start`, its
+  // controller — behind for the panel's whole lifetime.
+  //
+  // `rows` is a dependency rather than something read inside an updater, so the
+  // deletes happen here, when the effect runs, instead of whenever React next
+  // gets round to invoking a lazy updater. Re-running on every `rows` change
+  // cannot loop: the early return covers the render this effect's own
+  // `setRows` causes.
   useEffect(() => {
-    setRows((previous) => {
-      const remaining = previous.filter((row) => !retired(row))
-      return remaining.length === previous.length ? previous : remaining
-    })
-  }, [retired])
+    const retiredRows = rows.filter((row) => retired(row))
+    if (retiredRows.length === 0) {
+      return
+    }
+    for (const row of retiredRows) {
+      controllers.current.delete(row.key)
+      announcedStep.current.delete(row.key)
+    }
+    setRows((previous) => previous.filter((row) => !retired(row)))
+  }, [rows, retired])
+
+  // Nothing outlives the panel. Closing the item dialog mid-upload used to
+  // leave the request running: its `.then` then called `patch` and
+  // `setAnnouncement` into a tree that no longer exists and `onUploaded` on a
+  // host that had gone, and the bytes kept flowing for a file nobody could see
+  // the outcome of. Aborting rejects each upload with an `AbortError`, which
+  // the handler in `start` already returns early on, so the unmount is silent.
+  useEffect(() => {
+    const inFlight = controllers.current
+    const steps = announcedStep.current
+    return () => {
+      for (const controller of inFlight.values()) {
+        controller.abort()
+      }
+      inFlight.clear()
+      steps.clear()
+    }
+  }, [])
 
   const start = useCallback(
     (key: string, file: File) => {

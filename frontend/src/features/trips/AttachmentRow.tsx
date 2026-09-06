@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 
 import type { Attachment } from '../../api/attachments'
 import { attachmentContentUrl, deleteAttachment } from '../../api/attachments'
+import { ApiError } from '../../api/client'
 import { Icon } from '../../components/Icon'
 import { ConfirmDialog } from './ConfirmDialog'
 import { splitByteSize } from './format'
@@ -27,7 +28,11 @@ import { Lightbox } from './Lightbox'
  *
  * **Delete** is behind `ConfirmDialog`, the same shipped confirmation trip
  * delete uses, and for the same reason: there is no undo in this milestone, so
- * the dialog naming the file is the whole safety net.
+ * the dialog naming the file is the whole safety net. **A delete that fails
+ * says so in that same dialog** — the translated `error.*` message for the
+ * code the server sent — and leaves the row alone: the file is very likely
+ * still there, and a row that vanished on a `503` would be the worst possible
+ * answer to "did that work?".
  *
  * **Images open in `Lightbox`** (Step 4.2) when their preview is clicked; a
  * PDF's glyph is not a button at all, so clicking it does nothing — the PDF
@@ -88,6 +93,13 @@ export function AttachmentRow({
   const { t } = useTranslation()
   const size = splitByteSize(attachment.byte_size)
   const [confirmingDelete, setConfirmingDelete] = useState(false)
+  /**
+   * The translated message for a delete the server refused, or that never
+   * reached it. `null` until one fails, and cleared again whenever the dialog
+   * is opened afresh — a stale refusal beside a new attempt would be a lie
+   * about what just happened.
+   */
+  const [deleteError, setDeleteError] = useState<string | null>(null)
   const [lightboxOpen, setLightboxOpen] = useState(false)
   const isImage = IMAGE_CONTENT_TYPES.has(attachment.content_type)
   const contentUrl = attachmentContentUrl(tripId, attachment.id)
@@ -143,7 +155,14 @@ export function AttachmentRow({
         <a className="button-quiet" href={contentUrl}>
           {t('attachment.download')}
         </a>
-        <button type="button" className="button-danger" onClick={() => setConfirmingDelete(true)}>
+        <button
+          type="button"
+          className="button-danger"
+          onClick={() => {
+            setDeleteError(null)
+            setConfirmingDelete(true)
+          }}
+        >
           {t('attachment.delete')}
         </button>
       </span>
@@ -155,9 +174,26 @@ export function AttachmentRow({
           // to be able to tell *what* is about to go.
           message={t('attachment.deleteMessage', { filename: attachment.filename })}
           confirmLabel={t('attachment.deleteConfirm')}
+          error={deleteError}
           onCancel={() => setConfirmingDelete(false)}
+          // A rejection here used to be an unhandled one: the dialog stayed
+          // open with its button re-enabled and the owner was told nothing,
+          // while the row they had just asked to delete was still there. A
+          // `503`, a dropped connection and a `404` from a second tab that
+          // already deleted this file all land here. The row is kept — the
+          // file may well still exist — and the translated message goes into
+          // the dialog the owner is looking at, where the confirm button is
+          // itself the retry.
           onConfirm={async () => {
-            await deleteAttachment(tripId, attachment.id)
+            try {
+              await deleteAttachment(tripId, attachment.id)
+            } catch (caught: unknown) {
+              setDeleteError(
+                caught instanceof ApiError ? t(caught.translationKey) : t('error.unknown'),
+              )
+              return
+            }
+            setDeleteError(null)
             setConfirmingDelete(false)
             onDeleted()
           }}

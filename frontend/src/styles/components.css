@@ -1265,6 +1265,15 @@ textarea:disabled {
   color: var(--text-muted);
 }
 
+/* A failed confirmation is not the muted body copy above it. This is the
+   shipped `[role='alert']` recipe — `--danger` on the dialog's `--surface`,
+   exactly the pair the item editor's own field messages already render on this
+   same panel — restated only because `.dialog--confirm p` would otherwise win
+   on specificity and mute it. No new colour pair. */
+.dialog--confirm [role='alert'] {
+  color: var(--danger);
+}
+
 /* --- the image lightbox (Step 4.2) ---
  *
  * The same `.dialog` shell — same scrim, same frost, same `--radius` — just

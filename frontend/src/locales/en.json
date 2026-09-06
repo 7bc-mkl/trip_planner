@@ -196,7 +196,7 @@
     "attachment_limit_reached": "This already has the maximum of 20 attachments. Remove one before adding another.",
     "trip_storage_quota_exceeded": "This trip has reached its storage limit. Remove an attachment before adding another.",
     "rate_limited": "Too many uploads in a short time. Wait a few minutes and try again.",
-    "invalid_cost": "Check the cost: it needs both an amount and a currency, cannot be negative, and allows at most two decimals.",
+    "invalid_cost": "Check the cost: it needs both an amount and a currency, cannot be negative, allows at most two decimals, and cannot be larger than 9,999,999,999.99.",
     "invalid_reservation_field": "That confirmation number is too long. Shorten it to 500 characters or fewer.",
     "days_have_attachments": "Those days already have attachments on them. Remove the attachments first, then shorten the trip.",
     "unknown": "Something went wrong. Please try again."

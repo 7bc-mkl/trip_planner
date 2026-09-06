@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import {
   COST_AMOUNT_PATTERN,
   CURRENCY_CODE_PATTERN,
+  exceedsMaxCostAmount,
   formatCurrency,
   normaliseAmount,
 } from './format'
@@ -108,7 +109,14 @@ export function costFieldErrors(value: ReservationValue): {
   }
 
   return {
-    amount: !COST_AMOUNT_PATTERN.test(amount),
+    // Shape *and* magnitude. `COST_AMOUNT_PATTERN` has no length bound — it
+    // cannot have one and stay a shape rule — so `12345678901.00` used to be
+    // the one cost refusal this side did not mark: the server answered it with
+    // `422 invalid_cost` and the user got the generic "check the marked
+    // fields" with nothing marked, which is the exact dead end
+    // `3.4-review-fix-2` existed to remove. `exceedsMaxCostAmount` is the
+    // other half of `validate_cost`, mirrored.
+    amount: !COST_AMOUNT_PATTERN.test(amount) || exceedsMaxCostAmount(amount),
     currency: !CURRENCY_CODE_PATTERN.test(currency),
   }
 }
@@ -177,6 +185,12 @@ export function hasCostError(value: ReservationValue): boolean {
  * typed, which the server would answer with `422 invalid_cost`, is. The
  * collapsed summary goes quiet for the same values rather than rendering a
  * rounded guess of an amount that cannot be saved.
+ *
+ * **Including an amount too large for the column** — `NUMERIC(12,2)` stops at
+ * `9999999999.99`, and `validate_cost` refuses anything above it. That was the
+ * one refusal this side did not mirror, so it arrived as the generic server
+ * answer with no field marked; `exceedsMaxCostAmount` closes it, and the mark
+ * is the same `aria-invalid`/`aria-describedby` pair as every other one.
  */
 export function ReservationPanel({
   value,

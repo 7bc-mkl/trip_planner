@@ -196,7 +196,7 @@
     "attachment_limit_reached": "Tutaj jest już maksymalna liczba 20 załączników. Usuń jeden, zanim dodasz kolejny.",
     "trip_storage_quota_exceeded": "Ta podróż osiągnęła limit miejsca na załączniki. Usuń jakiś załącznik, zanim dodasz kolejny.",
     "rate_limited": "Zbyt wiele przesłanych plików w krótkim czasie. Odczekaj kilka minut i spróbuj ponownie.",
-    "invalid_cost": "Sprawdź koszt: musi mieć kwotę i walutę, nie może być ujemny i może mieć co najwyżej dwa miejsca po przecinku.",
+    "invalid_cost": "Sprawdź koszt: musi mieć kwotę i walutę, nie może być ujemny, może mieć co najwyżej dwa miejsca po przecinku i nie może przekraczać 9 999 999 999,99.",
     "invalid_reservation_field": "Numer potwierdzenia jest za długi. Skróć go do 500 znaków lub mniej.",
     "days_have_attachments": "Te dni mają już załączniki. Najpierw je usuń, potem skróć podróż.",
     "unknown": "Coś poszło nie tak. Spróbuj ponownie."

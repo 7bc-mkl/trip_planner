@@ -201,6 +201,44 @@ export const CURRENCY_CODE_PATTERN = /^[A-Z]{3}$/u
 export const COST_AMOUNT_PATTERN = /^\d+(\.\d{1,2})?$/u
 
 /**
+ * The other half of the server's rule, which `COST_AMOUNT_PATTERN` cannot
+ * express: `NUMERIC(12,2)` has a *precision* as well as a scale, so an amount
+ * can be perfectly well-shaped and still be too large to store.
+ *
+ * Both numbers are the ones `backend/trip_planner/domain/money.py` writes down
+ * (`MAX_COST_DIGITS`, `MAX_COST_DECIMAL_PLACES`), mirrored here the same way
+ * `CURRENCY_CODE_PATTERN` mirrors its regex — and the bound below is *derived*
+ * from them rather than typed out, so `9999999999.99` exists in exactly one
+ * place on each side.
+ */
+export const MAX_COST_DECIMAL_PLACES = 2
+export const MAX_COST_DIGITS = 12
+export const MAX_COST_AMOUNT =
+  10 ** (MAX_COST_DIGITS - MAX_COST_DECIMAL_PLACES) - 10 ** -MAX_COST_DECIMAL_PLACES
+
+/**
+ * Whether a **normalised** amount is larger than the column can hold — the
+ * client side of the server's fourth `validate_cost` rule.
+ *
+ * A convenience, never an authority: the server repeats this check and its
+ * answer is the only one that decides anything. What it buys is that an
+ * over-large amount marks the field it is about, exactly like every other
+ * refused cost, instead of coming back as the generic "check the marked
+ * fields" with nothing marked.
+ *
+ * `Number` is safe here in a way it would not be for the *decimal* rule: this
+ * only ever judges values `COST_AMOUNT_PATTERN` has already accepted, so at
+ * most two decimal places, and a double's spacing around 10^10 is about
+ * 2 × 10⁻⁶ — thousands of times finer than the one-cent step this compares at.
+ * Anything the pattern refuses returns `false` here, because it is already
+ * refused for a better-stated reason.
+ */
+export function exceedsMaxCostAmount(amount: string): boolean {
+  const value = Number(amount)
+  return Number.isFinite(value) && value > MAX_COST_AMOUNT
+}
+
+/**
  * A typed amount, normalised into the decimal string the wire takes.
  *
  * **The comma is a decimal separator here.** This is a Polish-first product

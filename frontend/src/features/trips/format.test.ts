@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest'
 
-import { COST_AMOUNT_PATTERN, formatCurrency, normaliseAmount } from './format'
+import {
+  COST_AMOUNT_PATTERN,
+  MAX_COST_AMOUNT,
+  exceedsMaxCostAmount,
+  formatCurrency,
+  normaliseAmount,
+} from './format'
 
 /**
  * Step 3.4: a stored reservation cost renders as money through **one**
@@ -84,6 +90,36 @@ describe('COST_AMOUNT_PATTERN mirrors the server rules in domain/money.py', () =
 
   it.each(['-1', '-0.01', '1.234', 'abc', '', '1e3', '+1'])('refuses %s', (amount) => {
     expect(COST_AMOUNT_PATTERN.test(amount)).toBe(false)
+  })
+})
+
+/**
+ * The magnitude half of the same server rule, which the pattern above cannot
+ * carry: `NUMERIC(12,2)` stops at `9999999999.99`, and `validate_cost` refuses
+ * anything larger. Without this, a well-shaped but unstorable amount was the
+ * one cost refusal the client did not mark.
+ */
+describe('exceedsMaxCostAmount mirrors the precision half of domain/money.py', () => {
+  it('derives the same bound the server derives from NUMERIC(12,2)', () => {
+    expect(MAX_COST_AMOUNT).toBe(9999999999.99)
+  })
+
+  it.each(['0', '249.50', '9999999999.99', '9999999999'])('accepts %s', (amount) => {
+    expect(exceedsMaxCostAmount(amount)).toBe(false)
+  })
+
+  it.each(['10000000000', '10000000000.00', '12345678901.00', '99999999999999'])(
+    'refuses %s',
+    (amount) => {
+      expect(exceedsMaxCostAmount(amount)).toBe(true)
+    },
+  )
+
+  it('says nothing about an amount the pattern already refuses', () => {
+    // Not this function's question: `abc` and `` are refused for a
+    // better-stated reason, and answering "too large" for them would be wrong.
+    expect(exceedsMaxCostAmount('abc')).toBe(false)
+    expect(exceedsMaxCostAmount('')).toBe(false)
   })
 })
 

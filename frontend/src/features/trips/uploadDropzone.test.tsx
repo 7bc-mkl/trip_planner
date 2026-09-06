@@ -791,3 +791,101 @@ describe('drag-and-drop', () => {
     expect(within(row('c.pdf')).getByText(pl.upload.state.done)).toBeInTheDocument()
   })
 })
+
+/**
+ * Step 4.x review fix — nothing outlives the panel.
+ *
+ * Two leaks, one cause: the queue kept per-row bookkeeping outside React state
+ * and never cleaned it up on the two paths that were not `drop()`. Closing the
+ * item dialog mid-upload left the request running, so its handlers called
+ * `patch`, `setAnnouncement` and `onUploaded` into a tree and a host that had
+ * gone; and the retirement effect removed rows from state without touching
+ * either map, so both grew by an entry per successful upload for the panel's
+ * whole lifetime.
+ */
+describe('nothing outlives the panel', () => {
+  it('aborts an in-flight upload on unmount and updates nothing afterwards', async () => {
+    const user = userEvent.setup()
+    const onUploaded = vi.fn()
+    // React reports an update on an unmounted tree — and any un-acted one —
+    // through `console.error`, so this is the assertion that there was none.
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    const { unmount } = render(<UploadDropzone target={DAY} onUploaded={onUploaded} />)
+
+    await user.upload(dropzone(), pdf())
+    const xhr = FakeXhr.instances[0]!
+    xhr.progress(512, 1024)
+    await screen.findByRole('progressbar')
+
+    // From here on, any state update is one into a tree that is gone. (The
+    // progress tick above is driven outside `act`, like everywhere else in this
+    // suite, so its own warnings are cleared first rather than counted.)
+    consoleError.mockClear()
+
+    unmount()
+
+    expect(xhr.aborted).toBe(true)
+
+    // The answer the server was already sending arrives anyway. It must change
+    // nothing: no host notification, no state update, no warning.
+    xhr.respond(201, ATTACHMENT)
+    await Promise.resolve()
+
+    expect(onUploaded).not.toHaveBeenCalled()
+    expect(consoleError).not.toHaveBeenCalled()
+    consoleError.mockRestore()
+  })
+
+  it('keeps no per-row bookkeeping for rows that have retired', async () => {
+    // The two maps are refs, so they are observed the only honest way from
+    // outside: every `Map` the component builds is recorded, and the ones
+    // keyed by row keys are the two in question.
+    const built: Map<unknown, unknown>[] = []
+    class TrackingMap<K, V> extends Map<K, V> {
+      constructor(entries?: readonly (readonly [K, V])[] | null) {
+        super(entries)
+        built.push(this as unknown as Map<unknown, unknown>)
+      }
+    }
+    vi.stubGlobal('Map', TrackingMap)
+
+    const keyedByRow = () =>
+      built.filter((map) =>
+        [...map.keys()].some((key) => typeof key === 'string' && key.startsWith('upload-')),
+      )
+
+    const user = userEvent.setup()
+    render(<HostedDropzone />)
+
+    await user.upload(dropzone(), pdf('a.pdf'))
+    // The probe works: while the upload is in flight, the bookkeeping is there.
+    const bookkeeping = keyedByRow()
+    expect(bookkeeping.length).toBeGreaterThan(0)
+
+    FakeXhr.instances[0]!.respond(201, { ...ATTACHMENT, id: 'attachment-a', filename: 'a.pdf' })
+    await waitFor(() => expect(queue()).toBeNull())
+
+    // Retired: the row is gone from state, and so is everything keyed by it.
+    for (const map of bookkeeping) {
+      expect(map.size).toBe(0)
+    }
+
+    // And it stays that way across further successful uploads — the leak was
+    // one entry per upload, so two more would have shown as two more entries.
+    for (const [index, name] of ['b.pdf', 'c.pdf'].entries()) {
+      await user.upload(dropzone(), pdf(name))
+      FakeXhr.instances[index + 1]!.respond(201, {
+        ...ATTACHMENT,
+        id: `attachment-${name}`,
+        filename: name,
+      })
+      await waitFor(() => expect(queue()).toBeNull())
+    }
+
+    expect(keyedByRow()).toHaveLength(0)
+    for (const map of bookkeeping) {
+      expect(map.size).toBe(0)
+    }
+  })
+})

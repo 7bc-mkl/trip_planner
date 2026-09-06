@@ -500,3 +500,48 @@ was renamed, not weakened: `test_a_declared_length_over_the_cap_is_refused` →
 now refused by the counted file length rather than by its declared length — same status, same code,
 different mechanism, so the old name described a path it no longer took. The declared-length path
 keeps its own test against `MAX_BODY_BYTES`.
+
+## 2026-09-07T00:00:00Z — review-fix batch (frontend findings of the PR #12 review)
+One commit, three findings, no new Steps. No backend file touched — the server half of
+FINDING 1 landed in `46d4d9f` from the parallel executor, and this is its client mirror.
+
+- **FINDING 1 (client mirror of MAJOR 1) — the magnitude bound now exists client-side.**
+  `COST_AMOUNT_PATTERN` is a *shape* rule (`^\d+(\.\d{1,2})?$`) and cannot carry a length, so
+  `12345678901` sailed past the client check and came back as the server's generic
+  "check the marked fields" with **nothing marked** — the exact dead end `3.4-review-fix-2`
+  existed to remove. `format.ts` now mirrors `domain/money.py`'s other half: `MAX_COST_DIGITS`
+  and `MAX_COST_DECIMAL_PLACES`, with `MAX_COST_AMOUNT` **derived** from them exactly as the
+  server derives it, and `exceedsMaxCostAmount` judging it. `costFieldErrors` folds it into the
+  amount half, so the refusal marks the box with the same `aria-invalid` + `aria-describedby`
+  → `error.invalid_cost` pair every other cost refusal uses. Still only a convenience: the
+  server repeats the check, and the client is never the reason something is *accepted*. The
+  `error.invalid_cost` sentence gained the magnitude clause in **both** locales, so the one
+  wire code still has exactly one message. Pinned by four unit blocks in `format.test.ts`
+  (including the inclusive `9999999999.99`) and two editor-level tests in
+  `reservationDecimal.test.tsx`, pl and en, asserting the mark, the resolved message, the
+  disabled save and the silent summary.
+- **FINDING 5 — a failed attachment delete said nothing.** `onConfirm` had no `catch`, and
+  `ConfirmDialog` does `void Promise.resolve(onConfirm()).finally(...)`: a `503`, a dropped
+  connection or a `404` from a second tab was an **unhandled rejection** that left the dialog
+  open, the button re-enabled and the owner uninformed. `AttachmentRow` now catches and renders
+  `t(err.translationKey)` **inside the dialog**, through a new optional `error` prop on
+  `ConfirmDialog` — that is where the owner is looking, where the confirm button *is* the retry,
+  and the one place the dialog is not covering. The row is kept and `onDeleted` is not called:
+  the file very likely still exists. Three tests in `attachmentRow.test.tsx` (pl `503`, en `404`,
+  and a retry that succeeds and clears the message).
+- **FINDING 6 — in-flight uploads outlived the panel, and a map leaked per upload.** Unmount now
+  aborts every controller (closing the item dialog mid-upload cancels the request instead of
+  letting `patch`/`setAnnouncement`/`onUploaded` fire into a tree and a host that are gone), and
+  the retirement effect prunes `controllers` and `announcedStep` alongside the row, the same pair
+  `drop()` deletes. The prune moved out of the state updater into the effect body (`rows` is now
+  a dependency) so it happens when the effect runs rather than whenever React next invokes a lazy
+  updater. Two tests: an unmount-mid-upload one asserting the abort, no `onUploaded`, and no
+  React update warning afterwards; and one that records every `Map` the component builds and
+  pins that nothing keyed by a row key survives three successive successful uploads.
+
+Gate: `npm run typecheck` clean, **353 frontend tests passed in 22 files**, `npm run build` clean,
+`npm run lint` warnings only (all pre-existing), all three `scripts/check_*.py` green. No new
+colour pair: the dialog's failure line is the shipped `[role='alert']` recipe (`--danger` on the
+dialog's `--surface`), restated only because `.dialog--confirm p` outranked it on specificity.
+The six protected suites pass **unmodified** — `uploadDropzone.test.tsx` and
+`attachmentRow.test.tsx` are additions at the end of the file, 0 deletions.
