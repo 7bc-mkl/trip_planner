@@ -696,6 +696,41 @@ describe('items on the timeline', () => {
 
     expect(within(row as HTMLElement).queryByRole('button')).not.toBeInTheDocument()
   })
+
+  // Step 2.7: the timeline wires `attachmentCount` from `item.attachment_count`.
+  // Both fixture items already carry `attachment_count: 0`, so the existing
+  // tests above are already proof the wiring adds no bare paperclip — this one
+  // is the positive case, and the negative case asserted in the same card set.
+  it('shows the paperclip badge only on cards whose item has attachments', async () => {
+    mockApi(
+      backend({
+        trip: {
+          ...TRIP,
+          days: TRIP.days.map((day) =>
+            day.id === 'day-1'
+              ? {
+                  ...day,
+                  items: [
+                    { ...MUSEUM, attachment_count: 2 },
+                    { ...HOTEL, attachment_count: 0 },
+                  ],
+                }
+              : day,
+          ),
+        },
+      }),
+    )
+
+    renderApp('/trips/trip-1')
+    await screen.findByText('Batu Caves')
+
+    const museumRow = screen.getByText('Batu Caves').closest('.item-row') as HTMLElement
+    const hotelRow = screen.getByText('Nocleg: Memmo Alfama').closest('.item-row') as HTMLElement
+
+    expect(within(museumRow).getByText('2 pliki')).toBeInTheDocument()
+    expect(museumRow.querySelector('.item-row__attachments')).not.toBeNull()
+    expect(hotelRow.querySelector('.item-row__attachments')).toBeNull()
+  })
 })
 
 describe("the item card's paperclip badge", () => {
