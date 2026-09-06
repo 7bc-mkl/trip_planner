@@ -728,6 +728,23 @@ textarea:disabled {
   letter-spacing: var(--tracking-label-md);
 }
 
+/* Download and delete, pinned to the row's far edge rather than crowding the
+   name and size. Download wears the ghost recipe as an `<a>` rather than a
+   `<button>` — see `AttachmentRow.tsx` for why — so its underline (the `a`
+   default in `base.css`) is undone here the same way `.day-nav__link` already
+   undoes it for its own anchors. */
+.attachment-row__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  margin-left: auto;
+  flex: none;
+}
+
+.attachment-row__actions a {
+  text-decoration: none;
+}
+
 /* --- the item editor dialog --- */
 
 /* The scrim: `#0F172A` at 20% with a 12px backdrop blur, DESIGN.md's own pair

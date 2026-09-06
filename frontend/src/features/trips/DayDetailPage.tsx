@@ -253,6 +253,7 @@ export function DayDetailPage() {
         date={dayDate}
         attachments={day.attachments}
         onUploaded={() => void load()}
+        onDeleted={() => void load()}
       />
 
       {editing.mode !== 'closed' && (
@@ -264,6 +265,7 @@ export function DayDetailPage() {
             editing.mode === 'edit' ? () => handleDelete(editing.item) : undefined
           }
           onUploaded={() => void load()}
+          onAttachmentDeleted={() => void load()}
           onClose={() => setEditing({ mode: 'closed' })}
         />
       )}

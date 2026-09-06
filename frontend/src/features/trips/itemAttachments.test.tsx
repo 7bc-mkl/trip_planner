@@ -62,7 +62,12 @@ beforeEach(async () => {
 describe('the item attachment strip', () => {
   it('renders the empty state when the item has no attachments', () => {
     render(
-      <ItemAttachments tripId="trip-1" item={item({ attachments: [] })} onUploaded={vi.fn()} />,
+      <ItemAttachments
+        tripId="trip-1"
+        item={item({ attachments: [] })}
+        onUploaded={vi.fn()}
+        onDeleted={vi.fn()}
+      />,
     )
 
     expect(screen.getByText(pl.itemAttachments.empty)).toBeInTheDocument()
@@ -75,6 +80,7 @@ describe('the item attachment strip', () => {
         tripId="trip-1"
         item={item({ attachments: [VOUCHER] })}
         onUploaded={vi.fn()}
+        onDeleted={vi.fn()}
       />,
     )
 
@@ -88,6 +94,7 @@ describe('the item attachment strip', () => {
         tripId="trip-1"
         item={item({ attachments: [VOUCHER, TICKET] })}
         onUploaded={vi.fn()}
+        onDeleted={vi.fn()}
       />,
     )
 
@@ -98,7 +105,12 @@ describe('the item attachment strip', () => {
 
   it('hosts the upload dropzone for a saved item', () => {
     render(
-      <ItemAttachments tripId="trip-1" item={item({ attachments: [] })} onUploaded={vi.fn()} />,
+      <ItemAttachments
+        tripId="trip-1"
+        item={item({ attachments: [] })}
+        onUploaded={vi.fn()}
+        onDeleted={vi.fn()}
+      />,
     )
 
     expect(screen.getByText(pl.upload.add)).toBeInTheDocument()
@@ -106,7 +118,9 @@ describe('the item attachment strip', () => {
 
   describe('the new-item case', () => {
     it('renders no upload control and an explanatory line instead, for a new (unsaved) item', () => {
-      render(<ItemAttachments tripId="trip-1" item={null} onUploaded={vi.fn()} />)
+      render(
+        <ItemAttachments tripId="trip-1" item={null} onUploaded={vi.fn()} onDeleted={vi.fn()} />,
+      )
 
       expect(screen.getByText(pl.itemAttachments.saveFirst)).toBeInTheDocument()
       // No dropzone: there is no `itemId` yet to upload against.
@@ -115,7 +129,9 @@ describe('the item attachment strip', () => {
     })
 
     it('still renders the empty state and the heading for a new item', () => {
-      render(<ItemAttachments tripId="trip-1" item={null} onUploaded={vi.fn()} />)
+      render(
+        <ItemAttachments tripId="trip-1" item={null} onUploaded={vi.fn()} onDeleted={vi.fn()} />,
+      )
 
       expect(screen.getByText(pl.itemAttachments.heading)).toBeInTheDocument()
       expect(screen.getByText(pl.itemAttachments.empty)).toBeInTheDocument()
@@ -130,6 +146,7 @@ describe('the item attachment strip', () => {
         tripId="trip-1"
         item={item({ attachments: [VOUCHER] })}
         onUploaded={vi.fn()}
+        onDeleted={vi.fn()}
       />,
     )
 
@@ -141,7 +158,9 @@ describe('the item attachment strip', () => {
   it('renders the English empty state and the new-item message too', async () => {
     await applyLocale('en')
 
-    render(<ItemAttachments tripId="trip-1" item={null} onUploaded={vi.fn()} />)
+    render(
+      <ItemAttachments tripId="trip-1" item={null} onUploaded={vi.fn()} onDeleted={vi.fn()} />,
+    )
 
     expect(screen.getByText(en.itemAttachments.saveFirst)).toBeInTheDocument()
   })

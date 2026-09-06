@@ -133,7 +133,12 @@
     "saveFirst": "Najpierw zapisz element, a potem wróć, aby dołączyć do niego pliki."
   },
   "attachment": {
-    "size": "{value, number} {unit}"
+    "size": "{value, number} {unit}",
+    "download": "Pobierz",
+    "delete": "Usuń załącznik",
+    "deleteTitle": "Usunąć ten załącznik?",
+    "deleteMessage": "„{filename}” zostanie usunięty. Tej operacji nie można cofnąć.",
+    "deleteConfirm": "Usuń załącznik"
   },
   "upload": {
     "add": "Dodaj plik / zdjęcie / bilet",

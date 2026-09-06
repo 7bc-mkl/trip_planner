@@ -113,3 +113,25 @@
   number})") deliberately does **not** pluralise the noun — that ICU plural key is Step 2.6's own
   named deliverable. This Step's key can be swapped for 2.6's once it lands without changing where
   it is called from.
+
+## 2026-09-06T18:25:51Z — Step 2.5 scope decisions
+- `AttachmentRow` owns the whole delete flow, not just the trigger: it renders the download `<a>`,
+  the delete `.button-danger`, and (behind `confirmingDelete` state) the `ConfirmDialog` itself,
+  which calls `deleteAttachment(tripId, attachment.id)` directly. A host never touches the API for
+  delete — it only receives the new required `onDeleted: () => void` prop, fired after the awaited
+  delete resolves, exactly mirroring how upload already bubbles through `onUploaded`.
+- Both hosts gained a same-shaped `onDeleted` prop and forward it unchanged to every row.
+  `DayAttachments` is purely presentational (no local list state), so its `onDeleted` is a straight
+  pass-through; `ItemAttachments` still owns its local `attachments` array, so its `onDeleted` prop
+  wraps a `handleDeleted(attachmentId)` that filters the row out locally *and* bubbles up, the same
+  local-first/bubble-up shape `handleUploaded` already uses.
+- `ItemDialog` gained `onAttachmentDeleted: () => void` — a name deliberately distinct from its
+  existing `onDelete` (which deletes the whole item) — wired by `DayDetailPage` to `() => void
+  load()`, the same refetch `onUploaded` already triggers on both hosts.
+- Download is a real `<a href={attachmentContentUrl(...)}>` wearing `.button-quiet`; a new
+  `.attachment-row__actions a { text-decoration: none }` rule undoes the link underline, the same
+  pattern `.day-nav__link` already uses for its own anchors.
+- Whoever builds Step 4.2's lightbox on top of this row should know: `AttachmentRow`'s own delete
+  button and `ConfirmDialog` stay mounted in the row regardless of what a host does with `onDeleted`
+  (confirmed by `attachmentRow.test.tsx`'s focus-return-on-confirm test), so a lightbox trigger on
+  the image preview can coexist without fighting this row's own confirm-dialog lifecycle.

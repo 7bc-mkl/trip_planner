@@ -50,6 +50,7 @@ describe('the day documents panel', () => {
         date="2026-10-11"
         attachments={[PDF, PHOTO]}
         onUploaded={vi.fn()}
+        onDeleted={vi.fn()}
       />,
     )
 
@@ -60,7 +61,13 @@ describe('the day documents panel', () => {
 
   it('renders the shipped empty-state recipe when there are none', () => {
     const { container } = render(
-      <DayAttachments tripId="trip-1" date="2026-10-11" attachments={[]} onUploaded={vi.fn()} />,
+      <DayAttachments
+        tripId="trip-1"
+        date="2026-10-11"
+        attachments={[]}
+        onUploaded={vi.fn()}
+        onDeleted={vi.fn()}
+      />,
     )
 
     expect(screen.getByText(pl.dayAttachments.empty)).toBeInTheDocument()
@@ -73,7 +80,13 @@ describe('the day documents panel', () => {
     await applyLocale('en')
 
     render(
-      <DayAttachments tripId="trip-1" date="2026-10-11" attachments={[PDF]} onUploaded={vi.fn()} />,
+      <DayAttachments
+        tripId="trip-1"
+        date="2026-10-11"
+        attachments={[PDF]}
+        onUploaded={vi.fn()}
+        onDeleted={vi.fn()}
+      />,
     )
 
     expect(screen.getByText(en.dayAttachments.heading)).toBeInTheDocument()
@@ -84,14 +97,28 @@ describe('the day documents panel', () => {
   it('renders the English empty state too', async () => {
     await applyLocale('en')
 
-    render(<DayAttachments tripId="trip-1" date="2026-10-11" attachments={[]} onUploaded={vi.fn()} />)
+    render(
+      <DayAttachments
+        tripId="trip-1"
+        date="2026-10-11"
+        attachments={[]}
+        onUploaded={vi.fn()}
+        onDeleted={vi.fn()}
+      />,
+    )
 
     expect(screen.getByText(en.dayAttachments.empty)).toBeInTheDocument()
   })
 
   it('renders a lazy-loaded image preview — the original file, with the filename as alt text', () => {
     render(
-      <DayAttachments tripId="trip-1" date="2026-10-11" attachments={[PHOTO]} onUploaded={vi.fn()} />,
+      <DayAttachments
+        tripId="trip-1"
+        date="2026-10-11"
+        attachments={[PHOTO]}
+        onUploaded={vi.fn()}
+        onDeleted={vi.fn()}
+      />,
     )
 
     const preview = screen.getByAltText(PHOTO.filename)
@@ -105,7 +132,13 @@ describe('the day documents panel', () => {
 
   it('renders the document glyph, not a preview, for a PDF', () => {
     const { container } = render(
-      <DayAttachments tripId="trip-1" date="2026-10-11" attachments={[PDF]} onUploaded={vi.fn()} />,
+      <DayAttachments
+        tripId="trip-1"
+        date="2026-10-11"
+        attachments={[PDF]}
+        onUploaded={vi.fn()}
+        onDeleted={vi.fn()}
+      />,
     )
 
     expect(screen.queryByRole('img')).not.toBeInTheDocument()
@@ -124,6 +157,7 @@ describe('the day documents panel', () => {
         date="2026-10-11"
         attachments={[PDF, PHOTO]}
         onUploaded={vi.fn()}
+        onDeleted={vi.fn()}
       />,
     )
 
@@ -133,7 +167,15 @@ describe('the day documents panel', () => {
   })
 
   it("hosts the dropzone with the export's verbatim label, kept as-is", () => {
-    render(<DayAttachments tripId="trip-1" date="2026-10-11" attachments={[]} onUploaded={vi.fn()} />)
+    render(
+      <DayAttachments
+        tripId="trip-1"
+        date="2026-10-11"
+        attachments={[]}
+        onUploaded={vi.fn()}
+        onDeleted={vi.fn()}
+      />,
+    )
 
     expect(screen.getByText(pl.upload.add)).toBeInTheDocument()
   })

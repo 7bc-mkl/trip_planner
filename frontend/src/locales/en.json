@@ -133,7 +133,12 @@
     "saveFirst": "Save the item first, then come back to attach files to it."
   },
   "attachment": {
-    "size": "{value, number} {unit}"
+    "size": "{value, number} {unit}",
+    "download": "Download",
+    "delete": "Delete attachment",
+    "deleteTitle": "Delete this attachment?",
+    "deleteMessage": "“{filename}” will be deleted. This cannot be undone.",
+    "deleteConfirm": "Delete attachment"
   },
   "upload": {
     "add": "Add file, photo or ticket",

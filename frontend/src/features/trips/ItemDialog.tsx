@@ -47,6 +47,7 @@ export function ItemDialog({
   onSave,
   onDelete,
   onUploaded,
+  onAttachmentDeleted,
   onClose,
 }: {
   tripId: string
@@ -57,6 +58,9 @@ export function ItemDialog({
   /** Called once per successful upload from `ItemAttachments`, so the day
       list's own paperclip count catches up without waiting for Save. */
   onUploaded: (attachment: Attachment) => void
+  /** Called once per successful attachment delete from `ItemAttachments` —
+      named distinctly from `onDelete` above, which deletes the whole item. */
+  onAttachmentDeleted: () => void
   onClose: () => void
 }) {
   const { t } = useTranslation()
@@ -272,7 +276,12 @@ export function ItemDialog({
 
           {error !== null && <p role="alert">{error}</p>}
 
-          <ItemAttachments tripId={tripId} item={item} onUploaded={onUploaded} />
+          <ItemAttachments
+            tripId={tripId}
+            item={item}
+            onUploaded={onUploaded}
+            onDeleted={onAttachmentDeleted}
+          />
 
           <div className="dialog__actions">
             {onDelete !== undefined && (

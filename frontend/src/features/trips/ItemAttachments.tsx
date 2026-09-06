@@ -32,16 +32,25 @@ import { UploadDropzone } from './UploadDropzone'
  * rows use, so adding three files in a row does not flicker through a parent
  * refetch between each one. `onUploaded` still bubbles further up so the day
  * list's own paperclip count catches up without waiting for Save.
+ *
+ * **Delete follows the same local-first shape.** A row's own delete (Step
+ * 2.5, on the shared `AttachmentRow`) already called the API and awaited it
+ * before reporting back here, so removing the entry from local state is safe;
+ * `onDeleted` then bubbles up exactly like `onUploaded` does, so the day
+ * list's paperclip count catches up too.
  */
 export function ItemAttachments({
   tripId,
   item,
   onUploaded,
+  onDeleted,
 }: {
   tripId: string
   /** The item being edited, or `null` when adding a new one — see the module doc. */
   item: Item | null
   onUploaded: (attachment: Attachment) => void
+  /** Called once any row's delete succeeds, so the day list's paperclip count catches up. */
+  onDeleted: () => void
 }) {
   const { t } = useTranslation()
   const [attachments, setAttachments] = useState<Attachment[]>(item?.attachments ?? [])
@@ -49,6 +58,11 @@ export function ItemAttachments({
   function handleUploaded(attachment: Attachment) {
     setAttachments((previous) => [...previous, attachment])
     onUploaded(attachment)
+  }
+
+  function handleDeleted(attachmentId: string) {
+    setAttachments((previous) => previous.filter((entry) => entry.id !== attachmentId))
+    onDeleted()
   }
 
   return (
@@ -61,7 +75,11 @@ export function ItemAttachments({
         <ul className="item-attachments__list" aria-label={t('itemAttachments.list')}>
           {attachments.map((attachment) => (
             <li key={attachment.id}>
-              <AttachmentRow tripId={tripId} attachment={attachment} />
+              <AttachmentRow
+                tripId={tripId}
+                attachment={attachment}
+                onDeleted={() => handleDeleted(attachment.id)}
+              />
             </li>
           ))}
         </ul>

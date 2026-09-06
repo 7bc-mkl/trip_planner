@@ -13,11 +13,12 @@ import { UploadDropzone } from './UploadDropzone'
  * pinned to an item, which travel with the item and render inside the item
  * editor instead (a later Step).
  *
- * **Download and delete are a later Step's, not this one's.** A row is
- * readable without them — a preview or glyph, a filename and a size already
- * say what the file is — so none is stubbed in here; adding either action is
- * exactly the same markup this component's callers will extend, not a
- * redesign of it.
+ * **Download and delete** live on the shared `AttachmentRow` (Step 2.5). This
+ * panel does not own the day's attachment list — `DayDetailPage` fetches it as
+ * part of the same `DayDetail` payload — so a delete here is reported upward
+ * through `onDeleted` exactly like an upload already is through `onUploaded`:
+ * the host refetches the day and the panel simply re-renders with whatever
+ * list comes back.
  *
  * There is no attachments-only load-error state to design for: `attachments`
  * arrives as part of the same `DayDetail` payload `DayDetailPage` already
@@ -35,12 +36,15 @@ export function DayAttachments({
   date,
   attachments,
   onUploaded,
+  onDeleted,
 }: {
   tripId: string
   /** The day this panel's dropzone uploads onto — the day's own date, not an item's. */
   date: string
   attachments: Attachment[]
   onUploaded: (attachment: Attachment) => void
+  /** Called once a row's own delete succeeds, so the host can refetch the day. */
+  onDeleted: () => void
 }) {
   const { t } = useTranslation()
 
@@ -54,7 +58,7 @@ export function DayAttachments({
         <ul className="day-attachments__list" aria-label={t('dayAttachments.list')}>
           {attachments.map((attachment) => (
             <li key={attachment.id}>
-              <AttachmentRow tripId={tripId} attachment={attachment} />
+              <AttachmentRow tripId={tripId} attachment={attachment} onDeleted={onDeleted} />
             </li>
           ))}
         </ul>
