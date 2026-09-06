@@ -30,14 +30,14 @@
 | 3 | 3.2 | The optional `context` prop on trip-scoped routes (spec step 14) | group:C | done | ceac09f |
 | 3 | 3.3 | The optional `dock` prop and the responsive page grid (spec step 15) | group:C | done | a552668 |
 | 3 | 3.4 | Phase-3 screenshot set, including 360px (spec step 16) | inline | done | 001e1dc |
-| 4 | 4.1 | `/login` and `/trips` restyled (spec step 17) | dispatch | done | pending |
-| 4 | 4.2 | The trip banner on `/trips/:id` (spec step 18) | group:D | done | pending |
-| 4 | 4.3 | The readiness ring behind the optional `ring` prop (spec step 19) | group:D | done | pending |
-| 4 | 4.4 | The sticky pill filter bar (spec step 20) | group:D | done | pending |
-| 4 | 4.5 | The timeline rail, day anchors and item cards (spec step 21) | group:D | done | pending |
-| 4 | 4.6 | `/trips/new` — the multi-stop creator (spec step 22) | dispatch | done | pending |
-| 4 | 4.7 | `/trips/:id/days/:date` — the day detail (spec step 23) | dispatch | done | pending |
-| 4 | 4.8 | Phase-4 screenshot set and the before/after pairs (spec step 24) | inline | done | pending |
+| 4 | 4.1 | `/login` and `/trips` restyled (spec step 17) | dispatch | done | 4bbbad2 |
+| 4 | 4.2 | The trip banner on `/trips/:id` (spec step 18) | group:D | done | 96637e5 |
+| 4 | 4.3 | The readiness ring behind the optional `ring` prop (spec step 19) | group:D | done | 844ef50 |
+| 4 | 4.4 | The sticky pill filter bar (spec step 20) | group:D | done | 76686e5 |
+| 4 | 4.5 | The timeline rail, day anchors and item cards (spec step 21) | group:D | done | 13248c6 |
+| 4 | 4.6 | `/trips/new` — the multi-stop creator (spec step 22) | dispatch | done | 72c5aef |
+| 4 | 4.7 | `/trips/:id/days/:date` — the day detail (spec step 23) | dispatch | done | 14781cc |
+| 4 | 4.8 | Phase-4 screenshot set and the before/after pairs (spec step 24) | inline | done | 8d85675 |
 | 5 | 5.1 | The preview primitives in `features/preview/` (spec step 25) | dispatch | todo | — |
 | 5 | 5.2 | The share preview and its State A dialog (spec step 26) | dispatch | todo | — |
 | 5 | 5.3 | The chat drawer preview (spec step 27) | dispatch | todo | — |
