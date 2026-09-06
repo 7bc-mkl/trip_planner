@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Mockup 03 — day detail and the item editor</title>
+<link rel="stylesheet" href="_mockup.css">
+<style>
+  .overlay {
+    position: fixed; inset: 0; z-index: 10;
+    display: grid; place-items: center; padding: var(--space-md);
+    background: rgb(15 23 42 / 20%);
+    backdrop-filter: blur(12px);
+  }
+  .dialog {
+    width: min(34rem, 100%);
+    padding: var(--space-lg);
+    border-radius: var(--radius-xl);
+    background: var(--surface);
+    box-shadow: var(--elevation-3);
+  }
+  .dialog__actions { display: flex; justify-content: flex-end; gap: var(--space-xs); margin-top: var(--space-lg); }
+</style>
+</head>
+<body>
+<p class="mockup-note">Illustrative mockup — Smart Trip Planner · /trips/:id/days/:date · English locale · not application code</p>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <symbol id="i-activity" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m13 4 4.5 7.5M13 4l-6 5.5M7 9.5 3 20l9-3 8 3-2.5-8.5M7 9.5l5 7.5"/></symbol>
+  <symbol id="i-meal" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3v8a2.5 2.5 0 0 0 5 0V3M8.5 11v10M17 3c-1.5 1.5-2 3.5-2 5.5S15.5 12 17 12v9"/></symbol>
+</defs></svg>
+
+<header class="chrome">
+  <span class="wordmark">Smart Trip Planner</span>
+  <span class="chrome__context"><b>Malaysia: Kuala Lumpur, Penang and Langkawi</b>10–24 Oct 2026</span>
+  <span class="chrome__right">
+    <span class="body-sm subtle">Language</span>
+    <span class="segmented"><span>PL</span><span data-selected>EN</span></span>
+    <button class="btn btn--ghost btn--sm">Sign out</button>
+  </span>
+</header>
+
+<div class="page page--single">
+  <main>
+    <p class="body-sm subtle" style="margin:0 0 var(--space-sm)">Trips / Malaysia / Monday, 12 October</p>
+
+    <div class="row" style="align-items:flex-start;margin-bottom:var(--space-lg)">
+      <div style="flex:1">
+        <p class="eyebrow" style="margin:0 0 var(--space-2xs)">Kuala Lumpur</p>
+        <h1 class="headline-xl">Monday, 12 October</h1>
+        <p class="body-sm subtle" style="margin:var(--space-2xs) 0 0">Day 3 of 15</p>
+      </div>
+      <div class="row">
+        <button class="btn btn--ghost btn--icon" aria-label="Previous day">‹</button>
+        <button class="btn btn--ghost btn--icon" aria-label="Next day">›</button>
+        <button class="btn btn--primary">Add item</button>
+      </div>
+    </div>
+
+    <div class="stack stack--sm">
+      <article class="item-card item-card--hover">
+        <div class="item-card__time">09:30<small>11:30</small></div>
+        <span class="item-card__icon"><svg width="20" height="20" aria-hidden="true"><use href="#i-activity"/></svg></span>
+        <div class="item-card__body">
+          <h2 class="headline-sm">Petronas Towers — observation deck</h2>
+          <p class="item-card__kind">Activity</p>
+          <p class="item-card__notes">Timed tickets; they sell out a few days ahead.</p>
+        </div>
+        <div class="item-card__aside"><span class="chip" data-status="to_book"><span class="chip__glyph" aria-hidden="true">◐</span>To book</span></div>
+      </article>
+
+      <article class="item-card">
+        <div class="item-card__time">19:00</div>
+        <span class="item-card__icon"><svg width="20" height="20" aria-hidden="true"><use href="#i-meal"/></svg></span>
+        <div class="item-card__body">
+          <h2 class="headline-sm">Dinner on Jalan Alor</h2>
+          <p class="item-card__kind">Meal</p>
+          <p class="item-card__notes">Street food; pick a stall on the spot.</p>
+        </div>
+        <div class="item-card__aside"><span class="chip" data-status="to_plan"><span class="chip__glyph" aria-hidden="true">○</span>To plan</span></div>
+      </article>
+    </div>
+  </main>
+</div>
+
+<div class="overlay">
+  <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="dlg-title">
+    <h2 class="headline-lg" id="dlg-title" style="margin-bottom:var(--space-md)">Edit item</h2>
+    <div class="stack stack--sm">
+      <div class="field"><label for="d-title">Title</label><input class="input input--focus" id="d-title" value="Petronas Towers — observation deck"></div>
+      <div class="row" style="align-items:flex-end">
+        <div class="field" style="flex:1"><label for="d-kind">Type</label><input class="input" id="d-kind" value="Activity"></div>
+        <div class="field" style="flex:1"><label for="d-start">Starts</label><input class="input" id="d-start" value="09:30"></div>
+        <div class="field" style="flex:1"><label for="d-end">Ends</label><input class="input" id="d-end" value="11:30"></div>
+      </div>
+      <div class="field"><label for="d-notes">Notes</label><textarea class="input" id="d-notes" rows="3">Timed tickets; they sell out a few days ahead.</textarea></div>
+      <div class="field">
+        <label id="d-status-label">Status</label>
+        <div class="segmented" role="radiogroup" aria-labelledby="d-status-label">
+          <span><span aria-hidden="true">○</span> To plan</span>
+          <span data-selected><span aria-hidden="true">◐</span> To book</span>
+          <span><span aria-hidden="true">●</span> Done</span>
+        </div>
+        <p class="hint">Moving an item to <i>Done</i> is what the readiness counter on the timeline reacts to.</p>
+      </div>
+    </div>
+    <div class="dialog__actions">
+      <button class="btn btn--danger btn--sm" style="margin-right:auto">Delete item</button>
+      <button class="btn btn--ghost">Cancel</button>
+      <button class="btn btn--primary">Save</button>
+    </div>
+  </div>
+</div>
+</body>
+</html>

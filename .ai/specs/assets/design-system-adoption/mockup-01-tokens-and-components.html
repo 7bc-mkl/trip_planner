@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<title>Mockup 01 — tokens and component recipes</title>
+<link rel="stylesheet" href="_mockup.css">
+<style>
+  .sheet { width: min(72rem, 100%); margin-inline: auto; padding: var(--space-xl) var(--gutter) var(--space-2xl); }
+  .grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr)); gap: var(--space-lg); }
+  .type-row { display: flex; align-items: baseline; gap: var(--space-md); padding: var(--space-xs) 0; border-bottom: 1px dashed var(--hairline); }
+  .type-row code { flex: none; width: 9rem; font-size: 11px; color: var(--text-subtle); }
+  .ratio { font-size: 11px; font-weight: 600; color: var(--success-text); }
+  .ratio--fixed { color: var(--warning-text); }
+</style>
+</head>
+<body>
+<p class="mockup-note">Illustrative mockup — Smart Trip Planner · design-system-adoption · not application code</p>
+
+<div class="sheet">
+  <p class="eyebrow">System podglądowy</p>
+  <h1 class="headline-xl" style="margin-bottom:var(--space-xs)">Tokeny i komponenty</h1>
+  <p class="body-lg muted" style="margin-top:0">
+    Paleta, skala typograficzna, promienie, cienie i przepisy komponentów z eksportu
+    <code>modern_premium_travel_companion</code>, w krojach i wartościach, które trafiają do
+    <code>frontend/src/styles/tokens.css</code>.
+  </p>
+
+  <hr class="divider">
+
+  <h2 class="headline-lg section-title">Paleta ról</h2>
+  <div class="swatches">
+    <div class="swatch"><div class="swatch__fill" style="background:#0f3f6d"></div><div class="swatch__meta"><b>primary</b><code>#0F3F6D</code></div></div>
+    <div class="swatch"><div class="swatch__fill" style="background:#00294d"></div><div class="swatch__meta"><b>primary-deep</b><code>#00294D</code></div></div>
+    <div class="swatch"><div class="swatch__fill" style="background:#ea580c"></div><div class="swatch__meta"><b>secondary</b><code>#EA580C</code></div></div>
+    <div class="swatch"><div class="swatch__fill" style="background:#10b981"></div><div class="swatch__meta"><b>success</b><code>#10B981</code></div></div>
+    <div class="swatch"><div class="swatch__fill" style="background:#f59e0b"></div><div class="swatch__meta"><b>warning</b><code>#F59E0B</code></div></div>
+    <div class="swatch"><div class="swatch__fill" style="background:#64748b"></div><div class="swatch__meta"><b>draft</b><code>#64748B</code></div></div>
+    <div class="swatch"><div class="swatch__fill" style="background:#f8fafc;border-bottom:1px solid #e2e8f0"></div><div class="swatch__meta"><b>canvas</b><code>#F8FAFC</code></div></div>
+    <div class="swatch"><div class="swatch__fill" style="background:#e2e8f0"></div><div class="swatch__meta"><b>hairline</b><code>#E2E8F0</code></div></div>
+    <div class="swatch"><div class="swatch__fill" style="background:#0f172a"></div><div class="swatch__meta"><b>text</b><code>#0F172A</code></div></div>
+    <div class="swatch"><div class="swatch__fill" style="background:#334155"></div><div class="swatch__meta"><b>text-muted</b><code>#334155</code></div></div>
+    <div class="swatch"><div class="swatch__fill" style="background:#64748b"></div><div class="swatch__meta"><b>text-subtle</b><code>#64748B</code></div></div>
+    <div class="swatch"><div class="swatch__fill" style="background:#ba1a1a"></div><div class="swatch__meta"><b>error</b><code>#BA1A1A</code></div></div>
+  </div>
+
+  <hr class="divider">
+
+  <h2 class="headline-lg section-title">Skala typograficzna — Plus Jakarta Sans</h2>
+  <div class="type-row"><code>display-lg 48/56</code><span class="display-lg">Majówka w Portugalii</span></div>
+  <div class="type-row"><code>headline-xl 36/44</code><span class="headline-xl">Zaplanuj nową podróż</span></div>
+  <div class="type-row"><code>headline-lg 24/32</code><span class="headline-lg">Dzień 3 — Sintra</span></div>
+  <div class="type-row"><code>headline-md 20/28</code><span class="headline-md">Zwiedzanie Pałacu Pena</span></div>
+  <div class="type-row"><code>headline-sm 16/24</code><span class="headline-sm">Hotel Chow Kit</span></div>
+  <div class="type-row"><code>body-lg 18/28</code><span class="body-lg">Ląduje w stolicy, transfer do serca miasta.</span></div>
+  <div class="type-row"><code>body-md 15/22</code><span>Trasa spacerowa: Katedra Sé → taras widokowy Santa Luzia.</span></div>
+  <div class="type-row"><code>body-sm 13/18</code><span class="body-sm">Bilety czasowe, wyprzedają się na kilka dni do przodu.</span></div>
+  <div class="type-row"><code>label-md 12/16</code><span class="label-md">POKAŻ WSZYSTKIE POZYCJE</span></div>
+  <div class="type-row"><code>label-sm 11/14</code><span class="eyebrow">Status logistyki</span></div>
+  <div class="type-row"><code>diakrytyki 700</code><span style="font-weight:700;font-size:28px;letter-spacing:-0.02em">ą ć ę ł ń ó ś ź ż — Ą Ć Ę Ł Ń Ó Ś Ź Ż</span></div>
+  <p class="hint" style="margin-top:var(--space-xs)">
+    Ostatni wiersz to test podzbioru <code>latin-ext</code>: bez niego polskie znaki spadają do kroju
+    zastępczego pojedynczo, a wiersz przestaje być optycznie równy.
+  </p>
+
+  <hr class="divider">
+
+  <div class="grid2">
+    <section>
+      <h2 class="headline-lg section-title">Przyciski</h2>
+      <div class="stack--sm stack">
+        <div class="row">
+          <button class="btn btn--primary">Zapisz pozycję</button>
+          <button class="btn btn--ghost">Anuluj</button>
+          <button class="btn btn--danger btn--sm">Usuń</button>
+        </div>
+        <div class="row">
+          <button class="btn btn--deep btn--block">Utwórz pustą oś czasu do ręcznego planowania</button>
+        </div>
+        <div class="row">
+          <button class="btn btn--primary" disabled>Stan nieaktywny</button>
+          <button class="btn btn--ghost btn--icon" aria-label="Poprzedni dzień">‹</button>
+          <button class="btn btn--ghost btn--icon" aria-label="Następny dzień">›</button>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2 class="headline-lg section-title">Pola formularza</h2>
+      <div class="stack stack--sm">
+        <div class="field"><label for="m-a">Tytuł podróży</label><input class="input" id="m-a" value="Malezja: Kuala Lumpur, Penang i Langkawi"></div>
+        <div class="row" style="align-items:flex-end">
+          <div class="field" style="flex:1"><label for="m-b">Wyjazd</label><input class="input input--focus" id="m-b" value="2026-10-10"></div>
+          <div class="field" style="flex:1"><label for="m-c">Powrót</label><input class="input" id="m-c" value="2026-10-24"></div>
+        </div>
+        <p class="hint">Aktywne pole niesie 2&nbsp;px obrys <code>--primary</code>, nie tylko zmianę koloru ramki.</p>
+      </div>
+    </section>
+  </div>
+
+  <hr class="divider">
+
+  <div class="grid2">
+    <section>
+      <h2 class="headline-lg section-title">Statusy (R02)</h2>
+      <div class="row" style="flex-wrap:wrap">
+        <span class="chip" data-status="done"><span class="chip__glyph" aria-hidden="true">●</span>Gotowe</span>
+        <span class="chip" data-status="to_book"><span class="chip__glyph" aria-hidden="true">◐</span>Do zarezerwowania</span>
+        <span class="chip" data-status="to_plan"><span class="chip__glyph" aria-hidden="true">○</span>Do zaplanowania</span>
+      </div>
+      <p class="hint" style="margin-top:var(--space-sm)">
+        Kolor jest dodatkiem: znak graficzny i przetłumaczona etykieta zostają, gdy wyłączyć wszystkie
+        reguły barwne. Pierwszy plan przyciemniony wobec eksportu, żeby przejść AA:
+        <span class="ratio ratio--fixed">#047857 → 5,21:1</span> ·
+        <span class="ratio ratio--fixed">#B45309 → 4,84:1</span> ·
+        <span class="ratio">#475569 → 6,92:1</span>.
+      </p>
+      <div class="row" style="margin-top:var(--space-md);flex-wrap:wrap">
+        <span class="count-chip">Nocleg 2</span>
+        <span class="count-chip">Transport 5</span>
+        <span class="count-chip">Atrakcja 3</span>
+        <span class="count-chip">Jedzenie 1</span>
+        <span class="count-chip">Inne 1</span>
+      </div>
+      <p class="hint" style="margin-top:var(--space-xs)">Liczniki, nie przyciski — nie wolno im wyglądać na klikalne.</p>
+    </section>
+
+    <section>
+      <h2 class="headline-lg section-title">Kontrolka segmentowa</h2>
+      <div class="segmented">
+        <span data-selected>Wszystko</span>
+        <span>Tylko do zrobienia</span>
+      </div>
+      <div class="segmented" style="margin-top:var(--space-sm)">
+        <span>W obie strony</span>
+        <span data-selected>Open-jaw</span>
+        <span>W jedną stronę</span>
+      </div>
+      <p class="hint" style="margin-top:var(--space-sm)">
+        Pod spodem zostaje prawdziwa grupa <code>radio</code> z <code>legend</code>; segment to warstwa
+        malarska na <code>:checked</code>, nie zamiana na przyciski.
+      </p>
+    </section>
+  </div>
+
+  <hr class="divider">
+
+  <h2 class="headline-lg section-title">Wysokości</h2>
+  <div class="elev-demo">
+    <div style="box-shadow:var(--elevation-1)"><b>elevation-1</b><br><span class="body-sm subtle">Karty w spoczynku, wiersze list</span></div>
+    <div style="box-shadow:var(--elevation-2);border-color:var(--hairline-strong)"><b>elevation-2</b><br><span class="body-sm subtle">Hover i focus na karcie osi czasu</span></div>
+    <div style="box-shadow:var(--elevation-3);border-radius:var(--radius-xl)"><b>elevation-3</b><br><span class="body-sm subtle">Dialog edycji pozycji, nad rozmytym tłem</span></div>
+  </div>
+</div>
+</body>
+</html>

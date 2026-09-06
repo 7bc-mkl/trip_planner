@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<title>Mockup 04 — kreator podróży</title>
+<link rel="stylesheet" href="_mockup.css">
+<style>
+  .group { padding: var(--space-lg); border: 1px solid var(--hairline); border-radius: var(--radius-lg); background: var(--surface); box-shadow: var(--elevation-1); }
+  .group + .group { margin-top: var(--space-md); }
+  .group__legend { margin-bottom: var(--space-md); }
+  .stage {
+    display: grid;
+    grid-template-columns: 2rem minmax(0, 2fr) 1fr 1fr auto;
+    gap: var(--space-sm);
+    align-items: end;
+    padding: var(--space-sm) 0;
+    border-top: 1px solid var(--hairline);
+  }
+  .stage__no {
+    display: grid; place-items: center;
+    width: 2rem; height: 2rem; margin-bottom: 4px;
+    border-radius: 9999px; background: var(--draft-bg);
+    color: var(--text-muted); font-size: 13px; font-weight: 700;
+  }
+</style>
+</head>
+<body>
+<p class="mockup-note">Illustrative mockup — Smart Trip Planner · /trips/new · not application code</p>
+
+<header class="chrome">
+  <span class="wordmark">Smart Trip Planner</span>
+  <span class="chrome__right">
+    <span class="body-sm subtle">Język</span>
+    <span class="segmented"><span data-selected>PL</span><span>EN</span></span>
+    <button class="btn btn--ghost btn--sm">Wyloguj się</button>
+  </span>
+</header>
+
+<div class="page">
+  <main>
+    <p class="body-sm subtle" style="margin:0 0 var(--space-sm)">Podróże / Nowa podróż</p>
+    <p class="eyebrow" style="margin:0 0 var(--space-2xs)">Kreator podróży</p>
+    <h1 class="headline-xl">Zaplanuj nową podróż</h1>
+    <p class="body-lg muted" style="margin:var(--space-xs) 0 var(--space-lg)">
+      Podaj daty, miejsce wyjazdu i bazy. Dni wygenerują się same — oś czasu wypełnisz ręcznie.
+    </p>
+
+    <section class="group">
+      <h2 class="headline-md group__legend">Podróż</h2>
+      <div class="stack stack--sm">
+        <div class="field"><label for="t-title">Tytuł</label><input class="input" id="t-title" value="Malezja: Kuala Lumpur, Penang i Langkawi"></div>
+        <div class="row" style="align-items:flex-end">
+          <div class="field" style="flex:1"><label for="t-from">Wyjazd</label><input class="input" id="t-from" value="2026-10-10"></div>
+          <div class="field" style="flex:1"><label for="t-to">Powrót</label><input class="input" id="t-to" value="2026-10-24"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="group">
+      <h2 class="headline-md group__legend">Trasa</h2>
+      <div class="stack stack--sm">
+        <div class="field">
+          <span class="label-md" id="mode-label" style="font-weight:600">Rodzaj trasy</span>
+          <div class="segmented" role="radiogroup" aria-labelledby="mode-label">
+            <span data-selected>W obie strony</span>
+            <span>Inne miasto powrotu (open-jaw)</span>
+            <span>W jedną stronę</span>
+          </div>
+        </div>
+        <div class="row" style="align-items:flex-end">
+          <div class="field" style="flex:1"><label for="t-dep">Skąd wyruszasz</label><input class="input" id="t-dep" value="Katowice"></div>
+          <div class="field" style="flex:1"><label for="t-ret">Dokąd wracasz</label><input class="input" id="t-ret" value="Katowice"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="group">
+      <h2 class="headline-md group__legend">Bazy</h2>
+      <p class="hint" style="margin-bottom:var(--space-sm)">
+        Baza to miejsce, w którym zatrzymujesz się na dłużej. Daty są opcjonalne — baza bez dat też jest bazą.
+      </p>
+
+      <div class="stage">
+        <span class="stage__no">1</span>
+        <div class="field"><label for="s1">Miejsce</label><input class="input" id="s1" value="Kuala Lumpur"></div>
+        <div class="field"><label for="s1a">Od</label><input class="input" id="s1a" value="2026-10-11"></div>
+        <div class="field"><label for="s1b">Do</label><input class="input" id="s1b" value="2026-10-15"></div>
+        <button class="btn btn--ghost btn--icon" aria-label="Usuń bazę Kuala Lumpur">×</button>
+      </div>
+      <div class="stage">
+        <span class="stage__no">2</span>
+        <div class="field"><label for="s2">Miejsce</label><input class="input input--focus" id="s2" value="Penang"></div>
+        <div class="field"><label for="s2a">Od</label><input class="input" id="s2a" value="2026-10-16"></div>
+        <div class="field"><label for="s2b">Do</label><input class="input" id="s2b" value="2026-10-19"></div>
+        <button class="btn btn--ghost btn--icon" aria-label="Usuń bazę Penang">×</button>
+      </div>
+      <div class="stage">
+        <span class="stage__no">3</span>
+        <div class="field"><label for="s3">Miejsce</label><input class="input" id="s3" value="Langkawi"></div>
+        <div class="field"><label for="s3a">Od</label><input class="input" id="s3a" value="2026-10-20"></div>
+        <div class="field"><label for="s3b">Do</label><input class="input" id="s3b" value="2026-10-23"></div>
+        <button class="btn btn--ghost btn--icon" aria-label="Usuń bazę Langkawi">×</button>
+      </div>
+
+      <button class="btn btn--ghost btn--sm" style="margin-top:var(--space-md)">+ Dodaj bazę</button>
+    </section>
+
+    <button class="btn btn--deep btn--block" style="margin-top:var(--space-lg);height:48px">
+      Utwórz pustą oś czasu do ręcznego planowania
+    </button>
+  </main>
+
+  <aside class="dock">
+    <div class="dock__card">
+      <h3>Podsumowanie</h3>
+      <p class="headline-md" style="margin:0">15 dni / 14 nocy</p>
+      <p class="body-sm subtle" style="margin:var(--space-2xs) 0 0">3 bazy · trasa w obie strony</p>
+    </div>
+    <div class="dock__card">
+      <h3>Trasa</h3>
+      <ul class="dock__list">
+        <li><b>Katowice</b><span class="subtle">wyjazd</span></li>
+        <li><b>Kuala Lumpur</b><span class="subtle">11–15 paź</span></li>
+        <li><b>Penang</b><span class="subtle">16–19 paź</span></li>
+        <li><b>Langkawi</b><span class="subtle">20–23 paź</span></li>
+        <li><b>Katowice</b><span class="subtle">powrót</span></li>
+      </ul>
+    </div>
+    <div class="dock__card">
+      <h3>Co powstanie</h3>
+      <p class="body-sm" style="margin:0">
+        15 pustych dni, każdy przypisany do bazy wynikającej z jej dat. Pozycje dodajesz sam — nic nie
+        jest generowane za Ciebie.
+      </p>
+    </div>
+  </aside>
+</div>
+</body>
+</html>
