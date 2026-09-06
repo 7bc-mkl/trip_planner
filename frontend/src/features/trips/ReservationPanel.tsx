@@ -1,5 +1,7 @@
 import { useTranslation } from 'react-i18next'
 
+import { formatCurrency } from './format'
+
 /**
  * The three reservation fields, exactly as they live flattened on `ItemDraft`.
  * A narrower type of its own — rather than importing `ItemDraft` — so this
@@ -95,6 +97,16 @@ export function reservationInput(value: ReservationValue): {
  * start day, times and `end_date`, edited in the controls the editor already
  * has a few rows above — a second date control here would be a second,
  * contradictory answer to when the booking is for.
+ *
+ * **The collapsed summary shows the saved cost, formatted through
+ * `formatCurrency` (Step 3.4-review-fix-1).** Step 3.4 built `formatCurrency`
+ * but gave it no call site, so the spec's `Intl` rule governed nothing a user
+ * could see. This is the fix: the same amount/currency pair this panel already
+ * holds, rendered beside the heading whenever both halves are non-blank — the
+ * same `hasCost` the wire translation above uses, so the two never disagree
+ * about what counts as "a cost". Nothing renders when there is none: no
+ * placeholder, no dash, no "not set" — invariant 4 above forbids a marker keyed
+ * on an *empty* field, and a muted "no cost yet" would be exactly that.
  */
 export function ReservationPanel({
   value,
@@ -103,11 +115,22 @@ export function ReservationPanel({
   value: ReservationValue
   onChange: (next: ReservationValue) => void
 }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+
+  const trimmedAmount = value.costAmount.trim()
+  const trimmedCurrency = value.costCurrency.trim()
+  const hasCost = trimmedAmount !== '' && trimmedCurrency !== ''
 
   return (
     <details className="reservation-panel">
-      <summary className="reservation-panel__summary">{t('item.reservation.heading')}</summary>
+      <summary className="reservation-panel__summary">
+        {t('item.reservation.heading')}
+        {hasCost && (
+          <span className="reservation-panel__cost">
+            {formatCurrency(trimmedAmount, trimmedCurrency, i18n.language)}
+          </span>
+        )}
+      </summary>
 
       <div className="reservation-panel__body">
         <label htmlFor="item-confirmation-number">

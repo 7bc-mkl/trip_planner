@@ -41,6 +41,7 @@
 | 3 | 3.5 | The status control's path to *done* left untouched and unconditioned | dispatch:cheap | done | `ed65394` |
 | 3 | 3.6 | Assert the absence of nagging | dispatch:cheap | done | `6e5141e` |
 | 3 | 3.7 | End-to-end verification of the brief's own flow | inline | done | `e5c4586` |
+| 3 | 3.4-review-fix-1 | The saved cost is actually rendered through `Intl`, giving the rule a call site | dispatch | done | `26a48ad` |
 | 4 | 4.1 | Drag-and-drop layered on the existing input | dispatch | todo | — |
 | 4 | 4.2 | The image lightbox — focus-trapped, `Escape` to close | dispatch | todo | — |
 | 4 | 4.3 | The non-blocking duplicate hint | dispatch:cheap | todo | — |
@@ -350,3 +351,29 @@ successful upload's queue entry retires once the host list has refreshed — the
 file's one representation, and the queue is only about work in flight. Verify: component tests that
 a successful upload leaves exactly one representation of the file, and that deleting an attachment
 leaves no stale queue entry behind.
+
+### Phase 3 — fix Step appended after Step 3.7's end-to-end walk
+
+**3.4-review-fix-1 The saved cost is actually rendered through `Intl`, giving the rule a call site.**
+Step 3.7's walk found that `formatCurrency` in `features/trips/format.ts` has **no call site in the
+application** — only its own unit test. The cost appears on screen solely as the raw `1250.00` in the
+editable input, so `1 250,00 zł` never renders anywhere and the spec's cross-cutting rule ("amounts
+via `Intl.NumberFormat(locale, {style: 'currency', currency})`, so `1 250,00 zł` in Polish and
+`PLN 1,250.00` in English fall out of one call") currently governs nothing. Step 3.4 therefore
+shipped a green test over code no user can reach, which is exactly the kind of thing a PR should not
+claim as delivered.
+
+The fix is the smallest surface that makes the rule real: **when an item has a saved cost, the
+collapsed reservation disclosure shows it, formatted through `formatCurrency`.** This is chosen over
+the alternatives deliberately. Deleting `formatCurrency` would drop a rule the spec states outright.
+Adding a new display surface elsewhere would be scope the spec does not ask for — and the timeline is
+explicitly forbidden money (D04, D12). The collapsed summary is where the value already belongs: the
+disclosure sits permanently beneath the attachment list, and a user who recorded a cost should be
+able to see it without opening the panel.
+
+**It cannot become a nag**, which is the invariant to protect here: the formatted cost appears *only*
+when a cost exists. An item with no reservation data renders exactly as before — no placeholder, no
+em dash, no "not set". That keeps Step 3.6's assertion (no marker keyed on an *empty* reservation
+field) true, and it is the reason this is safe to do at all. Verify: a component test that the
+formatted cost appears in the collapsed summary in both locales when set, and that an item without a
+cost renders no cost-shaped element whatsoever.

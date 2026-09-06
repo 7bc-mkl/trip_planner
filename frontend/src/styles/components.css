@@ -1023,6 +1023,13 @@ textarea:disabled {
   letter-spacing: var(--tracking-label-lg);
 }
 
+.reservation-panel__cost {
+  margin-left: var(--space-xs);
+  color: var(--text-muted);
+  font: var(--type-label-md);
+  letter-spacing: var(--tracking-label-md);
+}
+
 .reservation-panel__body {
   display: flex;
   flex-direction: column;
