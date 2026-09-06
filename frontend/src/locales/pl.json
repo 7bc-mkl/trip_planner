@@ -150,6 +150,7 @@
     "progressLabel": "Postęp wysyłania pliku {filename}",
     "announceUploading": "Wysyłanie {filename}: {ratio, number, percent}",
     "announceDone": "Dodano {filename}",
+    "announceFailed": "Nie dodano {filename}. {reason}",
     "announceCancelled": "Anulowano wysyłanie {filename}",
     "state": {
       "selected": "Wybrany",

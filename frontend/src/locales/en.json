@@ -150,6 +150,7 @@
     "progressLabel": "Upload progress for {filename}",
     "announceUploading": "Uploading {filename}: {ratio, number, percent}",
     "announceDone": "{filename} was added",
+    "announceFailed": "{filename} was not added. {reason}",
     "announceCancelled": "Uploading {filename} was cancelled",
     "state": {
       "selected": "Selected",

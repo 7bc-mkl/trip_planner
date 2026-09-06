@@ -28,7 +28,7 @@
 | 2 | 2.3 | The day documents panel on `/trips/:id/days/:date` | dispatch | done | `95aac47` |
 | 2 | 2.4 | The item attachment strip inside the item editor | dispatch | done | `2672e2f` |
 | 2 | 2.5 | Download and delete, with a confirmation dialog naming the file | dispatch | done | `d83e6eb` |
-| 2 | 2.2-review-fix-1 | The upload announcement re-renders on locale change and tells the truth about failures | dispatch:capable | todo | — |
+| 2 | 2.2-review-fix-1 | The upload announcement re-renders on locale change and tells the truth about failures | dispatch:capable | done | `e530dee` |
 | 2 | 2.2-review-fix-2 | The completed upload queue clears instead of shadowing the attachment list | dispatch:capable | todo | — |
 | 2 | 2.6 | The attachment-count ICU plural key in both locales | dispatch:cheap | todo | — |
 | 2 | 2.7 | The paperclip badge on the timeline's item cards | dispatch:cheap | todo | — |

@@ -1,5 +1,6 @@
 import { useCallback, useId, useRef, useState } from 'react'
 import type { ChangeEvent, CSSProperties } from 'react'
+import type { TFunction } from 'i18next'
 import { useTranslation } from 'react-i18next'
 
 import { uploadDayAttachment, uploadItemAttachment } from '../../api/attachments'
@@ -39,6 +40,17 @@ import { ApiError } from '../../api/client'
  *
  * Colour never carries state on its own: every pill renders a translated word
  * and a glyph beside it, the same contract `StatusChip` keeps.
+ *
+ * The `aria-live` region holds **facts, not a sentence**: which file, which
+ * phase, how far, and — on a failure — which error code. The sentence is
+ * formatted at *render* time from the current `t`, so switching the locale
+ * re-renders the announcement like every other string in the app instead of
+ * leaving one Polish line on an English page. Storing the formatted string was a
+ * real defect (a browser walk found it; `check_locales.py` cannot, because both
+ * keys exist and are in sync — what was wrong was *when* the string was made).
+ * The same shape is what lets a terminal failure replace a progress claim the
+ * row has moved past, rather than announcing "100 %" for an upload the server
+ * refused.
  */
 
 /** The server's per-attachment ceiling, mirrored for the pre-check only. */
@@ -68,6 +80,16 @@ type Row = {
       would refuse identically, so the row offers no retry. */
   refusedLocally: boolean
 }
+
+/**
+ * What the live region currently has to say, as facts. Never a formatted string:
+ * see the note above the component.
+ */
+type Announcement =
+  | { kind: 'uploading'; filename: string; ratio: number }
+  | { kind: 'done'; filename: string }
+  | { kind: 'failed'; filename: string; errorKey: string }
+  | { kind: 'cancelled'; filename: string }
 
 const GLYPH: Record<RowState, string> = {
   selected: '•',
@@ -103,6 +125,33 @@ function percentOf(row: Row): number {
   return Math.min(100, Math.round((row.loaded / row.total) * 100))
 }
 
+/**
+ * The announcement's sentence, formatted from the facts with the `t` of the
+ * render that is happening now. A locale change re-renders this like any other
+ * string.
+ */
+function announcementText(t: TFunction, announcement: Announcement | null): string {
+  if (announcement === null) {
+    return ''
+  }
+  switch (announcement.kind) {
+    case 'uploading':
+      return t('upload.announceUploading', {
+        filename: announcement.filename,
+        ratio: announcement.ratio,
+      })
+    case 'done':
+      return t('upload.announceDone', { filename: announcement.filename })
+    case 'failed':
+      return t('upload.announceFailed', {
+        filename: announcement.filename,
+        reason: t(announcement.errorKey),
+      })
+    case 'cancelled':
+      return t('upload.announceCancelled', { filename: announcement.filename })
+  }
+}
+
 export function UploadDropzone({
   target,
   onUploaded,
@@ -116,7 +165,7 @@ export function UploadDropzone({
   const { t } = useTranslation()
   const inputId = useId()
   const [rows, setRows] = useState<Row[]>([])
-  const [announcement, setAnnouncement] = useState('')
+  const [announcement, setAnnouncement] = useState<Announcement | null>(null)
 
   /** One controller per in-flight row, so cancelling one cannot abort another. */
   const controllers = useRef(new Map<string, AbortController>())
@@ -151,12 +200,11 @@ export function UploadDropzone({
           const step = total > 0 ? Math.floor((loaded / total) * 4) : 0
           if (step !== announcedStep.current.get(key)) {
             announcedStep.current.set(key, step)
-            setAnnouncement(
-              t('upload.announceUploading', {
-                filename: file.name,
-                ratio: total > 0 ? loaded / total : 0,
-              }),
-            )
+            setAnnouncement({
+              kind: 'uploading',
+              filename: file.name,
+              ratio: total > 0 ? loaded / total : 0,
+            })
           }
         },
       }
@@ -170,7 +218,7 @@ export function UploadDropzone({
         (attachment) => {
           controllers.current.delete(key)
           patch(key, { state: 'done', loaded: attachment.byte_size, total: attachment.byte_size })
-          setAnnouncement(t('upload.announceDone', { filename: file.name }))
+          setAnnouncement({ kind: 'done', filename: file.name })
           onUploaded?.(attachment)
         },
         (caught: unknown) => {
@@ -178,15 +226,18 @@ export function UploadDropzone({
           if (caught instanceof DOMException && caught.name === 'AbortError') {
             return // Cancelling already removed the row and announced it.
           }
-          patch(key, {
-            state: 'failed',
-            errorKey: caught instanceof ApiError ? caught.translationKey : 'error.unknown',
-            refusedLocally: false,
-          })
+          const errorKey = caught instanceof ApiError ? caught.translationKey : 'error.unknown'
+          patch(key, { state: 'failed', errorKey, refusedLocally: false })
+          // The region has been claiming progress for this file — often "100 %",
+          // because the bytes did arrive and the server refused them afterwards.
+          // Leaving that claim standing tells a screen-reader user the upload
+          // succeeded, so the terminal state replaces it.
+          setAnnouncement({ kind: 'failed', filename: file.name, errorKey })
         },
       )
     },
-    [onUploaded, patch, t, target],
+    // `t` is deliberately absent: nothing in here formats a string any more.
+    [onUploaded, patch, target],
   )
 
   function handleChange(event: ChangeEvent<HTMLInputElement>) {
@@ -226,7 +277,7 @@ export function UploadDropzone({
   function cancel(row: Row) {
     controllers.current.get(row.key)?.abort()
     drop(row.key)
-    setAnnouncement(t('upload.announceCancelled', { filename: row.file.name }))
+    setAnnouncement({ kind: 'cancelled', filename: row.file.name })
   }
 
   return (
@@ -246,9 +297,10 @@ export function UploadDropzone({
       </label>
 
       {/* Always rendered, empty or not: a live region inserted at the same
-          moment as its text is not announced by every screen reader. */}
+          moment as its text is not announced by every screen reader. Formatted
+          here, from facts, so a locale change re-renders it. */}
       <p aria-live="polite" className="upload-dropzone__announcement">
-        {announcement}
+        {announcementText(t, announcement)}
       </p>
 
       {rows.length > 0 && (

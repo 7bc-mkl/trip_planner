@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -186,6 +186,66 @@ describe('the upload drop zone', () => {
     await user.upload(dropzone(), pdf())
 
     expect(FakeXhr.instances[0]!.url).toBe('/api/v1/trips/trip-1/items/item-1/attachments')
+  })
+})
+
+describe('the live announcement', () => {
+  /** The one live region the drop zone owns. */
+  function live(): HTMLElement {
+    return document.querySelector('[aria-live="polite"]') as HTMLElement
+  }
+
+  it('follows a locale change, because it is formatted at render time and not at upload time', async () => {
+    // The defect this test exists for: the announcement used to be a string
+    // formatted when the progress event arrived, so switching to English left
+    // one Polish line ("Wysyłanie …: 100%") on an otherwise English page.
+    const user = userEvent.setup()
+    render(<UploadDropzone target={DAY} />)
+
+    await user.upload(dropzone(), pdf())
+    FakeXhr.instances[0]!.progress(1024, 1024)
+    await waitFor(() => expect(live().textContent).toContain('Wysyłanie voucher.pdf'))
+
+    await act(async () => {
+      await applyLocale('en')
+    })
+
+    expect(live().textContent).toContain('Uploading voucher.pdf')
+    expect(live().textContent).not.toContain('Wysyłanie')
+  })
+
+  it('follows a locale change after completion too', async () => {
+    const user = userEvent.setup()
+    render(<UploadDropzone target={DAY} />)
+
+    await user.upload(dropzone(), pdf())
+    FakeXhr.instances[0]!.respond(201, ATTACHMENT)
+    await waitFor(() => expect(live().textContent).toBe('Dodano voucher.pdf'))
+
+    await act(async () => {
+      await applyLocale('en')
+    })
+
+    expect(live().textContent).toBe('voucher.pdf was added')
+  })
+
+  it('never announces completion for a rejected upload, and states the failure instead', async () => {
+    // The bytes do arrive — the server refuses them afterwards — so the region
+    // has already announced 100 %. Announcing success for a refused upload is
+    // worse than announcing nothing.
+    const user = userEvent.setup()
+    render(<UploadDropzone target={DAY} />)
+
+    await user.upload(dropzone(), pdf('fake-photo.jpg'))
+    FakeXhr.instances[0]!.progress(1024, 1024)
+    await waitFor(() => expect(live().textContent).toMatch(/100\s*%/))
+
+    FakeXhr.instances[0]!.respond(400, { error: { code: 'unsupported_file_type' } })
+
+    await waitFor(() => expect(live().textContent).toContain(pl.error.unsupported_file_type))
+    expect(live().textContent).toContain('fake-photo.jpg')
+    expect(live().textContent).not.toMatch(/100\s*%/)
+    expect(live().textContent).not.toMatch(/^Dodano/)
   })
 })
 
