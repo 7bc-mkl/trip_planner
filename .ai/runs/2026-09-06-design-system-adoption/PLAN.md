@@ -19,7 +19,7 @@
 | 1 | 1.3 | Add the compatibility bridge and the token-completeness check (spec step 3) | group:A | done | pending |
 | 1 | 1.4 | Split the base layer into `styles/base.css` (spec step 4) | dispatch | done | pending |
 | 1 | 1.5 | Contrast script over the token file (spec step 5) | dispatch:cheap | done | pending |
-| 1 | 1.6 | Phase-1 screenshot set — five routes × two locales (spec step 6) | inline | todo | — |
+| 1 | 1.6 | Phase-1 screenshot set — five routes × two locales (spec step 6) | inline | done | pending |
 | 2 | 2.1 | Split `components.css` and rewrite the button recipes (spec step 7) | group:B | todo | — |
 | 2 | 2.2 | Rewrite the input, select, textarea and date recipes (spec step 8) | group:B | todo | — |
 | 2 | 2.3 | Rewrite the status chip recipes and add the dot (spec step 9) | group:B | todo | — |
