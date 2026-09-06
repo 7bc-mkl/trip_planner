@@ -545,3 +545,24 @@ colour pair: the dialog's failure line is the shipped `[role='alert']` recipe (`
 dialog's `--surface`), restated only because `.dialog--confirm p` outranked it on specificity.
 The six protected suites pass **unmodified** — `uploadDropzone.test.tsx` and
 `attachmentRow.test.tsx` are additions at the end of the file, 0 deletions.
+
+## 2026-09-07T03:05:00Z — run complete
+- `om-auto-review-pr 12 --autofix` ran as the single authoritative review pass. An **independent**
+  reviewer was used deliberately rather than self-review: the main session had supervised all 35
+  Steps and would have been anchored.
+- Verdict: **changes requested**, two majors, both reproduced with measurements —
+  (1) a `cost_amount >= 10^10` passed every validator and overflowed `NUMERIC(12,2)` into an
+  unhandled `500` instead of `422 invalid_cost`; (2) the "exactly one part" rule was enforced
+  *after* parsing, so a 10 MiB body of ~1.16M empty parts allocated ~145 MB RSS (measured
+  84 MB → 229 MB) before rejection — the spec explicitly wanted that bound in the parser.
+- Both majors, all six minors and the actionable nits were fixed in two batches (`46d4d9f` backend,
+  `a380204` frontend) and re-verified. Re-review: **approve**.
+- GitHub refuses `addPullRequestReview` on one's own PR, so both the review and the re-review were
+  posted as comments with that substitution stated plainly. The pipeline label moved
+  `review → changes-requested → merge-queue` as if they had been formal reviews.
+- Final state: **654 backend passed / 0 skipped**, **353 frontend passed**, build clean, all three
+  script gates green, **CI green**. PR flipped to ready, `needs-qa` retained — with `qaGate` on it
+  cannot merge until a human adds `qa-approved`, and a P0/P1/P2 QA plan is posted on the PR.
+- Closing note for the record: **eight major defects passed the full eight-command gate** across
+  this run and were caught only by driving the application in a browser. That is the run's clearest
+  finding and it is written into `final-gate-checks.md` rather than left implicit.

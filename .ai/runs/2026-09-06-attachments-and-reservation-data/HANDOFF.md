@@ -1,54 +1,51 @@
 # Handoff — 2026-09-06-attachments-and-reservation-data
 
-**Last updated:** 2026-09-07T00:25:00Z
+**Last updated:** 2026-09-07T03:05:00Z
 **Branch:** feat/attachments-and-reservation-data
-**PR:** https://github.com/7bc-mkl/trip_planner/pull/12 (draft, claimed by @7bc-mkl)
-**Current phase/step:** Phase 4 Step 4.1
-**Last commit:** 8d21299 — feat(reservations): show the saved cost formatted through Intl
+**PR:** https://github.com/7bc-mkl/trip_planner/pull/12 — **ready for review**, `merge-queue`, awaiting manual QA
+**Current phase/step:** none — the run is complete
+**Last commit:** a380204 — fix(attachments): bound cost client-side, report delete failures, abort on unmount
 
-## What just happened
-- **Phase 3 is complete.** 29 of 32 Steps done. The user reviewed at the safety checkpoint and chose
-  to finish the whole spec, so the run resumed through Phase 3 and continues into Phase 4.
-- **R04 is met**, proved by walking the brief\'s own flow in the running app: open a day → open an
-  item → attach a voucher → save the confirmation number and cost → move to *gotowe* → the counter
-  went `0 z 1` to `1 z 1`. A full reload returned every value; the disclosure never opened itself;
-  moving to *gotowe* stayed one click with no prompt.
-- That walk also found `formatCurrency` had **no call site** — a green Step-3.4 test over
-  unreachable code. Fixed as `3.4-review-fix-1`: the collapsed disclosure now shows a *saved* cost
-  formatted through `Intl`, and only when one exists, so it cannot become a nag.
-- Gate: **635 backend / 0 skips, 270 frontend**, build clean.
+## Status: COMPLETE
 
-## Next concrete action
-- **Step 4.1** — drag-and-drop layered on the existing file input. Phase 4 is the spec\'s own
-  slippable tail; the user asked for all of it.
+All **35** Tasks rows are `done` — the spec's 28 Steps plus 7 fix Steps appended from browser
+findings. The final gate passed on its second run, the authoritative `om-auto-review-pr --autofix`
+pass requested changes and its findings were fixed and re-verified, and CI is **green**.
 
-## Blockers / open questions
-- none.
+## What the run produced
+- Attachments on days and items: upload, list, image preview, download, delete — with the full
+  security control set the spec specified, and no image library on the server.
+- Reservation data on the item (confirmation number, cost amount, cost currency), never demanded.
+- Two Alembic revisions that unwind independently (assumption A1), tested against a database already
+  holding data.
+- 654 backend tests / 0 skipped (from 520 at the first checkpoint) and 353 frontend tests (from 149).
 
-## Remaining after Phase 4
-The final gate (full `validation.commands` + the integration suite + a design-system pass), the
-authoritative `om-auto-review-pr {12} --autofix` pass, the summary comment, and the draft→ready flip.
+## The thing worth remembering
+**Eight major defects passed the full eight-command gate and were caught only by driving the
+application in a browser** — including one that hung the entire server on two concurrent uploads,
+and one where a 4.3 MB upload silently vanished. Every automated signal was green each time. Five
+browser walks, one per checkpoint plus the final gate, are what found them.
 
-## Deferred to the final `om-auto-review-pr` pass
-- The `aria-live` announcement keeps its previous message after an unrelated action.
-- Manually clearing the pre-filled `PLN` currency while an amount is present drops both halves
-  silently (outside ordinary use, but real).
-- A long filename wraps mid-word in the narrow item modal; large PNG previews show a placeholder.
-- Three backend nits: `normalise_filename` strips after truncating; `INSTALLATION_LOCK_KEY` shares
-  an advisory keyspace with `hashtext(trip_id)`; the parent lookup runs before `check_rate`.
+## Open, and deliberately not fixed
+See `final-gate-checks.md` "Residual findings" and the re-review comment on the PR. Nothing blocking:
+stale `aria-live` text after an unrelated action, a multi-file drop announcing only the last
+filename, the cost input\'s dot-vs-comma round trip on re-edit, clearing a pre-filled `PLN` dropping
+both halves, a mid-word filename wrap, large-PNG preview placeholders, and three backend nits.
 
-## Environment caveats
-- PostgreSQL on `localhost:55432`. Every backend run reports **0 skips** — keep checking that.
-- QA env: `sh .ai/scripts/test-env-up.sh [--force-rebuild]`; descriptor `.ai/qa/test-env.json`; left
-  running. **Use this worktree\'s `.ai/qa/test-env.env`** — the main checkout\'s password is stale.
-- Browser: `agent-browser` v0.34.0, **not on `PATH`**; **`TMPDIR` must be `/tmp`** or Chrome will not
-  launch from this worktree path. It **cannot drive `input[type=date]` or `input[type=time]`** at
-  all — create trips through the REST API and do the flow under test through the UI. Also
-  `find role button "<label>" click` silently no-ops on this app\'s dialog buttons; use
-  `click \'button[type=submit]\'`.
-- Frontend deps installed here via `npm ci`.
-- Database/migration state: clean. Head is `0006_item_reservation`.
+## What is left for a human
+Manual QA — the PR carries `needs-qa` and `qaGate` is on, so it cannot merge until someone adds
+`qa-approved`. A P0/P1/P2 test plan is posted on the PR. Then a human approval, since GitHub refuses
+a formal self-review and both the author and the reviewing automation are the same account.
+
+## Environment caveats (for whoever runs QA)
+- QA env: `sh .ai/scripts/test-env-up.sh [--force-rebuild]`; descriptor `.ai/qa/test-env.json`.
+  **Use this worktree\'s `.ai/qa/test-env.env`** — the main checkout\'s password is stale.
+- `agent-browser` is not on `PATH`; `TMPDIR` must be `/tmp` or Chrome will not launch from this
+  worktree path; it cannot drive `input[type=date]` or `input[type=time]` at all.
+- Backend tests need PostgreSQL on `localhost:55432`, and **skip the whole database layer silently**
+  without it — always read the summary for skips, never just the exit code.
 
 ## Worktree
 - Path: /home/mkl/cezar/projects/trip_planner/.ai/cezar/worktrees/2223e7fe-07b0-43b2-962a-a6d3db36f6f0
-- Created this run: no — the invoking linked worktree, reused per the worktree contract.
+- Created this run: no — the invoking linked worktree, reused per the worktree contract. Nothing to
+  clean up.
