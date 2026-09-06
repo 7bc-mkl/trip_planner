@@ -71,11 +71,16 @@ export function TripListPage() {
           {trips.map((trip) => (
             <li key={trip.id}>
               <Link to={`/trips/${trip.id}`}>
-                <h2>{trip.title}</h2>
-                <p className="trip-list__dates">
-                  {formatDateRange(trip.start_date, trip.end_date, i18n.language)}
-                </p>
-                <p className="trip-list__route">{routeSummary(trip)}</p>
+                {/* One wrapper so the row can be a two-part card: the naming
+                    block on the left, the readiness value pushed to the right.
+                    It carries no content of its own. */}
+                <div className="trip-list__text">
+                  <h2>{trip.title}</h2>
+                  <p className="trip-list__dates">
+                    {formatDateRange(trip.start_date, trip.end_date, i18n.language)}
+                  </p>
+                  <p className="trip-list__route">{routeSummary(trip)}</p>
+                </div>
                 {/* The same component as the timeline tile, so the two screens
                     cannot end up phrasing the counter differently. */}
                 <ReadinessTile readiness={trip.readiness} compact />

@@ -66,78 +66,49 @@
   gap: var(--space-md);
 }
 
+/* The wordmark, on a bare canvas rather than in the frosted band: one step up
+   from the chrome's `headline-sm` lockup, because here it is the page's own
+   `<h1>` and the only thing above the card. */
 .login > header h1 {
-  font-size: 1.25rem;
-  letter-spacing: -0.01em;
+  font: var(--type-headline-md);
+  letter-spacing: var(--tracking-headline-md);
 }
 
+/* The card. Centred in the second grid row rather than pinned to its top: the
+   design puts one card on the canvas and nothing else, and `1fr` grows with the
+   content, so a card taller than the row still cannot be clipped. */
 .login form {
   width: min(26rem, 100%);
-  margin-inline: auto;
-  align-self: start;
+  justify-self: center;
+  align-self: center;
   display: flex;
   flex-direction: column;
   gap: var(--space-sm);
-  padding: var(--space-xl);
+  padding: var(--space-lg);
 }
 
-.login form h2 {
-  font-size: 1.5rem;
-}
+/* The card's `<h2>` declares nothing: `base.css` already binds it to the
+   design's `headline-lg`, which is the size this heading was hard-coding. */
 
 .login form p {
   margin: 0;
   color: var(--text-muted);
+  font: var(--type-body-md);
+  letter-spacing: var(--tracking-body-md);
 }
 
 .login label {
-  font-size: 0.875rem;
-  font-weight: 600;
+  font: var(--type-label-lg);
+  letter-spacing: var(--tracking-label-lg);
   margin-bottom: calc(var(--space-2xs) * -1);
 }
 
 /* The card's two inputs declare nothing of their own — they wear the field
-   recipe in `components.css`, `:user-invalid` and all. */
-
-/* `/login`'s submit is unclassed markup, so it cannot reach `.button-primary`
-   without a TSX change this phase does not make. It wears the primary recipe's
-   declarations here rather than borrowing a component selector into the screen
-   layer; Phase 4 (step 17) rebuilds this card and the duplication goes with it. */
-.login button[type='submit'] {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 40px;
+   recipe in `components.css`, `:user-invalid` and all, and the submit now wears
+   `.button-primary` (step 17: the duplicated primary declarations that used to
+   stand in for it here are gone). All this screen says is where it sits. */
+.login form .button-primary {
   margin-top: var(--space-xs);
-  padding: var(--space-xs) var(--space-md);
-  border: 1px solid transparent;
-  border-radius: var(--radius);
-  background: var(--primary);
-  color: var(--on-primary);
-  font: var(--type-label-lg);
-  letter-spacing: var(--tracking-label-lg);
-  cursor: pointer;
-}
-
-.login button[type='submit']:hover:not(:disabled) {
-  background: var(--primary-hover);
-}
-
-.login button[type='submit']:disabled {
-  opacity: 0.6;
-  cursor: progress;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .login button[type='submit'] {
-    transition:
-      background-color 150ms ease,
-      transform 150ms ease;
-  }
-
-  .login button[type='submit']:hover:not(:disabled) {
-    transform: scale(1.01);
-  }
 }
 
 /* The failure message carries colour AND a border and its own text, so it is not
@@ -149,10 +120,20 @@
   border-radius: var(--radius-sm);
   background: var(--danger-surface);
   color: var(--danger);
-  font-size: 0.875rem;
+  font: var(--type-body-sm);
+  letter-spacing: var(--tracking-body-sm);
 }
 
 /* --- /trips --- */
+
+/* Adopted by analogy (Q10): `/trips` has no counterpart in the export, so each
+   row takes the card recipe the export uses everywhere else — elevation-1 at
+   `--radius-lg` (declared once at the top of this file), lifting to elevation-2
+   on hover AND on `:focus-visible`, because a row is a link a keyboard reaches
+   without a pointer ever touching it.
+   Deliberately NOT here: a `Shared` chip. PR #3 specifies one, but it is only
+   true when a share token exists, none can exist yet, and a chip that is never
+   true is a fabrication rather than a preview. */
 
 .trip-list {
   display: grid;
@@ -162,21 +143,47 @@
   list-style: none;
 }
 
+/* Two parts: the naming block, and the readiness value pushed to the right
+   edge. It wraps rather than squeezes — at 360px "nothing arranged yet" is
+   longer than the room left beside a trip title, and a readiness value on its
+   own line is better than an ellipsed one. */
 .trip-list a {
-  display: block;
-  padding: var(--space-md);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-xs) var(--space-md);
+  padding: var(--space-lg);
   color: inherit;
   text-decoration: none;
 }
 
+/* `min-width: 0` plus a break opportunity anywhere: a flex item's automatic
+   minimum is its content, so an unbroken 60-character title would otherwise
+   widen the card until the page scrolls sideways. */
+.trip-list__text {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 .trip-list h2 {
-  font-size: 1.125rem;
+  font: var(--type-headline-md);
+  letter-spacing: var(--tracking-headline-md);
 }
 
 .trip-list p {
   margin: var(--space-2xs) 0 0;
   color: var(--text-muted);
-  font-size: 0.875rem;
+  font: var(--type-body-sm);
+  letter-spacing: var(--tracking-body-sm);
+}
+
+/* The compact counter, right-aligned: `margin-left: auto` is what puts it at
+   the far edge whatever the title's length, and the reset of the component's
+   own top margin is what keeps it on the card's centre line. */
+.trip-list .readiness {
+  margin: 0 0 0 auto;
+  color: var(--text);
+  text-align: right;
 }
 
 /* --- /trips/new --- */
