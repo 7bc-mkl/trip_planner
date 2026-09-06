@@ -10,6 +10,7 @@ import { ITEM_STATUSES } from '../../api/items'
 import { applyLocale, initI18n } from '../../i18n'
 import { clearAllDrafts, readDraft } from '../auth/draftStore'
 import { SessionProvider } from '../auth/SessionContext'
+import { StatusChip } from './StatusChip'
 import { draftKey } from './itemDraft'
 import type { ItemDraft } from './itemDraft'
 
@@ -410,6 +411,44 @@ describe('status chips', () => {
 
     expect(await screen.findByText('To plan')).toBeInTheDocument()
     expect(screen.getByText('Done')).toBeInTheDocument()
+  })
+
+  it.each(ITEM_STATUSES)(
+    'exposes both a glyph and the translated label for %s — the colour-blind contract',
+    (status) => {
+      // The design adds a 6px dot to each chip. A dot is paint, and paint is
+      // exactly what a colour-blind reader, a screen reader and a stylesheet
+      // failure all lose. So the assertion is that the two things that survive
+      // all three are still there and still distinct: a glyph that differs per
+      // status, and the status as a translated word.
+      //
+      // jsdom cannot see colour, and that is the point — this is a test about
+      // text nodes and attributes, which is all the contract has ever been.
+      render(<StatusChip status={status} />)
+
+      const chip = screen.getByText(pl.item.status[status]).closest('.status-chip')
+
+      expect(chip).toHaveAttribute('data-status', status)
+
+      const glyph = chip?.querySelector('.status-chip__glyph')
+      expect(glyph?.textContent?.trim()).toBeTruthy()
+      expect(glyph).toHaveAttribute('aria-hidden', 'true')
+
+      // The dot is decoration: hidden from assistive technology, and carrying
+      // no text of its own, so it can neither replace nor displace the glyph.
+      const dot = chip?.querySelector('.status-chip__dot')
+      expect(dot).toHaveAttribute('aria-hidden', 'true')
+      expect(dot?.textContent).toBe('')
+    },
+  )
+
+  it('gives every status a distinct glyph, so the shapes alone tell them apart', () => {
+    const glyphs = ITEM_STATUSES.map((status) => {
+      const { container } = render(<StatusChip status={status} />)
+      return container.querySelector('.status-chip__glyph')?.textContent
+    })
+
+    expect(new Set(glyphs).size).toBe(ITEM_STATUSES.length)
   })
 
   it.each(ITEM_STATUSES)('has a non-empty label in both locales for %s', (status) => {

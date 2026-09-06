@@ -360,37 +360,77 @@ textarea:disabled {
   font-weight: 600;
 }
 
-/* --- status chips --- */
+/* --- status chips (DESIGN.md, "Status Chips & Badges") ----------------
+ *
+ * Three states, three token triples, and the same three words the skeleton
+ * already rendered. `data-status` is the hinge for all of it — the suite asserts
+ * on it and every recipe below selects on it — so it is never renamed, removed
+ * or repurposed.
+ *
+ * The wire values map onto the design's three chips: `done` is Confirmed,
+ * `to_book` is In Progress, `to_plan` is Draft. The foregrounds are the spec's
+ * CORRECTED values, already carrying their ratio in `tokens.css`: two of the
+ * design's three fail AA against their own chip background. The three
+ * hardcoded hex values the skeleton used here are gone with them.
+ *
+ * `label-sm` is 11px, which is why the palette above is the only one allowed:
+ * the cross-cutting contrast rule bars `--text-subtle` below 13px.
+ */
 
 .status-chip {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-1);
-  padding: var(--space-1) var(--space-2);
-  border: 1px solid var(--colour-border);
-  border-radius: 999px;
-  background: var(--colour-surface);
-  font-size: 0.75rem;
-  font-weight: 600;
+  gap: var(--space-2xs);
+  padding: var(--space-2xs) var(--space-xs);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-full);
+  background: var(--surface);
+  color: var(--text-muted);
+  font: var(--type-label-sm);
+  letter-spacing: var(--tracking-label-sm);
   white-space: nowrap;
+}
+
+/* The design's 6px dot. Decoration: it carries no text, it is `aria-hidden` in
+   the markup, and it sits beside the glyph rather than instead of it. */
+.status-chip__dot {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-full);
+  background: currentcolor;
 }
 
 /* Colour is an addition to the glyph and the label, never a replacement:
    removing every rule below must still leave the status readable. */
 .status-chip[data-status='to_plan'] {
-  color: var(--colour-text-muted);
+  border-color: var(--status-draft-border);
+  background: var(--status-draft-bg);
+  color: var(--status-draft-text);
+}
+
+.status-chip[data-status='to_plan'] .status-chip__dot {
+  background: var(--status-draft-dot);
 }
 
 .status-chip[data-status='to_book'] {
-  border-color: #b8781f;
-  color: #8a5a12;
-  background: #fdf6e9;
+  border-color: var(--status-progress-border);
+  background: var(--status-progress-bg);
+  color: var(--status-progress-text);
+}
+
+.status-chip[data-status='to_book'] .status-chip__dot {
+  background: var(--status-progress-dot);
 }
 
 .status-chip[data-status='done'] {
-  border-color: var(--colour-accent);
-  color: var(--colour-accent);
-  background: #eef5f2;
+  border-color: var(--status-confirmed-border);
+  background: var(--status-confirmed-bg);
+  color: var(--status-confirmed-text);
+}
+
+.status-chip[data-status='done'] .status-chip__dot {
+  background: var(--status-confirmed-dot);
 }
 
 /* --- items --- */

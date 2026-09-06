@@ -22,7 +22,7 @@
 | 1 | 1.6 | Phase-1 screenshot set — five routes × two locales (spec step 6) | inline | done | 5722517 |
 | 2 | 2.1 | Split `components.css` and rewrite the button recipes (spec step 7) | group:B | done | pending |
 | 2 | 2.2 | Rewrite the input, select, textarea and date recipes (spec step 8) | group:B | done | pending |
-| 2 | 2.3 | Rewrite the status chip recipes and add the dot (spec step 9) | group:B | todo | — |
+| 2 | 2.3 | Rewrite the status chip recipes and add the dot (spec step 9) | group:B | done | pending |
 | 2 | 2.4 | Elevation utilities, cards, dialogs and the frosted backdrop (spec step 10) | group:B | todo | — |
 | 2 | 2.5 | Migrate off the bridge aliases and delete the bridge (spec step 11) | dispatch | todo | — |
 | 2 | 2.6 | Phase-2 screenshot set (spec step 12) | inline | todo | — |
