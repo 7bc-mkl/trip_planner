@@ -141,20 +141,21 @@ def test_every_trip_scoped_route_resolves_ownership_through_the_shared_dependenc
     """URL nesting enforces nothing; the dependency is the enforcement.
 
     A handler that joins to the trip by hand can forget the owner clause, and the
-    resulting endpoint happily serves another owner's data. Vacuous until Phase 2
-    registers the first `/trips/…` route.
+    resulting endpoint happily serves another owner's data.
+
+    "Trip-scoped" means a route that names a specific trip — a path containing
+    `{trip_id}`. The two collection routes (`GET`/`POST /trips`) cannot take
+    `get_owned_trip`, because there is no trip to resolve yet; they are covered by
+    the sibling test below instead.
     """
-    try:
-        from trip_planner.api.deps import get_owned_trip
-    except ImportError:
-        get_owned_trip = None
+    from trip_planner.api.deps import get_owned_trip
 
     offenders: list[str] = []
 
     for route in api_routes(application):
-        if not route.path.startswith(f"{API_PREFIX}/trips"):
+        if not route.path.startswith(f"{API_PREFIX}/trips") or "{trip_id}" not in route.path:
             continue
-        if get_owned_trip is None or get_owned_trip not in dependency_callables(route):
+        if get_owned_trip not in dependency_callables(route):
             offenders.append(str(route))
 
     assert offenders == [], (
@@ -162,6 +163,35 @@ def test_every_trip_scoped_route_resolves_ownership_through_the_shared_dependenc
         f"{offenders}. Ownership must be resolved by the shared dependency so no "
         "handler can forget the owner clause."
     )
+
+
+def test_the_trip_collection_routes_are_owner_scoped(application: FastAPI) -> None:
+    """The two routes with no `{trip_id}` still must not be owner-agnostic.
+
+    `GET /trips` listing every owner's trips, or `POST /trips` writing a row with
+    no `owner_id`, are the same failure as a missing ownership check — they just
+    cannot be caught by the same dependency. Requiring `get_current_owner` is what
+    makes the owner reachable in the handler at all.
+    """
+    collection_routes = [
+        route
+        for route in api_routes(application)
+        if route.path == f"{API_PREFIX}/trips" and "{trip_id}" not in route.path
+    ]
+
+    assert collection_routes, "expected the /trips collection routes to be registered"
+
+    for route in collection_routes:
+        assert get_current_owner in dependency_callables(route), (
+            f"{route} does not resolve the current owner, so it cannot scope on them."
+        )
+
+
+def test_the_trip_scoped_assertion_is_not_vacuous(application: FastAPI) -> None:
+    """Guards the test above: with no `{trip_id}` routes it would pass on nothing."""
+    scoped = [route for route in api_routes(application) if "{trip_id}" in route.path]
+
+    assert scoped, "expected at least one route naming a specific trip"
 
 
 def test_get_current_owner_implies_get_current_session(application: FastAPI) -> None:

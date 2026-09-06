@@ -1,10 +1,10 @@
 """The repository's own TODO rows, where this milestone closed them.
 
 `AGENTS.md` says a TODO row must be filled in by whoever establishes the
-convention. Three of them were decided by the walking-skeleton spec, and a
-decision that is not written down where the next agent reads it has not really
-been made — so the exact strings are asserted absent rather than trusted to
-review vigilance.
+convention. Each row below was decided by the walking-skeleton spec or by the
+code that implemented it, and a decision that is not written down where the next
+agent reads it has not really been made — so the exact strings are asserted
+absent rather than trusted to review vigilance.
 
 Rows deliberately still open are asserted *present*, so that deleting one
 without building the thing it points at fails here too.
@@ -30,10 +30,19 @@ RESOLVED = [
         "**Versioning:** TODO",
         "API versioning is a /api/v1 URL prefix (spec A13)",
     ),
+    (
+        "AGENTS.md",
+        "TODO: point at the domain module",
+        "backend/trip_planner/domain/ exists as of the Phase 2-4 implementation",
+    ),
+    (
+        "CODE_REVIEW.md",
+        "TODO: name the validation library",
+        "request validation is Pydantic v2 with extra=\"forbid\" (spec A7)",
+    ),
 ]
 
 STILL_OPEN = [
-    ("AGENTS.md", "TODO: point at the domain module", "the trip domain module arrives in Phase 2"),
     (
         "AGENTS.md",
         "TODO — integration module not yet created",

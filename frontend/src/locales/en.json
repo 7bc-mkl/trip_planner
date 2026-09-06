@@ -19,11 +19,102 @@
     "sessionExpired": "Your session expired. Please sign in again."
   },
   "nav": {
-    "signOut": "Sign out"
+    "signOut": "Sign out",
+    "breadcrumb": "Breadcrumb"
   },
   "trip": {
     "stageCount": "{count, plural, one {# stage} other {# stages}}",
-    "nightCount": "{count, plural, one {# night} other {# nights}}"
+    "nightCount": "{count, plural, one {# night} other {# nights}}",
+    "delete": "Delete trip",
+    "deleteTitle": "Delete this trip?",
+    "deleteMessage": "“{title}” and everything planned in it — every destination, every day and every item — will be deleted. This cannot be undone.",
+    "deleteConfirm": "Delete trip"
+  },
+  "trips": {
+    "title": "Trips",
+    "new": "New trip",
+    "emptyTitle": "No trips yet",
+    "emptyBody": "Create your first trip and its empty timeline, then fill it in day by day."
+  },
+  "tripCreate": {
+    "title": "New trip",
+    "titleLabel": "Trip name",
+    "titlePlaceholder": "Malaysia, October 2026",
+    "startDate": "Start date",
+    "endDate": "End date",
+    "routeMode": "Route",
+    "routeModes": {
+      "roundTrip": "Return to the same place",
+      "openJaw": "Return from somewhere else (open-jaw)",
+      "oneWay": "One way"
+    },
+    "departurePlace": "Departing from",
+    "returnPlace": "Returning to",
+    "stages": "Destinations",
+    "stagesHint": "Add each base of the trip, in order. Dates are optional — leave them empty if you have not decided how to split the days yet.",
+    "stagePlace": "Destination {position, number}",
+    "stageStart": "From",
+    "stageEnd": "To",
+    "addStage": "Add destination",
+    "removeStage": "Remove",
+    "summary": "{days, plural, one {# day} other {# days}} / {nights, plural, one {# night} other {# nights}} · {stages, plural, one {# base} other {# bases}}",
+    "submit": "Create an empty timeline to plan by hand",
+    "submitting": "Creating…"
+  },
+  "timeline": {
+    "emptyTimeline": "This timeline is empty. Open a day and add your first item.",
+    "emptyDay": "Nothing planned yet",
+    "allFilteredOut": "Everything here is already done"
+  },
+  "readiness": {
+    "label": "Logistics status",
+    "fraction": "{arranged, number} of {tracked, number} arranged",
+    "nothingArranged": "Nothing arranged yet"
+  },
+  "day": {
+    "title": "Day",
+    "backToTimeline": "Timeline",
+    "navLabel": "Day navigation",
+    "previous": "Previous day",
+    "next": "Next day",
+    "empty": "Nothing planned for this day yet. Add the first item."
+  },
+  "item": {
+    "add": "Add item",
+    "addTitle": "New item",
+    "editTitle": "Edit item",
+    "titleLabel": "Title",
+    "kindLabel": "Type",
+    "statusLabel": "Status",
+    "startTime": "Start time",
+    "endTime": "End time",
+    "endDate": "Ends on",
+    "endDateHint": "Only for something that runs past midnight — an overnight flight, or several nights in one place.",
+    "notesLabel": "Notes",
+    "save": "Save",
+    "saving": "Saving…",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "allDay": "All day",
+    "spansUntil": "→ {date}",
+    "kind": {
+      "accommodation": "Accommodation",
+      "transport": "Transport",
+      "activity": "Activity",
+      "meal": "Meal",
+      "other": "Other"
+    },
+    "status": {
+      "to_plan": "To plan",
+      "to_book": "To book",
+      "done": "Done"
+    }
+  },
+  "filter": {
+    "legend": "Show",
+    "all": "All",
+    "outstanding": "Only outstanding",
+    "kindCount": "{kind} ({count, number})"
   },
   "error": {
     "invalid_credentials": "We could not sign you in. Check your e-mail and password.",
@@ -32,6 +123,15 @@
     "validation_error": "Some of the details are not valid. Check the highlighted fields.",
     "not_found": "We could not find that.",
     "service_unavailable": "The service is temporarily unavailable. Please try again in a moment.",
+    "invalid_date_range": "The end date cannot be before the start date.",
+    "trip_too_long": "A trip can be at most 366 days long. Check the dates.",
+    "stages_required": "Add at least one destination to the trip.",
+    "stage_outside_trip": "A destination's dates fall outside the trip's dates.",
+    "invalid_time_span": "That start and end do not describe a real stretch of time. Check the times and the end date.",
+    "date_outside_trip": "That date is outside this trip.",
+    "days_have_items": "Those days already have items on them. Move or delete the items first, then shorten the trip.",
+    "stages_outside_new_range": "Some destinations fall outside the new dates. Adjust them first, then shorten the trip.",
+    "items_outside_new_range": "Some items run past the new end date. Shorten or delete them first, then shorten the trip.",
     "unknown": "Something went wrong. Please try again."
   }
 }

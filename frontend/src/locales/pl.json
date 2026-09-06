@@ -19,11 +19,102 @@
     "sessionExpired": "Sesja wygasła. Zaloguj się ponownie."
   },
   "nav": {
-    "signOut": "Wyloguj się"
+    "signOut": "Wyloguj się",
+    "breadcrumb": "Ścieżka nawigacji"
   },
   "trip": {
     "stageCount": "{count, plural, one {# etap} few {# etapy} many {# etapów} other {# etapu}}",
-    "nightCount": "{count, plural, one {# noc} few {# noce} many {# nocy} other {# nocy}}"
+    "nightCount": "{count, plural, one {# noc} few {# noce} many {# nocy} other {# nocy}}",
+    "delete": "Usuń podróż",
+    "deleteTitle": "Usunąć tę podróż?",
+    "deleteMessage": "„{title}” i wszystko, co w niej zaplanowano — każdy cel, każdy dzień i każdy element — zostanie usunięte. Tej operacji nie można cofnąć.",
+    "deleteConfirm": "Usuń podróż"
+  },
+  "trips": {
+    "title": "Podróże",
+    "new": "Nowa podróż",
+    "emptyTitle": "Nie masz jeszcze żadnej podróży",
+    "emptyBody": "Utwórz pierwszą podróż i jej pustą oś czasu, a potem wypełniaj ją dzień po dniu."
+  },
+  "tripCreate": {
+    "title": "Nowa podróż",
+    "titleLabel": "Nazwa podróży",
+    "titlePlaceholder": "Malezja, październik 2026",
+    "startDate": "Data rozpoczęcia",
+    "endDate": "Data zakończenia",
+    "routeMode": "Trasa",
+    "routeModes": {
+      "roundTrip": "W obie strony",
+      "openJaw": "Inne miasto powrotu (open-jaw)",
+      "oneWay": "W jedną stronę"
+    },
+    "departurePlace": "Wyjazd z",
+    "returnPlace": "Powrót do",
+    "stages": "Cele podróży",
+    "stagesHint": "Dodaj kolejne bazy podróży w odpowiedniej kolejności. Daty są opcjonalne — zostaw je puste, jeśli nie wiesz jeszcze, jak podzielić dni.",
+    "stagePlace": "Cel {position, number}",
+    "stageStart": "Od",
+    "stageEnd": "Do",
+    "addStage": "Dodaj cel",
+    "removeStage": "Usuń",
+    "summary": "{days, plural, one {# dzień} few {# dni} many {# dni} other {# dnia}} / {nights, plural, one {# noc} few {# noce} many {# nocy} other {# nocy}} · {stages, plural, one {# baza} few {# bazy} many {# baz} other {# bazy}}",
+    "submit": "Utwórz pustą oś czasu do ręcznego planowania",
+    "submitting": "Tworzenie…"
+  },
+  "timeline": {
+    "emptyTimeline": "Ta oś czasu jest pusta. Otwórz dzień i dodaj pierwszy element.",
+    "emptyDay": "Nic jeszcze nie zaplanowano",
+    "allFilteredOut": "Wszystko tutaj jest już gotowe"
+  },
+  "readiness": {
+    "label": "Status logistyki",
+    "fraction": "{arranged, number} z {tracked, number} załatwionych",
+    "nothingArranged": "Nic jeszcze nie załatwione"
+  },
+  "day": {
+    "title": "Dzień",
+    "backToTimeline": "Oś czasu",
+    "navLabel": "Nawigacja po dniach",
+    "previous": "Poprzedni dzień",
+    "next": "Następny dzień",
+    "empty": "Nic jeszcze nie zaplanowano na ten dzień. Dodaj pierwszy element."
+  },
+  "item": {
+    "add": "Dodaj element",
+    "addTitle": "Nowy element",
+    "editTitle": "Edytuj element",
+    "titleLabel": "Nazwa",
+    "kindLabel": "Typ",
+    "statusLabel": "Status",
+    "startTime": "Godzina rozpoczęcia",
+    "endTime": "Godzina zakończenia",
+    "endDate": "Kończy się",
+    "endDateHint": "Tylko dla czegoś, co trwa po północy — nocnego lotu albo kilku nocy w jednym miejscu.",
+    "notesLabel": "Notatki",
+    "save": "Zapisz",
+    "saving": "Zapisywanie…",
+    "cancel": "Anuluj",
+    "delete": "Usuń",
+    "allDay": "Cały dzień",
+    "spansUntil": "→ {date}",
+    "kind": {
+      "accommodation": "Nocleg",
+      "transport": "Transport",
+      "activity": "Atrakcja",
+      "meal": "Jedzenie",
+      "other": "Inne"
+    },
+    "status": {
+      "to_plan": "Do zaplanowania",
+      "to_book": "Do zarezerwowania",
+      "done": "Gotowe"
+    }
+  },
+  "filter": {
+    "legend": "Pokaż",
+    "all": "Wszystko",
+    "outstanding": "Tylko do zrobienia",
+    "kindCount": "{kind} ({count, number})"
   },
   "error": {
     "invalid_credentials": "Nie udało się zalogować. Sprawdź e-mail i hasło.",
@@ -32,6 +123,15 @@
     "validation_error": "Część danych jest nieprawidłowa. Sprawdź zaznaczone pola.",
     "not_found": "Nie znaleziono.",
     "service_unavailable": "Usługa jest chwilowo niedostępna. Spróbuj ponownie za moment.",
+    "invalid_date_range": "Data zakończenia nie może być wcześniejsza niż data rozpoczęcia.",
+    "trip_too_long": "Podróż może trwać maksymalnie 366 dni. Sprawdź daty.",
+    "stages_required": "Dodaj do podróży co najmniej jeden cel.",
+    "stage_outside_trip": "Daty jednego z celów wykraczają poza daty podróży.",
+    "invalid_time_span": "Podany początek i koniec nie opisują realnego przedziału czasu. Sprawdź godziny i datę zakończenia.",
+    "date_outside_trip": "Ta data jest poza zakresem podróży.",
+    "days_have_items": "Te dni mają już zaplanowane elementy. Najpierw je przenieś lub usuń, potem skróć podróż.",
+    "stages_outside_new_range": "Część celów wykracza poza nowe daty. Najpierw je popraw, potem skróć podróż.",
+    "items_outside_new_range": "Część elementów wykracza poza nową datę zakończenia. Najpierw je skróć lub usuń, potem skróć podróż.",
     "unknown": "Coś poszło nie tak. Spróbuj ponownie."
   }
 }

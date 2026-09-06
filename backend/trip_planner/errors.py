@@ -39,6 +39,21 @@ class ErrorCode(StrEnum):
     NOT_FOUND = "not_found"
     SERVICE_UNAVAILABLE = "service_unavailable"
 
+    # Trips and their stages (Phase 2).
+    INVALID_DATE_RANGE = "invalid_date_range"
+    TRIP_TOO_LONG = "trip_too_long"
+    STAGES_REQUIRED = "stages_required"
+    STAGE_OUTSIDE_TRIP = "stage_outside_trip"
+
+    # Items (Phase 3).
+    INVALID_TIME_SPAN = "invalid_time_span"
+    DATE_OUTSIDE_TRIP = "date_outside_trip"
+
+    # Editing and deleting a trip (Phase 4).
+    DAYS_HAVE_ITEMS = "days_have_items"
+    STAGES_OUTSIDE_NEW_RANGE = "stages_outside_new_range"
+    ITEMS_OUTSIDE_NEW_RANGE = "items_outside_new_range"
+
 
 #: The status each code is served with. Kept beside the enum so a code cannot be
 #: introduced without deciding its status, and so the pairing is assertable.
@@ -49,6 +64,17 @@ STATUS_FOR_CODE: dict[ErrorCode, int] = {
     ErrorCode.VALIDATION_ERROR: status.HTTP_422_UNPROCESSABLE_CONTENT,
     ErrorCode.NOT_FOUND: status.HTTP_404_NOT_FOUND,
     ErrorCode.SERVICE_UNAVAILABLE: status.HTTP_503_SERVICE_UNAVAILABLE,
+    ErrorCode.INVALID_DATE_RANGE: status.HTTP_422_UNPROCESSABLE_CONTENT,
+    ErrorCode.TRIP_TOO_LONG: status.HTTP_422_UNPROCESSABLE_CONTENT,
+    ErrorCode.STAGES_REQUIRED: status.HTTP_422_UNPROCESSABLE_CONTENT,
+    ErrorCode.STAGE_OUTSIDE_TRIP: status.HTTP_422_UNPROCESSABLE_CONTENT,
+    ErrorCode.INVALID_TIME_SPAN: status.HTTP_422_UNPROCESSABLE_CONTENT,
+    ErrorCode.DATE_OUTSIDE_TRIP: status.HTTP_422_UNPROCESSABLE_CONTENT,
+    # 409, not 422: the request is well-formed and the rule is about the state of
+    # the trip, which the caller can resolve by moving or deleting the items.
+    ErrorCode.DAYS_HAVE_ITEMS: status.HTTP_409_CONFLICT,
+    ErrorCode.STAGES_OUTSIDE_NEW_RANGE: status.HTTP_409_CONFLICT,
+    ErrorCode.ITEMS_OUTSIDE_NEW_RANGE: status.HTTP_409_CONFLICT,
 }
 
 

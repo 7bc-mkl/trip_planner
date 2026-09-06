@@ -1,0 +1,570 @@
+import { render, screen, waitFor, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { MemoryRouter } from 'react-router-dom'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+
+import App from '../../App'
+import en from '../../locales/en.json'
+import pl from '../../locales/pl.json'
+import { ITEM_STATUSES } from '../../api/items'
+import { applyLocale, initI18n } from '../../i18n'
+import { clearAllDrafts, readDraft } from '../auth/draftStore'
+import { SessionProvider } from '../auth/SessionContext'
+import { draftKey } from './itemDraft'
+import type { ItemDraft } from './itemDraft'
+
+/**
+ * Phase 3: the day-detail screen, the item editor, the status chips and the
+ * readiness counter.
+ */
+
+type Handler = (url: string, init?: RequestInit) => Response | Promise<Response>
+
+const json = (status: number, body: unknown) =>
+  new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
+
+const OWNER = { id: 'owner-1', email: 'owner@example.com', locale: 'pl' as const }
+const STAGE = {
+  id: 'stage-1',
+  position: 0,
+  place: 'Kuala Lumpur',
+  start_date: '2026-10-10',
+  end_date: '2026-10-13',
+}
+
+const MUSEUM = {
+  id: 'item-1',
+  position: 0,
+  kind: 'activity' as const,
+  status: 'to_plan' as const,
+  start_time: '10:30:00',
+  end_time: '12:00:00',
+  end_date: null,
+  title: 'Batu Caves',
+  notes: 'bring water',
+}
+
+const HOTEL = {
+  id: 'item-2',
+  position: 1,
+  kind: 'accommodation' as const,
+  status: 'done' as const,
+  start_time: null,
+  end_time: null,
+  end_date: '2026-10-13',
+  title: 'Nocleg: Memmo Alfama',
+  notes: null,
+}
+
+const DAY = {
+  id: 'day-1',
+  trip_id: 'trip-1',
+  date: '2026-10-11',
+  stages: [STAGE],
+  items: [MUSEUM, HOTEL],
+  previous_date: '2026-10-10',
+  next_date: '2026-10-12',
+}
+
+const TRIP = {
+  id: 'trip-1',
+  title: 'Malezja, październik 2026',
+  start_date: '2026-10-10',
+  end_date: '2026-10-13',
+  departure_place: 'Warszawa',
+  return_place: 'Katowice',
+  readiness: { arranged: 1, tracked: 2 },
+  stages: [STAGE],
+  days: [
+    { id: 'day-0', date: '2026-10-10', stage_ids: ['stage-1'], items: [] },
+    { id: 'day-1', date: '2026-10-11', stage_ids: ['stage-1'], items: [MUSEUM, HOTEL] },
+    { id: 'day-2', date: '2026-10-12', stage_ids: ['stage-1'], items: [] },
+    { id: 'day-3', date: '2026-10-13', stage_ids: ['stage-1'], items: [] },
+  ],
+}
+
+let requests: { url: string; method: string; body: unknown }[] = []
+
+function mockApi(handler: Handler) {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input)
+      requests.push({
+        url,
+        method: (init?.method ?? 'GET').toUpperCase(),
+        body: typeof init?.body === 'string' ? JSON.parse(init.body) : undefined,
+      })
+      return Promise.resolve(handler(url, init))
+    }),
+  )
+}
+
+function backend(overrides: { day?: unknown; trip?: unknown; owner?: unknown } = {}): Handler {
+  return (url, init) => {
+    const method = (init?.method ?? 'GET').toUpperCase()
+    if (url.endsWith('/auth/me')) return json(200, overrides.owner ?? OWNER)
+    if (url.endsWith('/trips') && method === 'GET') return json(200, [overrides.trip ?? TRIP])
+    if (url.includes('/days/') && url.endsWith('/items') && method === 'POST') {
+      return json(201, { ...MUSEUM, id: 'item-new' })
+    }
+    if (url.includes('/items/') && method === 'PATCH') return json(200, MUSEUM)
+    if (url.includes('/items/') && method === 'DELETE') return new Response(null, { status: 204 })
+    if (url.includes('/days/')) return json(200, overrides.day ?? DAY)
+    if (/\/trips\/[^/]+$/u.test(url)) return json(200, overrides.trip ?? TRIP)
+    return json(404, { error: { code: 'not_found', field: null } })
+  }
+}
+
+function renderApp(initialPath: string) {
+  return render(
+    <MemoryRouter initialEntries={[initialPath]}>
+      <SessionProvider>
+        <App />
+      </SessionProvider>
+    </MemoryRouter>,
+  )
+}
+
+const DAY_PATH = '/trips/trip-1/days/2026-10-11'
+
+beforeEach(async () => {
+  requests = []
+  clearAllDrafts()
+  initI18n('pl')
+  await applyLocale('pl')
+  document.cookie = 'csrf_token=test-csrf-token; path=/'
+})
+
+afterEach(() => {
+  vi.unstubAllGlobals()
+  vi.restoreAllMocks()
+})
+
+describe('the day detail', () => {
+  it('lists the day’s items in the order the server sent them', async () => {
+    mockApi(backend())
+
+    renderApp(DAY_PATH)
+
+    await screen.findByText('Batu Caves')
+    const titles = screen.getAllByRole('listitem').map((row) => row.textContent)
+
+    expect(titles[0]).toContain('Batu Caves')
+    expect(titles[1]).toContain('Nocleg: Memmo Alfama')
+  })
+
+  it('shows the day’s derived stage', async () => {
+    mockApi(backend())
+
+    renderApp(DAY_PATH)
+
+    expect(await screen.findByText('Kuala Lumpur')).toBeInTheDocument()
+  })
+
+  it('renders a time range, a bare start, and "all day"', async () => {
+    mockApi(backend())
+
+    renderApp(DAY_PATH)
+
+    // A range for the museum, "all day" for the hotel, which has no times.
+    expect(await screen.findByText('10:30–12:00')).toBeInTheDocument()
+    expect(screen.getByText('Cały dzień')).toBeInTheDocument()
+  })
+
+  it('marks an item that spans into a later day', async () => {
+    mockApi(backend())
+
+    renderApp(DAY_PATH)
+
+    expect(await screen.findByText('→ 13.10')).toBeInTheDocument()
+  })
+
+  it('navigates to the previous and next day', async () => {
+    mockApi(backend())
+
+    renderApp(DAY_PATH)
+
+    expect(await screen.findByRole('link', { name: 'Poprzedni dzień' })).toHaveAttribute(
+      'href',
+      '/trips/trip-1/days/2026-10-10',
+    )
+    expect(screen.getByRole('link', { name: 'Następny dzień' })).toHaveAttribute(
+      'href',
+      '/trips/trip-1/days/2026-10-12',
+    )
+  })
+
+  it('disables the navigator at the trip’s boundaries rather than hiding it', async () => {
+    mockApi(backend({ day: { ...DAY, previous_date: null, next_date: null } }))
+
+    renderApp(DAY_PATH)
+
+    await screen.findByText('Batu Caves')
+
+    expect(screen.queryByRole('link', { name: 'Poprzedni dzień' })).not.toBeInTheDocument()
+    expect(screen.getByText('Poprzedni dzień')).toBeInTheDocument()
+  })
+
+  it('invites the first item on an empty day', async () => {
+    mockApi(backend({ day: { ...DAY, items: [] } }))
+
+    renderApp(DAY_PATH)
+
+    expect(
+      await screen.findByText('Nic jeszcze nie zaplanowano na ten dzień. Dodaj pierwszy element.'),
+    ).toBeInTheDocument()
+  })
+})
+
+describe('the item editor', () => {
+  async function openNewItem() {
+    const user = userEvent.setup()
+    mockApi(backend())
+    renderApp(DAY_PATH)
+    await screen.findByText('Batu Caves')
+    await user.click(screen.getByRole('button', { name: 'Dodaj element' }))
+    return user
+  }
+
+  it('creates an item', async () => {
+    const user = await openNewItem()
+
+    await user.type(screen.getByLabelText('Nazwa'), 'Kolacja')
+    await user.selectOptions(screen.getByLabelText('Typ'), 'meal')
+    await user.type(screen.getByLabelText('Godzina rozpoczęcia'), '19:00')
+    await user.click(screen.getByRole('button', { name: 'Zapisz' }))
+
+    await waitFor(() => expect(posted()).not.toBeUndefined())
+    expect(posted()).toMatchObject({
+      kind: 'meal',
+      title: 'Kolacja',
+      start_time: '19:00',
+      status: 'to_plan',
+    })
+  })
+
+  it('sends null for an empty time rather than an empty string', async () => {
+    const user = await openNewItem()
+
+    await user.type(screen.getByLabelText('Nazwa'), 'Kiedyś tego dnia')
+    await user.click(screen.getByRole('button', { name: 'Zapisz' }))
+
+    await waitFor(() => expect(posted()).not.toBeUndefined())
+    expect(posted()).toMatchObject({ start_time: null, end_time: null, end_date: null })
+  })
+
+  it('edits an existing item, pre-filled with its values', async () => {
+    const user = userEvent.setup()
+    mockApi(backend())
+    renderApp(DAY_PATH)
+
+    await user.click(await screen.findByRole('button', { name: /Batu Caves/u }))
+
+    expect(screen.getByLabelText('Nazwa')).toHaveValue('Batu Caves')
+    expect(screen.getByLabelText('Godzina rozpoczęcia')).toHaveValue('10:30')
+
+    await user.selectOptions(screen.getByLabelText('Status'), 'done')
+    await user.click(screen.getByRole('button', { name: 'Zapisz' }))
+
+    await waitFor(() => expect(patched()).not.toBeUndefined())
+    expect(patched()).toMatchObject({ status: 'done' })
+  })
+
+  it('deletes an item', async () => {
+    const user = userEvent.setup()
+    mockApi(backend())
+    renderApp(DAY_PATH)
+
+    await user.click(await screen.findByRole('button', { name: /Batu Caves/u }))
+    await user.click(screen.getByRole('button', { name: 'Usuń' }))
+
+    await waitFor(() =>
+      expect(
+        requests.some((entry) => entry.method === 'DELETE' && entry.url.includes('/items/item-1')),
+      ).toBe(true),
+    )
+  })
+
+  it('returns focus to the trigger when it closes', async () => {
+    const user = userEvent.setup()
+    mockApi(backend())
+    renderApp(DAY_PATH)
+
+    const trigger = await screen.findByRole('button', { name: /Batu Caves/u })
+    await user.click(trigger)
+    await user.click(screen.getByRole('button', { name: 'Anuluj' }))
+
+    // Without this, focus falls back to <body> and a keyboard user is dropped at
+    // the top of the page every time they close the editor.
+    await waitFor(() => expect(trigger).toHaveFocus())
+  })
+
+  it('moves focus into the dialog when it opens', async () => {
+    const user = await openNewItem()
+
+    await waitFor(() =>
+      expect(screen.getByRole('dialog').contains(document.activeElement)).toBe(true),
+    )
+    expect(user).toBeDefined()
+  })
+
+  it('closes on Escape', async () => {
+    const user = await openNewItem()
+
+    await user.keyboard('{Escape}')
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+
+  it('keeps the primary action disabled until the item has a title', async () => {
+    const user = await openNewItem()
+
+    expect(screen.getByRole('button', { name: 'Zapisz' })).toBeDisabled()
+
+    await user.type(screen.getByLabelText('Nazwa'), 'Kolacja')
+
+    expect(screen.getByRole('button', { name: 'Zapisz' })).toBeEnabled()
+  })
+
+  it('discards the draft when the edit is cancelled', async () => {
+    const user = userEvent.setup()
+    mockApi(backend())
+    renderApp(DAY_PATH)
+
+    await user.click(await screen.findByRole('button', { name: /Batu Caves/u }))
+    await user.clear(screen.getByLabelText('Nazwa'))
+    await user.type(screen.getByLabelText('Nazwa'), 'coś zupełnie innego')
+    await user.click(screen.getByRole('button', { name: 'Anuluj' }))
+
+    // Checked here, while the dialog is closed: reopening legitimately re-seeds
+    // the store from the saved item, so afterwards it is non-empty again.
+    expect(readDraft<ItemDraft>(draftKey('item-1'))).toBeUndefined()
+
+    // And the visible consequence: reopening shows the saved item, not the edit
+    // the owner threw away.
+    await user.click(screen.getByRole('button', { name: /Batu Caves/u }))
+
+    expect(screen.getByLabelText('Nazwa')).toHaveValue('Batu Caves')
+  })
+
+  it('discards the draft on Escape too', async () => {
+    const user = await openNewItem()
+
+    await user.type(screen.getByLabelText('Nazwa'), 'porzucone')
+    await user.keyboard('{Escape}')
+
+    expect(readDraft<ItemDraft>(draftKey(null))).toBeUndefined()
+  })
+
+  it('keeps the draft when the session expires mid-edit', async () => {
+    const user = userEvent.setup()
+    mockApi((url, init) => {
+      if (url.endsWith('/auth/me')) return json(200, OWNER)
+      if (url.includes('/items') && (init?.method ?? 'GET') !== 'GET') {
+        return json(401, { error: { code: 'not_authenticated', field: null } })
+      }
+      return backend()(url, init)
+    })
+
+    renderApp(DAY_PATH)
+    await screen.findByText('Batu Caves')
+    await user.click(screen.getByRole('button', { name: 'Dodaj element' }))
+    await user.type(screen.getByLabelText('Nazwa'), 'Nocleg: Memmo Alfama')
+    await user.click(screen.getByRole('button', { name: 'Zapisz' }))
+
+    // The router has taken the owner to /login and unmounted the dialog. The
+    // draft is what makes coming back not mean retyping.
+    await waitFor(() =>
+      expect(screen.getByRole('heading', { name: 'Zaloguj się' })).toBeInTheDocument(),
+    )
+    expect(readDraft<ItemDraft>(draftKey(null))?.title).toBe('Nocleg: Memmo Alfama')
+  })
+})
+
+describe('status chips', () => {
+  it('render a translated text node, not only a colour', async () => {
+    mockApi(backend())
+
+    renderApp(DAY_PATH)
+
+    // Both chips: the museum is to_plan, the hotel is done.
+    expect(await screen.findByText('Do zaplanowania')).toBeInTheDocument()
+    expect(screen.getByText('Gotowe')).toBeInTheDocument()
+  })
+
+  it('carry a data-status attribute so the status is assertable and iconifiable', async () => {
+    mockApi(backend())
+
+    renderApp(DAY_PATH)
+
+    const chip = (await screen.findByText('Gotowe')).closest('.status-chip')
+
+    expect(chip).toHaveAttribute('data-status', 'done')
+  })
+
+  it('translate into English too', async () => {
+    mockApi(backend({ owner: { ...OWNER, locale: 'en' } }))
+
+    renderApp(DAY_PATH)
+
+    expect(await screen.findByText('To plan')).toBeInTheDocument()
+    expect(screen.getByText('Done')).toBeInTheDocument()
+  })
+
+  it.each(ITEM_STATUSES)('has a non-empty label in both locales for %s', (status) => {
+    // The check `scripts/check_locales.py` structurally cannot make: it compares
+    // the two files with each other, not against the statuses the code renders.
+    expect(en.item.status[status]).toBeTruthy()
+    expect(pl.item.status[status]).toBeTruthy()
+  })
+})
+
+describe('the readiness counter', () => {
+  it('shows the fraction on the timeline', async () => {
+    mockApi(backend())
+
+    renderApp('/trips/trip-1')
+
+    expect(await screen.findByText('1 z 2 załatwionych')).toBeInTheDocument()
+  })
+
+  it('shows the zero state instead of a fraction when nothing is tracked', async () => {
+    mockApi(backend({ trip: { ...TRIP, readiness: { arranged: 0, tracked: 0 } } }))
+
+    renderApp('/trips/trip-1')
+
+    expect(await screen.findByText('Nic jeszcze nie załatwione')).toBeInTheDocument()
+    expect(screen.queryByText(/z 0/u)).not.toBeInTheDocument()
+  })
+
+  it('shows the zero state for ten items that are all still to plan', async () => {
+    // The case that proves the denominator is `tracked` and not the item count.
+    const items = Array.from({ length: 10 }, (_, index) => ({
+      ...MUSEUM,
+      id: `item-${index}`,
+      status: 'to_plan' as const,
+    }))
+    mockApi(
+      backend({
+        trip: {
+          ...TRIP,
+          readiness: { arranged: 0, tracked: 0 },
+          days: [{ id: 'day-1', date: '2026-10-11', stage_ids: [], items }],
+        },
+      }),
+    )
+
+    renderApp('/trips/trip-1')
+
+    expect(await screen.findByText('Nic jeszcze nie załatwione')).toBeInTheDocument()
+  })
+
+  it('shows the zero state in English', async () => {
+    mockApi(
+      backend({
+        owner: { ...OWNER, locale: 'en' },
+        trip: { ...TRIP, readiness: { arranged: 0, tracked: 0 } },
+      }),
+    )
+
+    renderApp('/trips/trip-1')
+
+    expect(await screen.findByText('Nothing arranged yet')).toBeInTheDocument()
+  })
+
+  it('renders no progress bar and no percentage in either state', async () => {
+    mockApi(backend())
+
+    const { container } = renderApp('/trips/trip-1')
+    await screen.findByText('1 z 2 załatwionych')
+
+    expect(container.querySelector('progress')).toBeNull()
+    expect(screen.queryByRole('progressbar')).not.toBeInTheDocument()
+    expect(screen.queryByText(/%/u)).not.toBeInTheDocument()
+  })
+
+  it('appears on the trip list row as well', async () => {
+    mockApi(backend())
+
+    renderApp('/trips')
+
+    expect(await screen.findByText('1 z 2 załatwionych')).toBeInTheDocument()
+  })
+})
+
+describe('items on the timeline', () => {
+  it('renders each day’s items on its card', async () => {
+    mockApi(backend())
+
+    renderApp('/trips/trip-1')
+
+    expect(await screen.findByText('Batu Caves')).toBeInTheDocument()
+    expect(screen.getByText('Nocleg: Memmo Alfama')).toBeInTheDocument()
+  })
+
+  it('renders a spanning item once, on its start day, with the marker', async () => {
+    mockApi(backend())
+
+    renderApp('/trips/trip-1')
+
+    await screen.findByText('Batu Caves')
+
+    expect(screen.getAllByText('Nocleg: Memmo Alfama')).toHaveLength(1)
+    expect(screen.getByText('→ 13.10')).toBeInTheDocument()
+  })
+
+  it('still invites the first item on the days that have none', async () => {
+    mockApi(backend())
+
+    renderApp('/trips/trip-1')
+
+    await screen.findByText('Batu Caves')
+
+    // Three of the four days are empty.
+    expect(screen.getAllByText('Nic jeszcze nie zaplanowano')).toHaveLength(3)
+  })
+
+  it('shows an item created in the day detail once the timeline is reopened', async () => {
+    const user = userEvent.setup()
+    let created = false
+    mockApi((url, init) => {
+      const method = (init?.method ?? 'GET').toUpperCase()
+      if (url.includes('/days/') && url.endsWith('/items') && method === 'POST') {
+        created = true
+        return json(201, { ...MUSEUM, id: 'item-new', title: 'Kolacja' })
+      }
+      if (url.includes('/days/')) {
+        return json(200, created ? { ...DAY, items: [...DAY.items, { ...MUSEUM, id: 'item-new', title: 'Kolacja' }] } : DAY)
+      }
+      return backend()(url, init)
+    })
+
+    renderApp(DAY_PATH)
+    await screen.findByText('Batu Caves')
+    await user.click(screen.getByRole('button', { name: 'Dodaj element' }))
+    await user.type(screen.getByLabelText('Nazwa'), 'Kolacja')
+    await user.click(screen.getByRole('button', { name: 'Zapisz' }))
+
+    expect(await screen.findByText('Kolacja')).toBeInTheDocument()
+  })
+
+  it('does not turn timeline items into buttons — the day detail is where they are edited', async () => {
+    mockApi(backend())
+
+    renderApp('/trips/trip-1')
+
+    await screen.findByText('Batu Caves')
+    const row = screen.getByText('Batu Caves').closest('.item-row')
+
+    expect(within(row as HTMLElement).queryByRole('button')).not.toBeInTheDocument()
+  })
+})
+
+function posted() {
+  return requests.find((entry) => entry.method === 'POST' && entry.url.endsWith('/items'))?.body
+}
+
+function patched() {
+  return requests.find((entry) => entry.method === 'PATCH' && entry.url.includes('/items/'))?.body
+}

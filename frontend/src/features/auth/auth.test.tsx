@@ -22,6 +22,25 @@ const unauthenticated = () => json(401, { error: { code: 'not_authenticated', fi
 
 const OWNER = { id: 'owner-1', email: 'owner@example.com', locale: 'pl' as const }
 
+/**
+ * The signed-in backend for the session tests.
+ *
+ * These tests are about the session, not about trips, so `/trips` answers with an
+ * empty list. It still has to answer *something* shaped like a list: the guarded
+ * screen is now the real trip list, which calls the endpoint as soon as it mounts.
+ */
+const signedIn = (url: string) =>
+  url.endsWith('/trips') ? json(200, []) : json(200, OWNER)
+
+/**
+ * Wait until the guarded screen is on screen.
+ *
+ * Phase 1 keyed this on the owner's e-mail, which the placeholder screen printed.
+ * The real trip list does not show it, so the signal is now the list's own
+ * heading — the thing an owner actually lands on after signing in.
+ */
+const guardedScreen = () => screen.findByRole('heading', { name: 'Podróże', level: 1 })
+
 function mockApi(handler: Handler) {
   vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL, init?: RequestInit) =>
     Promise.resolve(handler(String(input), init)),
@@ -60,11 +79,11 @@ describe('the route guard', () => {
   })
 
   it('renders the guarded screen for a signed-in owner', async () => {
-    mockApi(() => json(200, OWNER))
+    mockApi((url) => signedIn(url))
 
     renderApp('/trips')
 
-    expect(await screen.findByText('owner@example.com')).toBeInTheDocument()
+    expect(await guardedScreen()).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'Zaloguj się' })).not.toBeInTheDocument()
   })
 
@@ -81,15 +100,15 @@ describe('the route guard', () => {
 describe('the login form', () => {
   it('signs in and lands on the path the visitor was going to', async () => {
     const user = userEvent.setup()
-    let signedIn = false
+    let isSignedIn = false
 
     mockApi((url, init) => {
       if (url.endsWith('/auth/login')) {
-        signedIn = true
+        isSignedIn = true
         return noContent()
       }
       if (url.endsWith('/auth/me') && (init?.method ?? 'GET') === 'GET') {
-        return signedIn ? json(200, OWNER) : unauthenticated()
+        return isSignedIn ? signedIn(url) : unauthenticated()
       }
       return json(404, { error: { code: 'not_found', field: null } })
     })
@@ -101,18 +120,18 @@ describe('the login form', () => {
     await user.click(screen.getByRole('button', { name: 'Zaloguj się' }))
 
     // The return path is preserved: sign-in lands back on /trips, not a default.
-    expect(await screen.findByText('owner@example.com')).toBeInTheDocument()
+    expect(await guardedScreen()).toBeInTheDocument()
   })
 
   it('sends the credentials to the login endpoint', async () => {
     const user = userEvent.setup()
-    let signedIn = false
+    let isSignedIn = false
     mockApi((url) => {
       if (url.endsWith('/auth/login')) {
-        signedIn = true
+        isSignedIn = true
         return noContent()
       }
-      return signedIn ? json(200, OWNER) : unauthenticated()
+      return isSignedIn ? signedIn(url) : unauthenticated()
     })
 
     renderApp('/login')
@@ -175,18 +194,18 @@ describe('the login form', () => {
 describe('sign-out', () => {
   it('returns to the login screen and clears drafts', async () => {
     const user = userEvent.setup()
-    let signedIn = true
+    let isSignedIn = true
 
     mockApi((url) => {
       if (url.endsWith('/auth/logout')) {
-        signedIn = false
+        isSignedIn = false
         return noContent()
       }
-      return signedIn ? json(200, OWNER) : unauthenticated()
+      return isSignedIn ? signedIn(url) : unauthenticated()
     })
 
     renderApp('/trips')
-    await screen.findByText('owner@example.com')
+    await guardedScreen()
 
     saveDraft('item:1', { title: 'a private plan' })
     await user.click(screen.getByRole('button', { name: 'Wyloguj się' }))
@@ -197,17 +216,17 @@ describe('sign-out', () => {
 
   it('sends the CSRF header on the logout request', async () => {
     const user = userEvent.setup()
-    let signedIn = true
+    let isSignedIn = true
     mockApi((url) => {
       if (url.endsWith('/auth/logout')) {
-        signedIn = false
+        isSignedIn = false
         return noContent()
       }
-      return signedIn ? json(200, OWNER) : unauthenticated()
+      return isSignedIn ? signedIn(url) : unauthenticated()
     })
 
     renderApp('/trips')
-    await screen.findByText('owner@example.com')
+    await guardedScreen()
     await user.click(screen.getByRole('button', { name: 'Wyloguj się' }))
 
     const call = vi.mocked(fetch).mock.calls.find(([url]) => String(url).endsWith('/auth/logout'))
@@ -219,21 +238,20 @@ describe('sign-out', () => {
 describe('a session that expires mid-use', () => {
   it('routes to the login screen from anywhere, and keeps the draft', async () => {
     const user = userEvent.setup()
-    let signedIn = true
+    let isSignedIn = true
 
-    mockApi((url) => {
-      if (url.endsWith('/auth/me')) {
-        return signedIn ? json(200, OWNER) : unauthenticated()
-      }
-      return unauthenticated()
-    })
+    // Every endpoint follows the same flag: the point is that the session dies on
+    // the server mid-use, not that one particular route is broken. Answering 401
+    // from the start would collapse the session on the trip list's own first call,
+    // before the test has anything to observe.
+    mockApi((url) => (isSignedIn ? signedIn(url) : unauthenticated()))
 
     renderApp('/trips')
-    await screen.findByText('owner@example.com')
+    await guardedScreen()
 
     // The owner has unsaved input open when the session dies on the server.
     saveDraft('item:42', { title: 'Nocleg: Memmo Alfama' })
-    signedIn = false
+    isSignedIn = false
 
     // Any request answering 401 must be noticed, not only by whichever component
     // happened to make it.
@@ -242,13 +260,13 @@ describe('a session that expires mid-use', () => {
   })
 
   it('a 401 from any request collapses the session', async () => {
-    let signedIn = true
-    mockApi((url) => (signedIn && url.endsWith('/auth/me') ? json(200, OWNER) : unauthenticated()))
+    let isSignedIn = true
+    mockApi((url) => (isSignedIn ? signedIn(url) : unauthenticated()))
 
     renderApp('/trips')
-    await screen.findByText('owner@example.com')
+    await guardedScreen()
 
-    signedIn = false
+    isSignedIn = false
     const { request } = await import('../../api/client')
     await expect(request('/auth/me')).rejects.toThrow()
 
@@ -309,11 +327,11 @@ describe('the language choice', () => {
       if (url.endsWith('/auth/me') && init?.method === 'PATCH') {
         return json(200, { ...OWNER, locale: 'en' })
       }
-      return json(200, OWNER)
+      return signedIn(url)
     })
 
     renderApp('/trips')
-    await screen.findByText('owner@example.com')
+    await guardedScreen()
 
     await user.selectOptions(screen.getByRole('combobox'), 'en')
 
@@ -335,11 +353,11 @@ describe('the language choice', () => {
       if (url.endsWith('/auth/me') && init?.method === 'PATCH') {
         return json(503, { error: { code: 'service_unavailable', field: null } })
       }
-      return json(200, OWNER)
+      return signedIn(url)
     })
 
     renderApp('/trips')
-    await screen.findByText('owner@example.com')
+    await guardedScreen()
 
     await user.selectOptions(screen.getByRole('combobox'), 'en')
 
@@ -364,13 +382,13 @@ describe('the language choice', () => {
 
 describe('the login screen after an expiry', () => {
   it('says why the owner is back on it', async () => {
-    let signedIn = true
-    mockApi((url) => (signedIn && url.endsWith('/auth/me') ? json(200, OWNER) : unauthenticated()))
+    let isSignedIn = true
+    mockApi((url) => (isSignedIn ? signedIn(url) : unauthenticated()))
 
     renderApp('/trips')
-    await screen.findByText('owner@example.com')
+    await guardedScreen()
 
-    signedIn = false
+    isSignedIn = false
     const { request } = await import('../../api/client')
     await expect(request('/auth/me')).rejects.toThrow()
 

@@ -6,7 +6,7 @@ Instructions for coding agents working in this repository. Every `om-*` skill re
 
 **trip_planner** is an intelligent trip planner: a web application that helps a traveller go from a rough intention ("a week somewhere warm in May, two people, moderate budget") to a concrete, bookable day-by-day itinerary. It is a Python backend serving a React single-page frontend, and it is **multilingual from day one — Polish and English are both first-class**, not an afterthought bolted on later.
 
-> **Status: skeleton.** `backend/` and `frontend/` are scaffolded and the validation gate is green; owner authentication is in place. Trips, days, items, the readiness counter and the filter are **not built yet** — they are Phases 2 to 4 of `.ai/specs/2026-09-05-walking-skeleton.md`. Rows still marked **TODO** must be filled in by the first agent or human that establishes the convention — do not invent a rule to fill a gap; record what you actually built.
+> **Status: walking skeleton complete.** All four phases of `.ai/specs/2026-09-05-walking-skeleton.md` have landed: the validation gate is green, owner authentication is in place, and a trip can be created with multiple stages, filled in day by day with items carrying the three statuses, read through the readiness counter, and filtered to what is outstanding. What is deliberately **not** built — chat and the AI assistant, sharing, attachments and reservation documents, cost data — was cut from this milestone by assumption A05, not abandoned; the specs for the last two are in flight. Rows still marked **TODO** must be filled in by the first agent or human that establishes the convention — do not invent a rule to fill a gap; record what you actually built.
 
 ## Stack
 
@@ -24,6 +24,12 @@ Instructions for coding agents working in this repository. Every `om-*` skill re
 
 ```
 backend/                 Python service (uv project; pyproject.toml + uv.lock)
+  trip_planner/
+    api/                 FastAPI routers, request/response models
+    domain/              Pure business rules — no database, no HTTP
+    db/                  SQLAlchemy models and session handling
+    security/            Passwords, sessions, CSRF, rate limiting
+  migrations/            Alembic revisions, one per phase
   tests/                 pytest suite
 frontend/                React SPA (npm; package.json + package-lock.json)
   src/locales/           en.json / pl.json (or en/ and pl/ namespace dirs)
@@ -50,7 +56,7 @@ BACKWARD_COMPATIBILITY.md  Protected contract surfaces
 | Frontend tests | `frontend/src/**` colocated tests | Run with `(cd frontend && npm run test -- --run)`. |
 | Translations / i18n / any user-visible copy | `frontend/src/locales/`, `scripts/check_locales.py` | See **Multilingual** below. Adding an English key without its Polish counterpart fails the validation gate. |
 | Dependencies | `backend/pyproject.toml` + `uv.lock`, `frontend/package.json` + `package-lock.json` | Both lockfiles are committed and must be updated in the same commit as the manifest. Label the PR `dependencies`. |
-| Trip-planning domain logic (itineraries, routing, scheduling, recommendations) | `.ai/specs/` | This is the product's core. Behavior changes need a spec before code — see `SDLC.md`, Definition of Ready. TODO: point at the domain module once it exists. |
+| Trip-planning domain logic (itineraries, routing, scheduling, recommendations) | `backend/trip_planner/domain/`, then `.ai/specs/` | This is the product's core. The rules that are not CRUD live in `domain/` as pure functions with their own unit tests — day generation (`days.py`), the day-to-stage derivation (`stages.py`), item span validation and ordering (`items.py`), and the readiness arithmetic (`readiness.py`). Put a new rule there rather than in a request handler, so it is testable without a database. Behavior changes need a spec before code — see `SDLC.md`, Definition of Ready. |
 | External APIs (maps, places, weather, booking, LLM providers) | TODO — integration module not yet created | Never commit API keys. Credentials come from environment variables; document each new one in the README and in `.ai/qa/test-env.env` (gitignored) for QA. Every external call needs a timeout and a defined failure mode — a dead third party must not take down a page. |
 | CI | `.github/workflows/validation-gate.yml` | Runs the same six commands as the validation gate below, in the same order. When the gate changes, change the workflow in the same PR. |
 | The agent pipeline itself (labels, review flow, QA gate) | `SDLC.md`, `.ai/agentic.config.json` | Change the config and `SDLC.md` together. Per-skill repo overrides go in `.ai/skills/<skill-name>/SKILL.md`. |
