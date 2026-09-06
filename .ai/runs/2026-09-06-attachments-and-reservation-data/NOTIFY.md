@@ -249,3 +249,40 @@
 - **Run paused here for user review**, per the executor-dispatch safety checkpoint (~20 consecutive
   successful Steps). 21 of 31 Steps are done; Phases 1 and 2 are complete and independently
   shippable. Nothing is blocked and nothing awaits an answer.
+
+## 2026-09-06T22:58:00Z — Step 3.7 — the brief's arranging-one-item flow, walked end to end: **PASS**
+- **The flow ran to its end in the running application**, in Polish and then in English:
+  open a day → open an item → set its details → attach `voucher-batu-caves.pdf` → save
+  `SX-9912L` / `1250.00 PLN` → move to *gotowe* → **the readiness counter moved from
+  `0 z 1 załatwionych` to `1 z 1 załatwionych`** (`1 of 1 arranged` under `en`). **R04 is met.**
+  Evidence: eight screenshots and a leg-by-leg log in `step-3.7-artifacts/`.
+- **The three sceptical questions this run's earlier walks taught us to ask, answered.**
+  The confirmation number and the cost **survive a full page reload** (checked twice, once before
+  and once after the status change). Moving to *gotowe* **really moved the counter**, with
+  reservation data present — nothing about the reservation fields conditioned it. **Nothing
+  nagged**: `[role=alert]` was empty at every leg, the dialog count never exceeded the one dialog
+  the click opened, and `details.reservation-panel.open` was `false` on first render, after the
+  upload landed, after the status change and after two reloads with data in it.
+- **What is committed is a full-app integration test, not browser E2E** —
+  `frontend/src/features/trips/arrangingOneItem.test.tsx`, in the pattern
+  `statusPathIndependence.test.tsx` established (real `App`, `MemoryRouter`, a `fetch` stub that
+  *stores* what it is sent so a re-read is a real round trip, and the shared `FakeXhr` for the
+  upload). This repository has no browser-driven runner and this Step did not add one; the browser
+  half of the evidence is the walk above. Verified sensitive by three mutations: forcing the
+  disclosure open, and dropping the confirmation number from the draft and from the `PATCH`, each
+  fail it.
+- **Finding, out of scope, no action taken.** `formatCurrency` in `features/trips/format.ts` has
+  **no call site in the application** — only `format.test.ts`. The saved cost is shown only in the
+  editable input, as the raw wire string `1250.00`; **`1 250,00 zł` never appears on screen.**
+  Arguably correct: the spec's UI/UX says the opened panel shows "three controls … nothing else"
+  and that costs are not shown on the timeline, so it names no display surface. But the
+  cross-cutting rule "money goes through `Intl`, never concatenation" currently governs nothing,
+  and Step 3.4's green test proves a function no user can reach. Worth a decision before the PR
+  claims the rule is implemented.
+- **Harness notes for the next walk.** `agent-browser` cannot drive `input[type=date]` **or**
+  `input[type=time]` — `fill`, `type`, `keyboard type` and per-segment `press` all leave the value
+  empty, so the trip was created through the REST API and the item carries no start time. Separately,
+  `find role button "<label>" click` silently no-ops on this app's dialog buttons while
+  `click 'button[type=submit]'` works; a stuck dialog after it is the harness, not the app.
+- Gate: all eight commands green — backend **635 passed, 0 skipped**, frontend **265 passed**
+  (up from 264), build clean, all three `check_*.py` OK.
