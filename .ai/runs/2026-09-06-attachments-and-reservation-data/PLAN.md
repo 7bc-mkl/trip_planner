@@ -28,12 +28,12 @@
 | 2 | 2.3 | The day documents panel on `/trips/:id/days/:date` | dispatch | done | `95aac47` |
 | 2 | 2.4 | The item attachment strip inside the item editor | dispatch | done | `2672e2f` |
 | 2 | 2.5 | Download and delete, with a confirmation dialog naming the file | dispatch | done | `d83e6eb` |
-| 2 | 2.2-review-fix-1 | The upload announcement re-renders on locale change and tells the truth about failures | dispatch:capable | done | `e530dee` |
-| 2 | 2.2-review-fix-2 | The completed upload queue clears instead of shadowing the attachment list | dispatch:capable | done | `360d7bb` |
-| 2 | 2.6 | The attachment-count ICU plural key in both locales | dispatch:cheap | done | `cfbcde8` |
-| 2 | 2.7 | The paperclip badge on the timeline's item cards | dispatch:cheap | done | `fa00226` |
+| 2 | 2.2-review-fix-1 | The upload announcement re-renders on locale change and tells the truth about failures | dispatch:capable | done | `038ea3c` |
+| 2 | 2.2-review-fix-2 | The completed upload queue clears instead of shadowing the attachment list | dispatch:capable | done | `8e6da92` |
+| 2 | 2.6 | The attachment-count ICU plural key in both locales | dispatch:cheap | done | `cfe242c` |
+| 2 | 2.7 | The paperclip badge on the timeline's item cards | dispatch:cheap | done | `4a2c751` |
 | 2 | 2.8 | Preview-surface reconciliation (no-op unless `features/preview/` exists) | inline | done | `cd52db1` |
-| 2 | 2.3-review-fix-1 | The day panel's post-upload refresh cannot be overwritten by a stale in-flight response | dispatch:capable | done | `45f695a` |
+| 2 | 2.3-review-fix-1 | The day panel's post-upload refresh cannot be overwritten by a stale in-flight response | dispatch:capable | done | `02339d2` |
 | 3 | 3.1 | The `item` reservation columns on their own Alembic revision | dispatch:capable | todo | — |
 | 3 | 3.2 | The `ReservationPanel` disclosure inside the item editor | dispatch | todo | — |
 | 3 | 3.3 | The disclosure's placement and its never-auto-expanded guarantee | dispatch | todo | — |

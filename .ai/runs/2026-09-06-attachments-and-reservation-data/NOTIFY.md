@@ -218,3 +218,34 @@
   own scope note it is left as a deferred minor rather than widening the Step.
 - Gate: `typecheck`, `test --run` (**232 passed**, up from 229), `build`, `check_locales.py`,
   `check_css_tokens.py`, `check_contrast.py` — all green.
+
+## 2026-09-06T21:55:00Z — checkpoint 4 (Phase 2 closes; run pauses at the safety checkpoint)
+- Steps covered: `2.2-review-fix-1`, `2.2-review-fix-2`, `2.6`, `2.7`, `2.8`, and the
+  `2.3-review-fix-1` this checkpoint produced (`bdcfa5b..02339d2`).
+- Gate: all eight commands green — 600 backend / 0 skips, **232** frontend tests, build clean.
+- UI re-verification: **all four checkpoint-3 defects confirmed FIXED in the running application**,
+  in both locales, rather than inferred from the suite.
+- **A fifth, worse defect was found by the same walk, and fixed.** A ~4.3 MB upload to the day panel
+  announced success and **never appeared in the list** (35 s DOM poll, reproduced 4/4) — the file was
+  on the server, so to a user this is indistinguishable from silent data loss. Root cause:
+  `DayDetailPage.load()` let whichever day response arrived last win; a refetch issued before the
+  upload answered after it and overwrote the fresh list, while the queue row had already retired
+  against the good render. Zero representations. Size-dependent because a long upload widens the
+  window; the item strip was immune because it appends from its own answer.
+  **This is precisely the "appears in neither" failure mode `2.2-review-fix-2` was warned to avoid,
+  and it happened anyway** — the strongest argument this run has produced for walking the UI at
+  every checkpoint instead of trusting a green suite.
+- Fix `2.3-review-fix-1`: a monotonic request tag; a superseded response is dropped on success and
+  on failure alike. Failing-first verified, and the executor reverted its optimistic append to prove
+  the tag alone carries the fix. Confirmed by **8 large uploads, 0 failures**, including a 4.3 MB
+  upload concurrent with an item save (network trace shows the two overlapping day GETs) and a
+  9.3 MB worst case.
+- 2.6 verified in the browser: Polish `few` (2 pliki) and `many` (5 plików) both render. 2.7's
+  "no money on the timeline" is currently *trivially* true — Phase 3 has not run — and must be
+  re-checked afterwards.
+- Environment: **the main checkout's `.ai/qa/test-env.env` holds a stale password**; the worktree
+  copy is the live one. Cost the confirmation walk ~10 minutes of 401s. Also: `agent-browser`'s
+  `fill`/`type` do not work on `input[type=date]` segment spinbuttons.
+- **Run paused here for user review**, per the executor-dispatch safety checkpoint (~20 consecutive
+  successful Steps). 21 of 31 Steps are done; Phases 1 and 2 are complete and independently
+  shippable. Nothing is blocked and nothing awaits an answer.
