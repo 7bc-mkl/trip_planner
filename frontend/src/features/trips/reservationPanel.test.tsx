@@ -353,6 +353,54 @@ describe('the reservation panel wired into the real item editor', () => {
     })
   })
 
+  /**
+   * Step 3.4: the currency field defaults to `PLN` rather than blank, on
+   * both a brand-new item and an existing one that never had a cost.
+   */
+  it('defaults the currency field to PLN on a fresh item', async () => {
+    const user = userEvent.setup()
+    renderApp()
+    await screen.findByText('Batu Caves')
+    await user.click(screen.getByRole('button', { name: pl.item.add }))
+
+    await user.click(screen.getByText(pl.item.reservation.heading))
+    expect(screen.getByLabelText(pl.item.reservation.currencyLabel)).toHaveValue('PLN')
+  })
+
+  it('defaults the currency field to PLN on an existing item with no cost yet', async () => {
+    const user = userEvent.setup()
+    await openItem(user)
+
+    await user.click(screen.getByText(pl.item.reservation.heading))
+    expect(screen.getByLabelText(pl.item.reservation.currencyLabel)).toHaveValue('PLN')
+  })
+
+  /**
+   * The gap Step 3.2 deliberately left open: `reservationInput` clears the
+   * whole cost pair the moment either half is blank, which used to mean a
+   * cost typed with no currency was silently dropped rather than saved.
+   * With the currency now defaulting to `PLN` (`itemDraft.ts`), typing only
+   * the amount and touching nothing else must still persist — this is the
+   * test that pins that down, rather than trusting the default by
+   * inspection alone.
+   */
+  it('persists a typed amount under the default PLN currency when the currency field is never touched', async () => {
+    const user = userEvent.setup()
+    await openItem(user)
+
+    await user.click(screen.getByText(pl.item.reservation.heading))
+    expect(screen.getByLabelText(pl.item.reservation.currencyLabel)).toHaveValue('PLN')
+    await user.type(screen.getByLabelText(pl.item.reservation.costLabel), '249.00')
+
+    await user.click(screen.getByRole('button', { name: pl.item.save }))
+
+    await waitFor(() => expect(patchCalls).toHaveLength(1))
+    expect(patchCalls[0]).toMatchObject({
+      cost_amount: '249.00',
+      cost_currency: 'PLN',
+    })
+  })
+
   it('sits directly beneath the item attachment list, with nothing between them', async () => {
     const user = userEvent.setup()
     await openItem(user)

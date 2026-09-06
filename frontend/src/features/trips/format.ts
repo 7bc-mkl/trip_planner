@@ -182,3 +182,34 @@ export function splitByteSize(bytes: number): { value: number; unit: ByteSizeUni
   }
   return { value: bytes, unit: 'B' }
 }
+
+/**
+ * A stored reservation cost, rendered as money through **one**
+ * `Intl.NumberFormat` call — the spec's cross-cutting rule that a currency
+ * goes through `Intl`, never through concatenation. `amount` arrives as the
+ * wire's decimal string (`NUMERIC(12,2)` is never a JS `float`; see
+ * `domain/money.py`), so turning it into a number happens here, at the one
+ * point it is about to be rendered, and nowhere else.
+ *
+ * This call produces both required shapes: `1 250,00 zł` under `pl` —
+ * Polish groups thousands with a *non-breaking* space, not a plain one, so
+ * a caller comparing this output should match that rather than fight it —
+ * and `PLN 1,250.00` under `en`, where `PLN` has no currency glyph `Intl`
+ * knows, so it falls back to the ISO code as the currency's own display
+ * form. Neither shape is assembled by hand.
+ *
+ * `useGrouping: 'always'` is not decoration: Polish's CLDR data sets a
+ * `minimumGroupingDigits` of 2, so the locale-default `'auto'` silently
+ * drops the separator on any four-digit amount (`1250,00 zł`, no space) and
+ * only groups from five digits up — which would make this exact, spec-cited
+ * example fail to reproduce on the very Node/ICU build this runs on.
+ * `'always'` is the one option that turns grouping back on without
+ * hand-rolling the separator.
+ */
+export function formatCurrency(amount: string, currency: string, locale: string): string {
+  return new Intl.NumberFormat(locale, {
+    style: 'currency',
+    currency,
+    useGrouping: 'always',
+  }).format(Number(amount))
+}

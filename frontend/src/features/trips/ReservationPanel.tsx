@@ -32,9 +32,13 @@ export type ReservationValue = {
  * against what the item **ends up holding**. Rather than send only the one
  * half this edit touched, both halves are cleared together the moment
  * *either* is blank — the rule that keeps ordinary use inside the pair the
- * `CHECK` allows, with no default currency yet to lean on (Step 3.4 adds
- * one; until it lands, a cost typed with no currency is silently not saved
- * rather than answering a 422 the user never asked for).
+ * `CHECK` allows. `itemDraft.ts`'s `draftOf` defaults the currency field to
+ * `PLN` for exactly this reason (Step 3.4, assumption A7): with the currency
+ * pre-filled, typing only an amount no longer leaves either half blank, so
+ * the pair persists rather than being silently dropped. The one way a typed
+ * amount can still vanish is the user *clearing* the pre-filled currency by
+ * hand while an amount is present — a deliberate edit of a field they were
+ * never asked to touch, not the ordinary path this rule protects.
  */
 export function reservationInput(value: ReservationValue): {
   confirmation_number: string | null
