@@ -14,12 +14,12 @@
 
 | Phase | Step | Title | Exec | Status | Commit |
 |-------|------|-------|------|--------|--------|
-| 1 | 1.1 | Load Plus Jakarta Sans (spec step 1) | dispatch:cheap | done | e60b249 |
-| 1 | 1.2 | Transcribe the token layer into `styles/tokens.css` (spec step 2) | group:A | done | pending |
-| 1 | 1.3 | Add the compatibility bridge and the token-completeness check (spec step 3) | group:A | done | pending |
-| 1 | 1.4 | Split the base layer into `styles/base.css` (spec step 4) | dispatch | done | pending |
-| 1 | 1.5 | Contrast script over the token file (spec step 5) | dispatch:cheap | done | pending |
-| 1 | 1.6 | Phase-1 screenshot set — five routes × two locales (spec step 6) | inline | done | pending |
+| 1 | 1.1 | Load Plus Jakarta Sans (spec step 1) | dispatch:cheap | done | 04a8ba8 |
+| 1 | 1.2 | Transcribe the token layer into `styles/tokens.css` (spec step 2) | group:A | done | 57c3081 |
+| 1 | 1.3 | Add the compatibility bridge and the token-completeness check (spec step 3) | group:A | done | 53898f6 |
+| 1 | 1.4 | Split the base layer into `styles/base.css` (spec step 4) | dispatch | done | 8fe1d89 |
+| 1 | 1.5 | Contrast script over the token file (spec step 5) | dispatch:cheap | done | ec3851b |
+| 1 | 1.6 | Phase-1 screenshot set — five routes × two locales (spec step 6) | inline | done | 5722517 |
 | 2 | 2.1 | Split `components.css` and rewrite the button recipes (spec step 7) | group:B | todo | — |
 | 2 | 2.2 | Rewrite the input, select, textarea and date recipes (spec step 8) | group:B | todo | — |
 | 2 | 2.3 | Rewrite the status chip recipes and add the dot (spec step 9) | group:B | todo | — |

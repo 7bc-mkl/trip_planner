@@ -31,3 +31,11 @@
 - `scripts/check_contrast.py`'s pair table now checks `--field-border` on `--surface` (large, 3:1) in place of `--hairline-strong` on `--surface`. All 15 declared pairs pass; table saved to `contrast-table.txt` in this run folder and committed.
 - Gate wiring landed in the same commit: `.ai/agentic.config.json` (`check_contrast.py` right after `check_css_tokens.py`), `.github/workflows/validation-gate.yml`, `AGENTS.md`, `SDLC.md`, `README.md` — the command count is now "eight" everywhere it was "seven".
 - `PLAN.md` row `1.5` flipped to `done`, `Commit` cell left as the literal word `pending`.
+
+## 2026-09-06T13:33:06Z — checkpoint 1 (Steps 1.1–1.6)
+- Phase 1 complete. Gate green: locales, css-tokens (244 refs), contrast (15/15 pairs), typecheck, 127 tests, build. Backend commands not run — no backend file is touched; they run in full at the final gate.
+- Step review (`checkpoint` mode) over `origin/main..5722517`: no blocker, no major. One minor (the bridge re-declares `--radius-md` at the same value, deliberate and deleted at 2.5) and one nit (PLAN's Scope line still says `wght` + `latin-ext`), both recorded in `checkpoint-1-checks.md` and deferred to the final review.
+- UI verification ran: ten PNGs, five routes × two locales, in `checkpoint-1-artifacts/`. New palette and typeface everywhere, no layout movement.
+- **Evidence defect found and fixed in-checkpoint:** the first pass photographed one locale twice, because signed in the owner's stored locale wins over the one chosen on `/login` (R01). The capture script now switches locale again through the header switch after sign-in; the set was re-captured.
+- **Observation, out of scope:** `POST /auth/login` answers 204 before its transaction commits (FastAPI exits the `get_db` yield dependency after the response is sent), so a fast client is answered 401 by a server that already accepted it. `qa-seed.py` polls for session visibility. `backend/` is an explicit non-goal of this spec, so this is surfaced on the PR rather than fixed here.
+- Decision: executors write the literal `pending` into the Tasks table's `Commit` cell and the main session fills the real short SHA at each checkpoint — writing a commit's own SHA into itself is a regress, and amend-chasing produced one wrong cell at Step 1.1 before the convention was set.
