@@ -108,6 +108,12 @@
     "allDay": "Cały dzień",
     "spansUntil": "→ {date}",
     "attachmentCount": "{count, plural, one {# plik} few {# pliki} many {# plików} other {# pliku}}",
+    "reservation": {
+      "heading": "Dane rezerwacji (opcjonalne)",
+      "confirmationNumberLabel": "Numer potwierdzenia",
+      "costLabel": "Koszt",
+      "currencyLabel": "Waluta"
+    },
     "kind": {
       "accommodation": "Nocleg",
       "transport": "Transport",

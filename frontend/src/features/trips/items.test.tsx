@@ -47,6 +47,9 @@ const MUSEUM = {
   title: 'Batu Caves',
   notes: 'bring water',
   attachment_count: 0,
+  confirmation_number: null,
+  cost_amount: null,
+  cost_currency: null,
   attachments: [],
 }
 
@@ -61,6 +64,9 @@ const HOTEL = {
   title: 'Nocleg: Memmo Alfama',
   notes: null,
   attachment_count: 0,
+  confirmation_number: null,
+  cost_amount: null,
+  cost_currency: null,
   attachments: [],
 }
 

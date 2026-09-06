@@ -108,6 +108,12 @@
     "allDay": "All day",
     "spansUntil": "→ {date}",
     "attachmentCount": "{count, plural, one {# file} other {# files}}",
+    "reservation": {
+      "heading": "Reservation details (optional)",
+      "confirmationNumberLabel": "Confirmation number",
+      "costLabel": "Cost",
+      "currencyLabel": "Currency"
+    },
     "kind": {
       "accommodation": "Accommodation",
       "transport": "Transport",

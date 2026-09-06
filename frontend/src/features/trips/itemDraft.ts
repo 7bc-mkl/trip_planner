@@ -21,6 +21,10 @@ export type ItemDraft = {
   endDate: string
   title: string
   notes: string
+  /** The reservation trio `ReservationPanel` reads and writes — see its own doc. */
+  confirmationNumber: string
+  costAmount: string
+  costCurrency: string
 }
 
 /** The key a draft is stored under. `new` for an item that does not exist yet. */
@@ -38,5 +42,8 @@ export function draftOf(item: Item | null): ItemDraft {
     endDate: item?.end_date ?? '',
     title: item?.title ?? '',
     notes: item?.notes ?? '',
+    confirmationNumber: item?.confirmation_number ?? '',
+    costAmount: item?.cost_amount ?? '',
+    costCurrency: item?.cost_currency ?? '',
   }
 }

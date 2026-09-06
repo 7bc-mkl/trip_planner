@@ -52,6 +52,9 @@ function item(overrides: Partial<Item> = {}): Item {
     notes: null,
     attachment_count: 0,
     attachments: [],
+    confirmation_number: null,
+    cost_amount: null,
+    cost_currency: null,
     ...overrides,
   }
 }

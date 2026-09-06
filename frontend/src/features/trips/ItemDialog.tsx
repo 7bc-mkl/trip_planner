@@ -10,6 +10,7 @@ import { clearDraft, readDraft, saveDraft } from '../auth/draftStore'
 import { ItemAttachments } from './ItemAttachments'
 import { draftKey, draftOf } from './itemDraft'
 import type { ItemDraft } from './itemDraft'
+import { ReservationPanel, reservationInput } from './ReservationPanel'
 import { STATUS_GLYPH } from './statusGlyph'
 
 /**
@@ -35,7 +36,9 @@ import { STATUS_GLYPH } from './statusGlyph'
  *
  * **Hosts `ItemAttachments`**, the strip that lets files be pinned to this
  * item — see that module's own doc for the new-item case, where `item` is
- * `null` and there is nothing yet to pin a file to.
+ * `null` and there is nothing yet to pin a file to. **And `ReservationPanel`**,
+ * the collapsed disclosure beneath it — see that module's own doc for why a
+ * create never sends the trio it edits.
  */
 
 const FOCUSABLE =
@@ -154,6 +157,9 @@ export function ItemDialog({
         end_date: draft.endDate === '' ? null : draft.endDate,
         title: draft.title.trim(),
         notes: draft.notes.trim() === '' ? null : draft.notes.trim(),
+        // Only on an edit: a create's `ItemCreate` takes none of these three
+        // and forbids extra keys — see `reservationInput`'s own doc.
+        ...(item === null ? {} : reservationInput(draft)),
       })
       // Cleared only on success: a failed save must leave the draft to retry.
       clearDraft(key)
@@ -281,6 +287,11 @@ export function ItemDialog({
             item={item}
             onUploaded={onUploaded}
             onDeleted={onAttachmentDeleted}
+          />
+
+          <ReservationPanel
+            value={draft}
+            onChange={(next) => setDraft({ ...draft, ...next })}
           />
 
           <div className="dialog__actions">
