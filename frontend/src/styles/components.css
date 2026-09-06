@@ -30,7 +30,8 @@
  */
 
 .filter-bar,
-.item-row {
+.item-row,
+.attachment-row {
   border: 1px solid var(--hairline);
   border-radius: var(--radius-lg);
   background: var(--surface);
@@ -627,6 +628,80 @@ textarea:disabled {
   color: var(--text-muted);
   font: var(--type-body-sm);
   letter-spacing: var(--tracking-body-sm);
+}
+
+/* --- day attachments (`features/trips/DayAttachments.tsx`) ------------
+ *
+ * The panel below the item list on the day detail. Its heading is a bare
+ * `<h2>` — the base layer already sets `--type-headline-lg` on every `h2` —
+ * and its empty state is the shipped `.empty-state`/`.empty-state--inline`
+ * recipe rather than a bespoke one.
+ */
+
+.day-attachments {
+  margin-top: var(--space-xl);
+}
+
+.day-attachments__heading {
+  margin: 0 0 var(--space-sm);
+}
+
+.day-attachments__list {
+  display: grid;
+  gap: var(--space-xs);
+  margin: 0 0 var(--space-md);
+  padding: 0;
+  list-style: none;
+}
+
+/* One attachment: the card recipe at `--radius-lg` (declared with
+   `.item-row` above), a preview or a glyph, the filename and the size. */
+.attachment-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+}
+
+/* The original file, never a server-generated thumbnail (A12) — scaled down
+   by the browser in CSS alone, and lazy-loaded by the `<img loading="lazy">`
+   attribute in the markup, not by anything here. */
+.attachment-row__preview {
+  flex: none;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: var(--radius-md);
+  object-fit: cover;
+}
+
+/* The PDF glyph's tile, matching `.item-row__icon`'s shape. */
+.attachment-row__glyph {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+  color: var(--text-muted);
+}
+
+.attachment-row__meta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2xs);
+  min-width: 0;
+}
+
+.attachment-row__name {
+  overflow-wrap: anywhere;
+  font: var(--type-body-md);
+}
+
+.attachment-row__size {
+  color: var(--text-muted);
+  font: var(--type-label-md);
+  letter-spacing: var(--tracking-label-md);
 }
 
 /* --- the item editor dialog --- */

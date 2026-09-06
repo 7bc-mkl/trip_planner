@@ -66,6 +66,7 @@ const DAY = {
   date: '2026-10-11',
   stages: [STAGE],
   items: [MUSEUM, HOTEL],
+  attachments: [],
   previous_date: '2026-10-10',
   next_date: '2026-10-12',
 }

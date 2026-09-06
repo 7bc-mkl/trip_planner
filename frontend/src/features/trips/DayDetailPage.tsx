@@ -9,6 +9,7 @@ import { fetchTrip } from '../../api/trips'
 import type { TripSummary } from '../../api/trips'
 import { Icon } from '../../components/Icon'
 import { AppShell } from './AppShell'
+import { DayAttachments } from './DayAttachments'
 import { ItemDialog } from './ItemDialog'
 import { ItemRow } from './ItemRow'
 import { formatDate, formatDateRange, stageLabel } from './format'
@@ -19,8 +20,10 @@ import { formatDate, formatDateRange, stageLabel } from './format'
  * Adapted from `szczeg_y_dnia_i_aktywno_ci`. Kept: the breadcrumb, the day
  * heading with its derived stages, prev/next navigation, the ordered item list
  * and the editor dialog. Dropped, per the spec: the route map and GPS, the
- * attachments panel, the tasks panel, the AI day assistant and its optimisation
- * suggestions, the calendar export, and per-item photos, ratings and prices.
+ * tasks panel, the AI day assistant and its optimisation suggestions, the
+ * calendar export, and per-item photos, ratings and prices. **Added back by
+ * the attachments-and-reservation-data spec**: the day documents panel,
+ * `DayAttachments`, below the item list.
  *
  * **The status control is the point of this screen.** Moving an item to *done*
  * here is the action the timeline's counter reacts to.
@@ -241,6 +244,13 @@ export function DayDetailPage() {
           ))}
         </ol>
       )}
+
+      <DayAttachments
+        tripId={trip}
+        date={dayDate}
+        attachments={day.attachments}
+        onUploaded={() => void load()}
+      />
 
       {editing.mode !== 'closed' && (
         <ItemDialog

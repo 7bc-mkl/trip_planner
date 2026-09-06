@@ -120,6 +120,14 @@
       "done": "Gotowe"
     }
   },
+  "dayAttachments": {
+    "heading": "Załączniki i dokumenty dnia",
+    "empty": "Do tego dnia nie dodano jeszcze żadnego pliku.",
+    "list": "Załączniki tego dnia"
+  },
+  "attachment": {
+    "size": "{value, number} {unit}"
+  },
   "upload": {
     "add": "Dodaj plik / zdjęcie / bilet",
     "hint": "PDF, JPEG lub PNG, do 10 MB",

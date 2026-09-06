@@ -120,6 +120,14 @@
       "done": "Done"
     }
   },
+  "dayAttachments": {
+    "heading": "Day files and documents",
+    "empty": "Nothing is attached to this day yet.",
+    "list": "This day's attachments"
+  },
+  "attachment": {
+    "size": "{value, number} {unit}"
+  },
   "upload": {
     "add": "Add file, photo or ticket",
     "hint": "PDF, JPEG or PNG, up to 10 MB",

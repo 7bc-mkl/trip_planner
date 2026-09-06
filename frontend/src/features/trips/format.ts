@@ -159,3 +159,26 @@ export function formatTime(value: string | null, locale: string): string {
     new Date(2000, 0, 1, hours, minutes),
   )
 }
+
+const BYTE_SIZE_UNITS = ['B', 'KB', 'MB'] as const
+export type ByteSizeUnit = (typeof BYTE_SIZE_UNITS)[number]
+
+/**
+ * Splits a byte count into the `{value, unit}` pair the `attachment.size` ICU
+ * key renders — never a pre-built string. `value` is a plain number, not a
+ * string this module has already formatted: the key's `{value, number}`
+ * argument is what hands it to `Intl.NumberFormat` under the active locale, so
+ * the decimal separator (`1.8` vs `1,8`) falls out of the translation call
+ * rather than being decided here.
+ */
+export function splitByteSize(bytes: number): { value: number; unit: ByteSizeUnit } {
+  const KB = 1024
+  const MB = KB * 1024
+  if (bytes >= MB) {
+    return { value: Math.round((bytes / MB) * 10) / 10, unit: 'MB' }
+  }
+  if (bytes >= KB) {
+    return { value: Math.round(bytes / KB), unit: 'KB' }
+  }
+  return { value: bytes, unit: 'B' }
+}

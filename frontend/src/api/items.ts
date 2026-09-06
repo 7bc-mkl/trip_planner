@@ -1,3 +1,4 @@
+import type { Attachment } from './attachments'
 import { request } from './client'
 import type { Stage } from './trips'
 
@@ -38,6 +39,8 @@ export type DayDetail = {
   date: string
   stages: Stage[]
   items: Item[]
+  /** The files pinned to the day itself, as opposed to one of its items. */
+  attachments: Attachment[]
   previous_date: string | null
   next_date: string | null
 }
