@@ -698,6 +698,20 @@ textarea:disabled {
   object-fit: cover;
 }
 
+/* The image preview's click target (Step 4.2). A plain button reset — no
+   border, no fill, no padding beyond the image itself — so it reads as the
+   same 2.5rem tile the PDF glyph beside it is, just with a pointer cursor and
+   the shared `:focus-visible` ring from `base.css` for a keyboard user. */
+.attachment-row__preview-trigger {
+  display: block;
+  flex: none;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-md);
+  background: none;
+  cursor: pointer;
+}
+
 /* The PDF glyph's tile, matching `.item-row__icon`'s shape. */
 .attachment-row__glyph {
   display: inline-grid;
@@ -1239,6 +1253,27 @@ textarea:disabled {
 .dialog--confirm p {
   margin: 0;
   color: var(--text-muted);
+}
+
+/* --- the image lightbox (Step 4.2) ---
+ *
+ * The same `.dialog` shell — same scrim, same frost, same `--radius` — just
+ * without its usual heading/form padding rhythm: the image is the whole
+ * content, so the panel hugs it instead of imposing the form's vertical gap. */
+.dialog--lightbox {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-xs);
+  width: auto;
+  max-width: 90vw;
+}
+
+.dialog--lightbox__image {
+  display: block;
+  max-width: 100%;
+  max-height: 80dvh;
+  border-radius: var(--radius-md);
 }
 
 /* Solid, so the destructive action is unmistakable — but it is not the one that

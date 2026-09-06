@@ -144,7 +144,8 @@
     "delete": "Delete attachment",
     "deleteTitle": "Delete this attachment?",
     "deleteMessage": "“{filename}” will be deleted. This cannot be undone.",
-    "deleteConfirm": "Delete attachment"
+    "deleteConfirm": "Delete attachment",
+    "lightboxClose": "Close"
   },
   "upload": {
     "add": "Add file, photo or ticket",

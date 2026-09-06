@@ -6,6 +6,7 @@ import { attachmentContentUrl, deleteAttachment } from '../../api/attachments'
 import { Icon } from '../../components/Icon'
 import { ConfirmDialog } from './ConfirmDialog'
 import { splitByteSize } from './format'
+import { Lightbox } from './Lightbox'
 
 /**
  * One attachment, as a card row — shared verbatim by `DayAttachments` (the
@@ -26,9 +27,11 @@ import { splitByteSize } from './format'
  *
  * **Delete** is behind `ConfirmDialog`, the same shipped confirmation trip
  * delete uses, and for the same reason: there is no undo in this milestone, so
- * the dialog naming the file is the whole safety net. Images opening in a
- * lightbox is Step 4.2's, not this one's — nothing here reacts to a click on
- * the preview itself.
+ * the dialog naming the file is the whole safety net.
+ *
+ * **Images open in `Lightbox`** (Step 4.2) when their preview is clicked; a
+ * PDF's glyph is not a button at all, so clicking it does nothing — the PDF
+ * action stays "Pobierz"/"Download", never a preview (A10).
  */
 const IMAGE_CONTENT_TYPES = new Set(['image/jpeg', 'image/png'])
 
@@ -45,20 +48,32 @@ export function AttachmentRow({
   const { t } = useTranslation()
   const size = splitByteSize(attachment.byte_size)
   const [confirmingDelete, setConfirmingDelete] = useState(false)
+  const [lightboxOpen, setLightboxOpen] = useState(false)
+  const isImage = IMAGE_CONTENT_TYPES.has(attachment.content_type)
+  const contentUrl = attachmentContentUrl(tripId, attachment.id)
 
   return (
     <div className="attachment-row">
-      {IMAGE_CONTENT_TYPES.has(attachment.content_type) ? (
-        // The original file, scaled by the browser in CSS — never a
-        // server-generated thumbnail (A12: the server never decodes an
-        // image). Lazy-loaded because a parent can carry several of these, and
-        // the filename is the alt text, not a caption beside it.
-        <img
-          className="attachment-row__preview"
-          src={attachmentContentUrl(tripId, attachment.id)}
-          alt={attachment.filename}
-          loading="lazy"
-        />
+      {isImage ? (
+        // A real button, not the `<img>` itself: an image is not natively
+        // interactive, and the click target has to be one for the lightbox to
+        // have a trigger to focus-return to when it closes. The original
+        // file, scaled by the browser in CSS — never a server-generated
+        // thumbnail (A12: the server never decodes an image). Lazy-loaded
+        // because a parent can carry several of these, and the filename is
+        // the alt text, not a caption beside it.
+        <button
+          type="button"
+          className="attachment-row__preview-trigger"
+          onClick={() => setLightboxOpen(true)}
+        >
+          <img
+            className="attachment-row__preview"
+            src={contentUrl}
+            alt={attachment.filename}
+            loading="lazy"
+          />
+        </button>
       ) : (
         <span className="attachment-row__glyph" aria-hidden="true">
           <Icon name="document" />
@@ -77,7 +92,7 @@ export function AttachmentRow({
             attachment` header does the downloading, so there is nothing for a
             click handler to do — and nothing here ever reads the bytes into
             memory to build a blob URL. */}
-        <a className="button-quiet" href={attachmentContentUrl(tripId, attachment.id)}>
+        <a className="button-quiet" href={contentUrl}>
           {t('attachment.download')}
         </a>
         <button type="button" className="button-danger" onClick={() => setConfirmingDelete(true)}>
@@ -98,6 +113,14 @@ export function AttachmentRow({
             setConfirmingDelete(false)
             onDeleted()
           }}
+        />
+      )}
+
+      {lightboxOpen && (
+        <Lightbox
+          src={contentUrl}
+          filename={attachment.filename}
+          onClose={() => setLightboxOpen(false)}
         />
       )}
     </div>

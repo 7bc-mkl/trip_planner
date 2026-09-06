@@ -144,7 +144,8 @@
     "delete": "Usuń załącznik",
     "deleteTitle": "Usunąć ten załącznik?",
     "deleteMessage": "„{filename}” zostanie usunięty. Tej operacji nie można cofnąć.",
-    "deleteConfirm": "Usuń załącznik"
+    "deleteConfirm": "Usuń załącznik",
+    "lightboxClose": "Zamknij"
   },
   "upload": {
     "add": "Dodaj plik / zdjęcie / bilet",
