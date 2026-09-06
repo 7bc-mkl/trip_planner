@@ -89,7 +89,13 @@ for LOCALE in pl en; do
   "$AB" --session "$SESSION" press Enter --json >/dev/null
   ab wait 1500
 
+  # Signed in, the owner's stored locale wins over the one chosen on /login (R01:
+  # the choice follows the owner, not the browser). So set it again here, through
+  # the header's own switch — the first capture pass proved a locale set only on
+  # /login leaves every authenticated screen in the persisted language.
   ab open "$BASE_URL/trips"
+  ab wait 800
+  "$AB" --session "$SESSION" select "header select" "$LOCALE" --json >/dev/null 2>&1 || true
   ab wait 800
   shoot "02-trips-${LOCALE}${SUFFIX}.png"
 
