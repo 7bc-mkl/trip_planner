@@ -64,6 +64,18 @@ export function setUnauthenticatedHandler(handler: (() => void) | null): void {
   onUnauthenticated = handler
 }
 
+/**
+ * The seam `attachments.ts` calls from its `XMLHttpRequest` upload path.
+ *
+ * That module cannot go through `request()` (no upload-progress event on
+ * `fetch`), so it cannot reach the module-private `onUnauthenticated` any other
+ * way. This is the one deliberate crack in that privacy — `request()`'s own
+ * 401 handling above is untouched.
+ */
+export function notifyUnauthenticated(): void {
+  onUnauthenticated?.()
+}
+
 type RequestOptions = {
   method?: string
   body?: unknown

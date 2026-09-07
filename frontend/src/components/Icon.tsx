@@ -36,6 +36,11 @@ const ICON_NAMES = [
   // Day navigation.
   'chevron-left',
   'chevron-right',
+  // A PDF attachment's glyph — see `DayAttachments.tsx`. An image attachment
+  // renders its own preview instead, never this glyph.
+  'document',
+  // The attachment-count badge on an item's card — see `ItemRow.tsx`.
+  'paperclip',
 ] as const
 
 export type IconName = (typeof ICON_NAMES)[number]

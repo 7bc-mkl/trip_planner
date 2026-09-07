@@ -1,0 +1,58 @@
+# Step 3.7 — browser walk of the brief's "arranging one item" flow
+
+Provider: agent-browser v0.34.0 (cached binary, `TMPDIR=/tmp`), Chrome for Testing 152.
+Session: `qa-step-3-7`. App: `http://127.0.0.1:48085` (production factory, built SPA,
+one origin, empty database). Owner credentials read from this worktree's
+`.ai/qa/test-env.env`; never echoed.
+
+VERDICT: **PASS.** Every leg of the brief's flow ran, and the readiness counter moved
+from `0 z 1 załatwionych` to `1 z 1 załatwionych` on the status change alone.
+
+## The walk, leg by leg
+
+| # | Leg | Observed |
+|---|-----|----------|
+| 1 | Sign in (`pl`) | `Podróże` — `Nie masz jeszcze żadnej podróży`. Empty database as promised |
+| 2 | Create the trip | **Through the REST API, not the UI** — see the automation gap below. `POST /api/v1/trips` → `201`, four days `2026-10-10…13` |
+| 3 | Open the timeline | `STATUS LOGISTYKI` tile present, no items yet |
+| 4 | Open a day (`PAŹ 11`) | `/days/2026-10-11`, `Dodaj element`, the day documents panel below |
+| 5 | Open an item / set its details | `Nowy element`: title `Batu Caves`, kind `Atrakcja`, notes, status `Do zarezerwowania`. **The reservation disclosure exists on a brand-new item and is collapsed** (`details.reservation-panel`, `open === false`); the currency field already reads `PLN`. Saved |
+| 6 | Readiness **before** | `0 z 1 załatwionych` — screenshot `01-pl-readiness-before.png` |
+| 7 | Attach a voucher PDF | Reopened the item, uploaded `voucher-batu-caves.pdf` (193 B) through the real dropzone input. Row rendered with `Pobierz` / `Usuń załącznik` and the live region said `Dodano voucher-batu-caves.pdf`. **The panel stayed collapsed** and exactly one dialog remained on screen — screenshot `02-pl-item-editor-voucher-attached.png` |
+| 8 | Save the confirmation number and cost | Opened the disclosure by hand, typed `SX-9912L` and `1250.00`, left `PLN` untouched. Saved: dialog closed, `[role=alert]` count `0` — screenshot `03-pl-reservation-panel-filled.png` |
+| 9 | **Reload and reopen** | Full page reload, item reopened: `SX-9912L`, `1250.00`, `PLN` all came back, and the panel was **still collapsed** even with data in it. The confirmation number survives a reload |
+| 10 | Move to *gotowe* | One click on the `Gotowe` pill: no request, no second dialog, no alert, panel still closed — screenshot `04-pl-item-status-gotowe.png`. Saved; dialog closed with no alert |
+| 11 | Day detail after save | Card reads `● Gotowe` and `1 plik` — screenshot `05-pl-day-item-done.png` |
+| 12 | Readiness **after** | `1 z 1 załatwionych`, dot turned green, paperclip badge `1 plik` on the card — screenshot `06-pl-readiness-after.png` |
+| 13 | Reload once more | Item still `done`, still holds `SX-9912L` / `1250.00` / `PLN`, still holds the voucher, panel still collapsed |
+| 14 | English locale | Same item: `Reservation details (optional)`, `Confirmation number`, `Cost`, `Currency`, `Download` / `Delete attachment`, card `● Done` and `1 file`, counter `1 of 1 arranged` — screenshots `07-en-reservation-panel.png`, `08-en-readiness-after.png` |
+
+## Nothing nagged
+
+At no point in the walk did anything open, prompt or complain by itself. Checked
+explicitly at every leg: `document.querySelectorAll('[role=alert]').length === 0`
+throughout; the dialog count never exceeded the one dialog the click opened; and
+`details.reservation-panel.open` was `false` on first render, after the upload
+landed, after the status change, and after two full reloads with data present.
+
+## Findings
+
+1. **`formatCurrency` has no call site in the running application.** It is exported
+   from `features/trips/format.ts` and covered by `format.test.ts`, but a grep over
+   `frontend/src` finds no `.tsx` consumer. The saved cost is only ever shown in the
+   editable `<input>` as the raw wire string `1250.00`; **`1 250,00 zł` never appears
+   anywhere on screen**. Not a Step-3.7 regression and arguably not a defect — the
+   spec's UI/UX says the opened panel shows "three controls … nothing else" and that
+   "costs, currencies and confirmation numbers are not shown on the timeline", so the
+   spec names no display surface. Recorded because the cross-cutting rule at spec
+   line 516 ("money goes through `Intl`") currently has nothing to govern.
+2. **Automation gap, re-confirmed and widened.** `agent-browser` cannot drive
+   `input[type=date]` **or** `input[type=time]`: `fill`, `type`, `keyboard type` and
+   per-segment `press` all leave the value empty. This is why the trip was created
+   through the API, and why the item carries no start time (`Cały dzień`). It is a
+   harness limitation, not an application defect — the same controls accept keystrokes
+   from a human.
+3. **`agent-browser find role button "<label>" click` silently no-ops** on this app's
+   dialog buttons (returns success, nothing happens); `click 'button[type=submit]'`
+   works. Harness quirk only; noted so the next walk does not read a stuck dialog as
+   an application bug.

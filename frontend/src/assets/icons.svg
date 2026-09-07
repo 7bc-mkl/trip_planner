@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  The application's icon sprite. Seven glyphs, hand-drawn as line art on one
+  The application's icon sprite. Nine glyphs, hand-drawn as line art on one
   24x24 viewBox at one stroke weight, referenced through `<Icon name=… />`
   (`src/components/Icon.tsx`).
 
@@ -19,11 +19,12 @@
   - The five item kinds are exactly `ITEM_KINDS` in `src/api/items.ts`, which
     mirrors the database CHECK constraint. A sixth kind gets a symbol here.
   - The two chevrons serve the day detail's prev/next controls.
-  - The three workstream-B glyphs the source spec also lists — chat, share and
-    paperclip — are deliberately ABSENT. Their consumers are the preview
-    surfaces of Phase 5, which the owner cut from this run, and a glyph with no
-    consumer is dead weight. Phase 5 (the chat drawer, the share dialog, the
-    day-documents panel) is what brings them back.
+  - `document` is the day/item attachment row's glyph for a PDF (an image
+    attachment renders its own lazily-loaded preview instead — see
+    `DayAttachments.tsx` — so this glyph is never asked to stand in for one).
+  - `paperclip` is the attachment-count badge's glyph on an item's card — see
+    `ItemRow.tsx`. It never appears alone: the badge always carries the
+    translated count beside it.
 -->
 <svg xmlns="http://www.w3.org/2000/svg" width="0" height="0">
   <!-- accommodation — a bed: headboard, pillow, mattress, foot. -->
@@ -73,5 +74,22 @@
   <symbol id="chevron-right" viewBox="0 0 24 24" fill="none" stroke="currentColor"
     stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
     <path d="M9 4.5 16.5 12 9 19.5" />
+  </symbol>
+
+  <!-- document — a page with a folded corner, for a PDF attachment. Images
+       show their own lazily-loaded preview instead (A12: never a
+       server-generated thumbnail), so this glyph is a PDF's alone. -->
+  <symbol id="document" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M7 3h7l4 4v14H7Z" />
+    <path d="M14 3v4h4" />
+    <path d="M9.5 12.5h5" />
+    <path d="M9.5 16h5" />
+  </symbol>
+
+  <!-- paperclip — the attachment-count badge on an item's card. -->
+  <symbol id="paperclip" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M21.44 11.05 12.25 20.24a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
   </symbol>
 </svg>

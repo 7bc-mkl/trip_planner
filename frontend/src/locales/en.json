@@ -107,6 +107,13 @@
     "delete": "Delete",
     "allDay": "All day",
     "spansUntil": "→ {date}",
+    "attachmentCount": "{count, plural, one {# file} other {# files}}",
+    "reservation": {
+      "heading": "Reservation details (optional)",
+      "confirmationNumberLabel": "Confirmation number",
+      "costLabel": "Cost",
+      "currencyLabel": "Currency"
+    },
     "kind": {
       "accommodation": "Accommodation",
       "transport": "Transport",
@@ -118,6 +125,47 @@
       "to_plan": "To plan",
       "to_book": "To book",
       "done": "Done"
+    }
+  },
+  "dayAttachments": {
+    "heading": "Day files and documents",
+    "empty": "Nothing is attached to this day yet.",
+    "list": "This day's attachments"
+  },
+  "itemAttachments": {
+    "heading": "Attachments",
+    "empty": "Nothing is attached to this item yet.",
+    "list": "This item's attachments",
+    "saveFirst": "Save the item first, then come back to attach files to it."
+  },
+  "attachment": {
+    "size": "{value, number} {unit}",
+    "download": "Download",
+    "delete": "Delete attachment",
+    "deleteTitle": "Delete this attachment?",
+    "deleteMessage": "“{filename}” will be deleted. This cannot be undone.",
+    "deleteConfirm": "Delete attachment",
+    "lightboxClose": "Close"
+  },
+  "upload": {
+    "add": "Add file, photo or ticket",
+    "hint": "PDF, JPEG or PNG, up to 10 MB",
+    "dropHint": "Drop it here to upload",
+    "list": "Selected files",
+    "cancel": "Cancel",
+    "retry": "Try again",
+    "dismiss": "Remove from the list",
+    "progressLabel": "Upload progress for {filename}",
+    "announceUploading": "Uploading {filename}: {ratio, number, percent}",
+    "announceDone": "{filename} was added",
+    "announceFailed": "{filename} was not added. {reason}",
+    "announceCancelled": "Uploading {filename} was cancelled",
+    "duplicateHint": "A file with the same contents is already attached here.",
+    "state": {
+      "selected": "Selected",
+      "uploading": "Uploading",
+      "done": "Added",
+      "failed": "Not added"
     }
   },
   "filter": {
@@ -142,6 +190,15 @@
     "days_have_items": "Those days already have items on them. Move or delete the items first, then shorten the trip.",
     "stages_outside_new_range": "Some destinations fall outside the new dates. Adjust them first, then shorten the trip.",
     "items_outside_new_range": "Some items run past the new end date. Shorten or delete them first, then shorten the trip.",
+    "attachment_too_large": "That file is larger than the 10 MB limit for a single attachment.",
+    "unsupported_file_type": "Only PDF, JPEG and PNG files can be attached.",
+    "malformed_upload": "That upload could not be read. Check the file and try again.",
+    "attachment_limit_reached": "This already has the maximum of 20 attachments. Remove one before adding another.",
+    "trip_storage_quota_exceeded": "This trip has reached its storage limit. Remove an attachment before adding another.",
+    "rate_limited": "Too many uploads in a short time. Wait a few minutes and try again.",
+    "invalid_cost": "Check the cost: it needs both an amount and a currency, cannot be negative, allows at most two decimals, and cannot be larger than 9,999,999,999.99.",
+    "invalid_reservation_field": "That confirmation number is too long. Shorten it to 500 characters or fewer.",
+    "days_have_attachments": "Those days already have attachments on them. Remove the attachments first, then shorten the trip.",
     "unknown": "Something went wrong. Please try again."
   }
 }

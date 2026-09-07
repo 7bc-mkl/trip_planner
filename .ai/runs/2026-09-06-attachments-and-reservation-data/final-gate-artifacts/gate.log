@@ -1,0 +1,111 @@
+=== 1 check_locales ===
+check_locales: OK — en, pl in sync across frontend/src/locales
+=== 2 check_css_tokens ===
+check_css_tokens: OK — 601 var() reference(s) across 66 file(s) all resolve against frontend/src/styles/tokens.css or their own file
+=== 3 check_contrast ===
+foreground               background             class     ratio     min  result
+-------------------------------------------------------------------------------
+--text                   --canvas               body     17.06:1   4.5:1  PASS
+--text                   --surface              body     17.85:1   4.5:1  PASS
+--text-muted             --surface              body     10.35:1   4.5:1  PASS
+--text-subtle            --surface              body      4.76:1   4.5:1  PASS
+--on-primary             --primary              body     10.76:1   4.5:1  PASS
+--on-primary             --primary-deep         body     14.74:1   4.5:1  PASS
+--primary                --surface              body     10.76:1   4.5:1  PASS
+--status-confirmed-text  --status-confirmed-bg  body      5.21:1   4.5:1  PASS
+--status-progress-text   --status-progress-bg   body      4.84:1   4.5:1  PASS
+--status-draft-text      --status-draft-bg      body      6.92:1   4.5:1  PASS
+--on-danger              --danger               body      6.46:1   4.5:1  PASS
+--on-danger-surface      --danger-surface       body      7.24:1   4.5:1  PASS
+--danger-surface         --primary-deep         body     11.41:1   4.5:1  PASS
+--field-border           --surface              large     3.21:1   3.0:1  PASS
+--primary                --canvas               large    10.28:1   3.0:1  PASS
+--primary-fixed          --primary-deep         large    11.45:1   3.0:1  PASS
+
+check_contrast: OK — 16 pair(s) all meet WCAG AA against frontend/src/styles/tokens.css
+=== 4 ruff ===
+All checks passed!
+=== 5 pytest ===
+============================= test session starts ==============================
+platform linux -- Python 3.12.14, pytest-9.1.1, pluggy-1.6.0
+rootdir: /home/mkl/cezar/projects/trip_planner/.ai/cezar/worktrees/2223e7fe-07b0-43b2-962a-a6d3db36f6f0/backend
+configfile: pyproject.toml
+testpaths: tests
+plugins: anyio-4.15.1
+collected 635 items
+
+tests/test_attachment_cascade.py ......                                  [  0%]
+tests/test_attachments_api.py .......................................... [  7%]
+...........................                                              [ 11%]
+tests/test_auth.py ................................                      [ 16%]
+tests/test_cli.py ............                                           [ 18%]
+tests/test_config.py ............                                        [ 20%]
+tests/test_docs_todos_resolved.py ......                                 [ 21%]
+tests/test_domain_days.py ............                                   [ 23%]
+tests/test_domain_items.py ................                              [ 25%]
+tests/test_domain_money.py ........                                      [ 27%]
+tests/test_domain_readiness.py ..............                            [ 29%]
+tests/test_domain_stages.py ................                             [ 31%]
+tests/test_domain_uploads.py ........................................... [ 38%]
+.....                                                                    [ 39%]
+tests/test_errors.py ................................................... [ 47%]
+....                                                                     [ 48%]
+tests/test_health.py ..                                                  [ 48%]
+tests/test_items_api.py ...........................................      [ 55%]
+tests/test_migrations.py ......                                          [ 56%]
+tests/test_models_attachment.py .............                            [ 58%]
+tests/test_models_item.py ...........................                    [ 62%]
+tests/test_models_owner.py ..........                                    [ 64%]
+tests/test_models_trip.py .....................                          [ 67%]
+tests/test_production_wiring.py ....                                     [ 68%]
+tests/test_quota.py ..................                                   [ 70%]
+tests/test_rate_limit.py ......................                          [ 74%]
+tests/test_reservation_api.py .....................                      [ 77%]
+tests/test_route_protection.py ........                                  [ 78%]
+tests/test_security.py ...................                               [ 81%]
+tests/test_spa.py .......                                                [ 82%]
+tests/test_startup.py .................                                  [ 85%]
+tests/test_success_flow.py ..                                            [ 85%]
+tests/test_trip_management_api.py ...................................... [ 91%]
+..............                                                           [ 94%]
+tests/test_trips_api.py .....................................            [100%]
+
+============================= 635 passed in 57.72s =============================
+=== 6 typecheck ===
+
+> trip-planner-frontend@0.0.0 typecheck
+> tsc -b
+
+=== 7 vitest ===
+
+> trip-planner-frontend@0.0.0 test
+> vitest --run
+
+
+ RUN  v4.1.11 /home/mkl/cezar/projects/trip_planner/.ai/cezar/worktrees/2223e7fe-07b0-43b2-962a-a6d3db36f6f0/frontend
+
+
+ Test Files  20 passed (20)
+      Tests  293 passed (293)
+   Start at  23:31:26
+   Duration  12.75s (transform 2.54s, setup 2.18s, import 9.07s, tests 40.25s, environment 27.43s)
+
+=== 8 build ===
+
+> trip-planner-frontend@0.0.0 build
+> tsc -b && vite build
+
+vite v8.2.2 building client environment for production...
+transforming...
+✓ 94 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                                                        0.55 kB │ gzip:   0.35 kB
+dist/assets/icons-BuWjNmj-.svg                                         4.57 kB │ gzip:   1.70 kB
+dist/assets/plus-jakarta-sans-vietnamese-wght-normal-qRpaaN48.woff2    8.35 kB
+dist/assets/plus-jakarta-sans-latin-ext-wght-normal-DmpS2jIq.woff2    21.72 kB
+dist/assets/plus-jakarta-sans-latin-wght-normal-eXO_dkmS.woff2        27.34 kB
+dist/assets/index-DvifDVty.css                                        39.49 kB │ gzip:   8.71 kB
+dist/assets/index-Cl41iLrn.js                                        377.45 kB │ gzip: 117.38 kB
+
+✓ built in 234ms

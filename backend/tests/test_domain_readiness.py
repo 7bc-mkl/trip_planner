@@ -22,6 +22,22 @@ def entries(*statuses: str) -> list[Entry]:
     return [Entry(status) for status in statuses]
 
 
+@dataclass
+class EntryWithReservation:
+    """An item shape that also carries the Phase 3 reservation columns.
+
+    `readiness()` is typed against `HasStatus`, a `Protocol` naming only
+    `status` — this class is the proof that the promise the protocol makes is
+    kept: nothing in the function can read `confirmation_number`, `cost_amount`
+    or `cost_currency` even if they are right there on the object.
+    """
+
+    status: str
+    confirmation_number: str | None = None
+    cost_amount: str | None = None
+    cost_currency: str | None = None
+
+
 class TestReadiness:
     def test_an_empty_trip_is_zero_of_zero(self) -> None:
         """Not an error and not a division — the copy for this case has no fraction."""
@@ -86,3 +102,55 @@ class TestReadiness:
         """It is serialised as `{"arranged": n, "tracked": m}`; positional access
         in the API layer would make a field swap silent."""
         assert hasattr(readiness(entries("done")), field)
+
+
+class TestReadinessIgnoresReservationData:
+    """R04's "never demanded" as arithmetic (Step 3.5).
+
+    A `done` item with a confirmation number and a cost is exactly as arranged
+    as one with neither. If a later change made the counter special-case a
+    `done` item that also carries reservation data, "arranged" would quietly
+    start meaning "arranged *and* documented" — this is the test that would
+    have to break for that to happen, and it is a cheaper, more decisive place
+    to catch it than the frontend ever could be.
+    """
+
+    def test_a_done_item_counts_the_same_whether_or_not_it_carries_reservation_data(
+        self,
+    ) -> None:
+        documented = EntryWithReservation(
+            status="done",
+            confirmation_number="SX-9912L",
+            cost_amount="249.00",
+            cost_currency="PLN",
+        )
+        undocumented = EntryWithReservation(status="done")
+
+        assert readiness([documented]) == readiness([undocumented]) == (1, 1)
+
+    def test_two_done_items_one_documented_one_not_both_count_toward_the_same_pair(
+        self,
+    ) -> None:
+        documented = EntryWithReservation(
+            status="done",
+            confirmation_number="SX-9912L",
+            cost_amount="249.00",
+            cost_currency="PLN",
+        )
+        undocumented = EntryWithReservation(status="done")
+
+        assert readiness([documented, undocumented]) == (2, 2)
+
+    def test_reservation_data_on_a_to_book_item_does_not_promote_it_to_arranged(
+        self,
+    ) -> None:
+        """A confirmation number and a cost are not a substitute for the status
+        the owner has not yet set to `done`."""
+        booked_with_data = EntryWithReservation(
+            status="to_book",
+            confirmation_number="SX-9912L",
+            cost_amount="249.00",
+            cost_currency="PLN",
+        )
+
+        assert readiness([booked_with_data]) == (0, 1)

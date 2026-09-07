@@ -1,3 +1,4 @@
+import type { Attachment } from './attachments'
 import { request } from './client'
 import type { Stage } from './trips'
 
@@ -30,6 +31,38 @@ export type Item = {
   end_date: string | null
   title: string
   notes: string | null
+  /**
+   * How many files are pinned to this item — mirrors `ItemRead.attachment_count`
+   * in `backend/trip_planner/api/schemas.py`. Always present, on every shape an
+   * item is serialised in, aggregated in one query per payload: the paperclip
+   * badge's number.
+   */
+  attachment_count: number
+  /**
+   * The item's own files, mirrors `ItemDetail.attachments`. Present only on the
+   * day-detail payload — the one screen whose item editor renders them — and
+   * `undefined` on the timeline's leaner `ItemRead` shape, which never sends it.
+   */
+  attachments?: Attachment[]
+  /**
+   * The reservation trio (R04, D07) — mirrors `ItemRead.confirmation_number` /
+   * `.cost_amount` / `.cost_currency` in `backend/trip_planner/api/schemas.py`.
+   * Always present, `null` throughout on an item nothing has arrived for yet,
+   * on **both** item shapes — the timeline never renders any of the three, but
+   * omitting them from its shape and not the other is exactly the
+   * two-shapes-of-one-object drift `attachment_count` above already avoids.
+   */
+  confirmation_number: string | null
+  /**
+   * A `Decimal` on the server, reaching the wire as a JSON **string**
+   * (`"249.00"`) — Pydantic's own serialisation for `Decimal`, and kept a
+   * string here rather than parsed into a `number`: a binary float cannot
+   * represent every value `NUMERIC(12,2)` can hold, which is the exact
+   * imprecision the column was chosen to avoid. Nothing on this side ever
+   * does arithmetic with it, so there is nothing a `number` would buy.
+   */
+  cost_amount: string | null
+  cost_currency: string | null
 }
 
 export type DayDetail = {
@@ -38,6 +71,8 @@ export type DayDetail = {
   date: string
   stages: Stage[]
   items: Item[]
+  /** The files pinned to the day itself, as opposed to one of its items. */
+  attachments: Attachment[]
   previous_date: string | null
   next_date: string | null
 }
@@ -50,6 +85,18 @@ export type ItemInput = {
   end_date: string | null
   title: string
   notes: string | null
+  /**
+   * The reservation trio — optional here for one reason that has nothing to do
+   * with R04's "never required": `ItemCreate` on the server takes none of
+   * these three and forbids extra keys (`model_config = ConfigDict(extra=
+   * "forbid")`), because a reservation arrives "with material the user
+   * already has" and a brand-new item has no material yet. `ItemDialog` omits
+   * these keys entirely on a create and only ever sends them on the `PATCH`
+   * an edit issues — see `ReservationPanel.reservationInput`.
+   */
+  confirmation_number?: string | null
+  cost_amount?: string | null
+  cost_currency?: string | null
 }
 
 export function fetchDay(

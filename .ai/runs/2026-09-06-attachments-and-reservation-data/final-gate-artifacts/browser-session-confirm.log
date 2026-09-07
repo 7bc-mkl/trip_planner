@@ -1,0 +1,49 @@
+=== final-gate confirm walk 2026-09-07T00:20:04+02:00 ===
+[agent-browser] launched browser
+✓ Done
+✓ Smart Trip Planner
+  http://127.0.0.1:39835/login
+✓ Smart Trip Planner
+  http://127.0.0.1:39835/trips/419aefd8-96fd-416e-8ff4-548ac188c0b0
+
+=== FINAL GATE RE-CONFIRMATION WALK — 2026-09-07 — session qa-final-confirm ===
+Base http://127.0.0.1:39835 | trip 419aefd8-96fd-416e-8ff4-548ac188c0b0 (created via REST, 4 days) | item ce0e4b3a Hotel Baixa
+
+--- DEFECT 1: concurrent uploads / event-loop deadlock ---
+[A] 2 concurrent big (2.3 MB) uploads -> same day 2026-10-02 : up1 201 0.117s, up2 201 0.188s
+    health polls during:  2598 health=200
+[B] 8 concurrent (5 -> day 2026-10-03, 3 -> item) : all 201, slowest 0.673s
+    health polls during:  3240 health=200
+[C] 16 concurrent incl. one --limit-rate 300k client held open 7.96s, day+item mixed : all 201
+    health polls during:  5225 health=200
+[D] UI multi-file drop (5 files at once through input[type=file], parallel XHRs): all stored
+    health polls during:  3185 health=200
+[E] 8 throttled (--limit-rate 90k) concurrent uploads held ~26.4-26.8s each, day+item : all 201
+    health polls during:  3903 health=200
+    browser screenshot of /api/v1/health taken 3s into the burst -> {"status":"ok"}
+    byte integrity: md5 of stored content matched source for 10/10 sampled uploads
+    final tally: DB attachment count 40 = day01 5 + day02 3 + day03 9 + day04 11 + item 12
+    app log across the whole walk: 0x 5xx, 0 tracebacks, 42x 201
+
+--- DEFECT 2: duplicate hint ---
+day 2026-10-01 after 5-file drop (bilet-lotniczy.png + bilet-lotniczy-kopia.png byte-identical):
+  bilet-lotniczy.png dup=true / big1 false / big2 false / big3 false / bilet-lotniczy-kopia.png dup=true
+  hint text: "Plik o takiej samej zawartosci jest juz tutaj dolaczony." (i18n pl)
+  styling: class attachment-row__duplicate-hint, color rgb(51,65,85) slate, no bg, 13px, no role=alert,
+  no aria-invalid on the row, 0 buttons in the hint, nothing to dismiss, no undo -> informational
+  after full page reload: hint still on both rows (widened on-load behaviour) - reads as a quiet note
+different parent: same bytes uploaded to day 2026-10-02 -> dup=false on all 3 rows there
+item strip (pre-existing duplicates, on load only): big6 false, big5 false, big4 x4 all true, big1 x2 both true
+
+--- DEFECT 3: NaN EUR / unmarked invalid field (Polish UI) ---
+  typed "249,50" -> summary "Dane rezerwacji (opcjonalne) 249,50 EUR-sign", hasNaN=false
+  saved -> API cost_amount "249.50" cost_currency "EUR"; reload -> summary 249,50 EUR-sign, no NaN
+  typed "1 250,50" (space) -> summary "1 250,50 EUR-sign"; saved -> API "1250.50"; reload OK, no NaN
+  malformed probes "12,3,4" / "abc" / "249.50.1" / "-5" / "" -> summary blank, hasNaN=false in every case
+  refused save with "12,3,4": #item-cost-amount aria-invalid="true", aria-describedby="item-cost-error"
+  -> visible red (rgb(186,26,26)) translated message, also announced role=alert; Zapisz disabled
+
+screenshots: screenshot-confirm-health-during-concurrent-uploads.png,
+             screenshot-confirm-duplicate-hint-two-copies.png,
+             screenshot-confirm-polish-comma-cost.png,
+             screenshot-confirm-invalid-cost-marked.png

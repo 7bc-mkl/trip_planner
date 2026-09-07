@@ -1,0 +1,84 @@
+Focused browser confirmation — large-attachment race on /trips/:id/days/:date
+Run: 2026-09-06-attachments-and-reservation-data · session qa-confirm-race
+Base URL: http://127.0.0.1:59729 (production app factory, built SPA, empty DB)
+Browser: agent-browser v0.34.0 (cached binary, TMPDIR=/tmp)
+Date: 2026-09-06
+
+SETUP
+- Logged in via the UI at /login as the seeded owner (credentials read from the
+  worktree copy of .ai/qa/test-env.env; never echoed into this log).
+  NOTE: the main-repo copy /home/mkl/cezar/projects/trip_planner/.ai/qa/test-env.env
+  holds a STALE password (401). The live one is the worktree copy at
+  .ai/cezar/worktrees/2223e7fe-.../.ai/qa/test-env.env. Cost ~10 min.
+- The trip-creator date fields (day/month/year segment spinbuttons) did not accept
+  `fill` or synthetic keystrokes from agent-browser, so the trip was created through
+  the REST API instead (POST /api/v1/trips, CSRF double-submit header):
+  trip aec08d77-34e3-476d-8991-8d76dfb3ab55, 2026-10-12 .. 2026-10-14.
+  Everything under test (uploads, item save) was driven through the real UI.
+- Fixtures built in /tmp/qaconf/files (NOT in the repo) by a small Python PNG writer:
+  valid RGB PNGs, stored (uncompressed) IDAT so the byte size is real:
+    large-a..g.png, large-item.png : 4,300,831 B (~4.1 MiB / "4,1 MB" as the UI labels it)
+    huge.png                       : 9,303,878 B (~8.9 MiB, just under the 10 MB cap)
+    small-a.png                    : 268 B
+  Header check: file starts with \x89PNG\r\n\x1a\n; the server accepted every one.
+
+ATTEMPTS — day documents panel (/trips/<id>/days/2026-10-12)
+
+1) large-a.png (4.3 MB), plain upload.
+   t=1s rows=[]                       (upload in flight)
+   t=2s rows=[large-a.png]            APPEARED, no reload
+   Held for a further 16 s of polling: still exactly one row.
+   DOM audit of every leaf node containing "large-a.png":
+     SPAN.attachment-row__name   -> the list row
+     P.upload-dropzone__announcement [aria-live=polite] -> "Dodano large-a.png"
+   i.e. one list row + one polite status announcement. No leftover "✓ Dodany"
+   queue row. Screenshot: screenshot-confirm-day-large-attachment-present.png
+
+2) large-b.png -> appeared at t=2s. rows=[a,b]
+3) large-c.png -> appeared at t=2s. rows=[a,b,c]
+4) large-d.png -> appeared at t=2s. rows=[a,b,c,d]
+   Settled 5 s: rows=[a,b,c,d], queue rows = 0.
+
+5) INTERLEAVE — large + small in quick succession:
+   large-e.png (4.3 MB) started, small-a.png (268 B) fired immediately after,
+   both in flight together.
+   t=2s rows=[a,b,c,d,large-e,small-a]; polled 20 s, stable, one row each.
+   The small file did NOT displace the large one — that was the old failure shape.
+
+6) INTERLEAVE — large upload while an item save triggers a day refetch:
+   Created item "Zwiedzanie Wawelu" via the UI, opened its editor, edited the
+   title, then fired the large-f.png (4.3 MB) upload and clicked "Zapisz"
+   concurrently.
+   Network trace confirms the race window really opened:
+     PATCH /items/<id>                 200
+     POST  /days/2026-10-12/attachments 201   (concurrent)
+     GET   /days/2026-10-12             200   \ two overlapping day refetches
+     GET   /days/2026-10-12             200   /
+   t=2s rows=[...,large-f.png]; polled 25 s, stable, exactly one row.
+   Item title updated to "Zwiedzanie Wawelu (edytowane)" — neither side lost.
+
+7) INTERLEAVE (worst case) — 9.3 MB upload batched with an item save so the two
+   commands leave the CLI back-to-back:
+     batch: upload input[type=file] huge.png ; click "Zapisz" (title -> "Wawel v3")
+   t=2s rows=[...,huge.png]; polled 20 s, stable, exactly one row.
+
+EXACTLY-ONE-REPRESENTATION CHECK
+  document.querySelectorAll('.attachment-row').length              = 8
+  distinct .attachment-row__name values                            = 8
+  leaf nodes matching /Dodany|✓/                                   = 0
+  Screenshot: screenshot-confirm-exactly-one-representation.png
+
+8) ITEM ATTACHMENT STRIP — large-item.png (4.3 MB) uploaded into the item
+   editor's own dropzone. Appeared within 1 s, exactly one row, stable over 12 s.
+   Screenshot: screenshot-confirm-item-strip-large-file.png
+
+PERSISTENCE / SERVER TRUTH
+  Page reload, then GET /api/v1/trips/<id>/days/2026-10-12:
+    UI day panel : [large-a, large-b, large-c, large-d, large-e, small-a, large-f, huge]
+    server day   : [large-a, large-b, large-c, large-d, large-e, small-a, large-f, huge]
+    server item "Wawel v3": [large-item.png]
+  Identical — nothing phantom, nothing missing, nothing duplicated.
+
+VERDICT: FIXED. 8 large uploads (7 day panel + 1 item strip), 0 failures.
+The previously 4/4-reproducible disappearance did not occur once, including
+under both interleavings that open the refetch race.

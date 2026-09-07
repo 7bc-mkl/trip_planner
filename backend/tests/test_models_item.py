@@ -9,6 +9,7 @@ instead would leave the guarantee resting on every write path remembering.
 from __future__ import annotations
 
 from datetime import date, time
+from decimal import Decimal
 
 import pytest
 from sqlalchemy.orm import Session as OrmSession
@@ -182,3 +183,90 @@ def test_the_status_constant_and_the_constraint_agree(
 
     stored = {item.status for item in db_session.query(Item).all()}
     assert stored == set(ITEM_STATUSES)
+
+
+class TestReservationColumns:
+    """The reservation data R04 keeps, asserted against the database itself.
+
+    These are `flush()`-and-read-the-exception tests for the same reason the
+    status constraint is: `api/items.py` checks the identical rules through
+    `domain/money.py` before it writes, and a test that only exercised the API
+    would leave the guarantee resting on every write path remembering to call it.
+    A future importer, a fixture or a `psql` session is a write path too.
+    """
+
+    def test_the_database_rejects_an_amount_with_no_currency(
+        self, db_session: OrmSession, trip_day: TripDay
+    ) -> None:
+        """A bare number whose unit lives in someone's head is not money."""
+        with rejected_by(db_session, "ck_item_cost_paired"):
+            db_session.add(make_item(trip_day, cost_amount=Decimal("249.00")))
+
+    def test_the_database_rejects_a_currency_with_no_amount(
+        self, db_session: OrmSession, trip_day: TripDay
+    ) -> None:
+        with rejected_by(db_session, "ck_item_cost_paired"):
+            db_session.add(make_item(trip_day, cost_currency="PLN"))
+
+    def test_the_database_rejects_a_negative_amount(
+        self, db_session: OrmSession, trip_day: TripDay
+    ) -> None:
+        with rejected_by(db_session, "ck_item_cost_amount"):
+            db_session.add(
+                make_item(trip_day, cost_amount=Decimal("-1.00"), cost_currency="PLN")
+            )
+
+    def test_the_database_rejects_a_lower_case_currency(
+        self, db_session: OrmSession, trip_day: TripDay
+    ) -> None:
+        """The CHECK does not upper-case anything, so neither does the API."""
+        with rejected_by(db_session, "ck_item_cost_currency"):
+            db_session.add(
+                make_item(trip_day, cost_amount=Decimal("249.00"), cost_currency="pln")
+            )
+
+    def test_the_database_rejects_a_501_character_confirmation_number(
+        self, db_session: OrmSession, trip_day: TripDay
+    ) -> None:
+        with rejected_by(db_session, "ck_item_confirmation_number"):
+            db_session.add(make_item(trip_day, confirmation_number="A" * 501))
+
+    def test_the_database_rejects_an_empty_confirmation_number(
+        self, db_session: OrmSession, trip_day: TripDay
+    ) -> None:
+        """`''` would be a second representation of "not recorded" beside NULL."""
+        with rejected_by(db_session, "ck_item_confirmation_number"):
+            db_session.add(make_item(trip_day, confirmation_number=""))
+
+    def test_a_cost_of_zero_is_stored(self, db_session: OrmSession, trip_day: TripDay) -> None:
+        """A free museum day is a real, arranged item with a real cost of zero."""
+        db_session.add(
+            make_item(trip_day, cost_amount=Decimal("0"), cost_currency="PLN")
+        )
+        db_session.flush()
+
+        stored = db_session.query(Item).one()
+        assert stored.cost_amount == Decimal("0.00")
+        assert stored.cost_currency == "PLN"
+
+    def test_an_item_with_no_reservation_data_is_the_normal_case(
+        self, db_session: OrmSession, trip_day: TripDay
+    ) -> None:
+        """Nullable, no default: every item the earlier phases stored still loads."""
+        db_session.add(make_item(trip_day))
+        db_session.flush()
+
+        stored = db_session.query(Item).one()
+        assert (stored.confirmation_number, stored.cost_amount, stored.cost_currency) == (
+            None,
+            None,
+            None,
+        )
+
+    def test_a_500_character_confirmation_number_is_stored_verbatim(
+        self, db_session: OrmSession, trip_day: TripDay
+    ) -> None:
+        db_session.add(make_item(trip_day, confirmation_number="B" * 500))
+        db_session.flush()
+
+        assert db_session.query(Item).one().confirmation_number == "B" * 500

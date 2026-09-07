@@ -32,15 +32,19 @@ const KIND_ICONS: Record<ItemKind, IconName> = {
  * An item spanning into a later day carries a "→ dd.MM" marker, and is rendered
  * **once**, on its start day: it is one item and is counted once.
  *
- * Deliberately absent, per the spec: **no paperclip and no price.** The
- * attachment count would be zero on every card until PR #4 lands, and PR #4 is
- * explicit that costs never appear on the timeline.
+ * **No price, per the spec** — costs never appear on the timeline or the day
+ * detail. **The paperclip is different**: it is `attachmentCount`, an
+ * **optional** prop rather than a field this component reads off `item`
+ * itself, so a caller that has not wired it up yet (until the timeline's own
+ * Step does) renders exactly as before. It appears only when the count is
+ * given and greater than zero — never a bare "0" paperclip.
  */
 export function ItemRow({
   item,
   dayDate,
   onOpen,
   railDot = false,
+  attachmentCount,
 }: {
   item: Item
   /** The day this row is being rendered on — the item's start day. */
@@ -56,6 +60,13 @@ export function ItemRow({
    * a reader who cannot see the colour.
    */
   railDot?: boolean
+  /**
+   * How many files are pinned to this item. Optional and opt-in per caller:
+   * the day detail passes `item.attachment_count`; a caller that passes
+   * nothing renders with no paperclip at all, unchanged from before this prop
+   * existed.
+   */
+  attachmentCount?: number
 }) {
   const { t, i18n } = useTranslation()
 
@@ -86,6 +97,17 @@ export function ItemRow({
         </span>
       )}
       <StatusChip status={item.status} />
+      {/* The paperclip: an ADDITION to a translated word beside it, never the
+          glyph alone — same contract as the kind tile above. Present only
+          when there is at least one file, per the spec's "and only then". */}
+      {attachmentCount !== undefined && attachmentCount > 0 && (
+        <span className="item-row__attachments">
+          <span className="item-row__attachments-icon" aria-hidden="true">
+            <Icon name="paperclip" />
+          </span>
+          {t('item.attachmentCount', { count: attachmentCount })}
+        </span>
+      )}
       {item.notes !== null && <span className="item-row__notes">{item.notes}</span>}
     </>
   )

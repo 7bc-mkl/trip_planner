@@ -107,6 +107,13 @@
     "delete": "Usuń",
     "allDay": "Cały dzień",
     "spansUntil": "→ {date}",
+    "attachmentCount": "{count, plural, one {# plik} few {# pliki} many {# plików} other {# pliku}}",
+    "reservation": {
+      "heading": "Dane rezerwacji (opcjonalne)",
+      "confirmationNumberLabel": "Numer potwierdzenia",
+      "costLabel": "Koszt",
+      "currencyLabel": "Waluta"
+    },
     "kind": {
       "accommodation": "Nocleg",
       "transport": "Transport",
@@ -118,6 +125,47 @@
       "to_plan": "Do zaplanowania",
       "to_book": "Do zarezerwowania",
       "done": "Gotowe"
+    }
+  },
+  "dayAttachments": {
+    "heading": "Załączniki i dokumenty dnia",
+    "empty": "Do tego dnia nie dodano jeszcze żadnego pliku.",
+    "list": "Załączniki tego dnia"
+  },
+  "itemAttachments": {
+    "heading": "Załączniki",
+    "empty": "Do tego elementu nie dodano jeszcze żadnego pliku.",
+    "list": "Załączniki tego elementu",
+    "saveFirst": "Najpierw zapisz element, a potem wróć, aby dołączyć do niego pliki."
+  },
+  "attachment": {
+    "size": "{value, number} {unit}",
+    "download": "Pobierz",
+    "delete": "Usuń załącznik",
+    "deleteTitle": "Usunąć ten załącznik?",
+    "deleteMessage": "„{filename}” zostanie usunięty. Tej operacji nie można cofnąć.",
+    "deleteConfirm": "Usuń załącznik",
+    "lightboxClose": "Zamknij"
+  },
+  "upload": {
+    "add": "Dodaj plik / zdjęcie / bilet",
+    "hint": "PDF, JPEG lub PNG, do 10 MB",
+    "dropHint": "Upuść tutaj, aby wysłać",
+    "list": "Wybrane pliki",
+    "cancel": "Anuluj",
+    "retry": "Spróbuj ponownie",
+    "dismiss": "Usuń z listy",
+    "progressLabel": "Postęp wysyłania pliku {filename}",
+    "announceUploading": "Wysyłanie {filename}: {ratio, number, percent}",
+    "announceDone": "Dodano {filename}",
+    "announceFailed": "Nie dodano {filename}. {reason}",
+    "announceCancelled": "Anulowano wysyłanie {filename}",
+    "duplicateHint": "Plik o takiej samej zawartości jest już tutaj dołączony.",
+    "state": {
+      "selected": "Wybrany",
+      "uploading": "Wysyłanie",
+      "done": "Dodany",
+      "failed": "Nie dodano"
     }
   },
   "filter": {
@@ -142,6 +190,15 @@
     "days_have_items": "Te dni mają już zaplanowane elementy. Najpierw je przenieś lub usuń, potem skróć podróż.",
     "stages_outside_new_range": "Część celów wykracza poza nowe daty. Najpierw je popraw, potem skróć podróż.",
     "items_outside_new_range": "Część elementów wykracza poza nową datę zakończenia. Najpierw je skróć lub usuń, potem skróć podróż.",
+    "attachment_too_large": "Ten plik przekracza limit 10 MB dla jednego załącznika.",
+    "unsupported_file_type": "Można załączać tylko pliki PDF, JPEG i PNG.",
+    "malformed_upload": "Nie udało się odczytać przesłanego pliku. Sprawdź plik i spróbuj ponownie.",
+    "attachment_limit_reached": "Tutaj jest już maksymalna liczba 20 załączników. Usuń jeden, zanim dodasz kolejny.",
+    "trip_storage_quota_exceeded": "Ta podróż osiągnęła limit miejsca na załączniki. Usuń jakiś załącznik, zanim dodasz kolejny.",
+    "rate_limited": "Zbyt wiele przesłanych plików w krótkim czasie. Odczekaj kilka minut i spróbuj ponownie.",
+    "invalid_cost": "Sprawdź koszt: musi mieć kwotę i walutę, nie może być ujemny, może mieć co najwyżej dwa miejsca po przecinku i nie może przekraczać 9 999 999 999,99.",
+    "invalid_reservation_field": "Numer potwierdzenia jest za długi. Skróć go do 500 znaków lub mniej.",
+    "days_have_attachments": "Te dni mają już załączniki. Najpierw je usuń, potem skróć podróż.",
     "unknown": "Coś poszło nie tak. Spróbuj ponownie."
   }
 }

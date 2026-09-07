@@ -1,0 +1,568 @@
+# Notify — 2026-09-06-attachments-and-reservation-data
+
+> Append-only log. Every entry is UTC-timestamped. Never rewrite prior entries.
+
+## 2026-09-06T16:27:06Z — run started
+- Brief: implement `.ai/specs/2026-09-05-attachments-and-reservation-data.md` — attachments on days
+  and items, plus reservation data (confirmation number and cost) on the item.
+- External skill URLs: none.
+- Engine decision: `Engine: om-auto-create-pr-loop (steps: 28, --loop: no)` — the spec's
+  Implementation Plan drafts 28 Steps across 4 phases, over the configured threshold of 20.
+- Slot check: free — no `feat/attachments-and-reservation-data` branch, no run folder for the slug,
+  and no open PRs in the repository at all.
+- Decision: `python-multipart` will be added as a backend dependency in Step 1.6. FastAPI needs it
+  for `multipart/form-data`, and it is not in `backend/pyproject.toml` today. It is the only
+  dependency this run adds; the spec's "no image library" rule is asserted by a test in Step 1.2.
+
+## 2026-09-06T17:05:00Z — checkpoint 1
+- Steps covered: 1.1..1.5 (`f6360f9..da84350`). Backend vocabulary complete; no endpoint wired yet.
+- Outcome: PASS. `check_locales` / `check_css_tokens` / `check_contrast` green, `ruff` clean,
+  `pytest` **520 passed / 0 skipped**, frontend typecheck and 149 tests green. `npm run build` is
+  deferred to the final gate because no application source changed in this window.
+- UI verification skipped, with reason: no Step in the window touched a page, component or
+  stylesheet — the frontend diff is a generated type union and nine locale keys.
+- Step review (checkpoint mode): no blocker and no major findings. Two nits recorded and deferred
+  to the final review — `normalise_filename` strips after truncating, and `INSTALLATION_LOCK_KEY`
+  shares an advisory keyspace with `hashtext(trip_id)` (harmless extra serialisation at worst).
+- Decision — Tasks-table SHA reconciliation. The per-Step "commit, read SHA, edit PLAN.md, amend"
+  procedure can only ever record the *pre-amend* SHA, because amending changes the SHA it just
+  recorded. Executors therefore record the pre-amend value and the main session rewrites the whole
+  `Commit` column to the real post-amend SHAs at every checkpoint. All five rows were reconciled
+  here (1.1 `a76361d`, 1.2 `223399b`, 1.3 `17215fb`, 1.4 `8cc3dc2`, 1.5 `da84350`), so
+  `om-auto-continue-pr-loop` resumes against SHAs that actually exist on the branch.
+- Environment note: `frontend/node_modules` was absent in this worktree and `npm ci` was run. The
+  first typecheck failure was that absence, not the diff.
+
+## 2026-09-06T18:12:00Z — Step 1.8 scope decision: the reservation fields moved to Step 3.1
+- Situation: Step 1.8 was drafted to add both the attachment counts/lists **and** the three
+  reservation fields (`confirmation_number`, `cost_amount`, `cost_currency`) to `ItemRead` and
+  `ItemUpdate`. Those three are `item` **columns**, and Step 3.1 adds them on its own Alembic
+  revision precisely so Phase 3 rolls back alone (assumption A1). At 1.8 the columns do not exist.
+- Decision: **resolution (ii)** — the attachment half landed in Step 1.8; the reservation half moves
+  into Step 3.1's commit, alongside the migration and the model columns it reads and writes.
+- Why: the split holds cleanly. Nothing in the attachment work needs the reservation columns, and
+  nothing in the reservation contract can be written without them — a serialiser field for a column
+  that does not exist is not a half-landed contract, it is a broken one, and `ItemUpdate` would have
+  had to accept fields it could not persist. Pulling `0006_item_reservation` forward into Phase 1
+  (resolution (i)) would have bought nothing and would have destroyed the property the phase split
+  exists for: Phase 3 rolling back on its own.
+- Effect on the plan: PLAN.md's Step 1.8 text now describes the attachment half only and records
+  this decision; Step 3.1's text now carries the API half verbatim — the `Decimal` on the wire, the
+  `model_fields_set` clear-vs-omit rule, `422 invalid_cost` for one half alone through
+  `domain/money.py`, `422 invalid_reservation_field` past 500 characters, `""` meaning clear, and no
+  second copy of the reservation's dates. The cost/confirmation tests move with it.
+- Step ids, `Exec` cells and the Tasks table's shape are unchanged; only the two Step descriptions
+  and row 1.8's `Status`/`Commit` were touched.
+
+## 2026-09-06T19:40:00Z — Step 1.10 contract decision: a day with BOTH items and attachments answers `days_have_items`
+- Situation: `PATCH /trips/{tripId}` gains `409 days_have_attachments` for a dropped day carrying
+  documents. A day can carry items *and* documents, and the spec leaves the code for that case open.
+- Decision: **`days_have_items` wins.** `_refuse_if_attachments_would_be_lost` runs immediately
+  *after* `_refuse_if_days_would_be_lost`, so a day with both answers the older code; only a day
+  with documents and no items answers `days_have_attachments`.
+- Why: both codes are truthful and both lead the owner to the same fix (clear that day), so the tie
+  is broken on compatibility. A client shipped before this feature already branches on
+  `days_have_items`; keeping it means no existing client meets an unknown code for a case it already
+  handles, and the new code appears only for a case that previously did not exist as a refusal at
+  all. Reversing the order would re-label a refusal an existing client understands —
+  `BACKWARD_COMPATIBILITY.md` §1's "changing an error code for an existing condition".
+- Scope note: this Step **narrows** shipped behaviour — a shortening that used to succeed can now be
+  refused. That direction is the point: the behaviour it removes is silent deletion of a voucher by
+  a date edit (foundation A10). No path that preserved data changes. The whole `days_have_items`
+  suite passes unmodified as the regression guard; the backend suite is 600 passed / 0 skipped.
+- The guard also covers attachments pinned to an *item* on a dropped day, in one `UNION`ed statement
+  for the whole edit (no query per day), so it does not depend on the sibling's ordering to be safe.
+
+## 2026-09-06T19:45:00Z — checkpoint 2 (Phase 1 closes)
+- Steps covered: 1.6..1.10 (`26941d8..2ab94c6`). **Phase 1 is complete and independently shippable.**
+- Outcome: PASS. Three script gates green, `ruff` clean, `pytest` **600 passed / 0 skipped**,
+  frontend typecheck and 149 tests green. `npm run build` still deferred — no frontend source has
+  changed yet.
+- UI verification skipped, with reason: Phase 1 is backend-only by design ("Nothing in the UI
+  changes yet, and the phase is verifiable entirely by tests"), so there is nothing to photograph.
+- Dependency: `python-multipart` 0.0.32 added via `uv add`, `uv.lock` committed with the manifest.
+  The only dependency this run adds; the no-image-library rule stays asserted by a test.
+- Step review (checkpoint mode): no blocker, no major. The `UploadFile`-avoidance and the check
+  order are proved by test, not asserted in a comment — the temp-file test patches
+  `starlette.formparsers.SpooledTemporaryFile` as well as `tempfile`, which is the patch that
+  actually matters, and the ordering test demands `429` rather than `413` on an oversized body.
+- Nits carried to the final review: the parent lookup runs before `check_rate` (deliberate — a bad
+  path answers 404 without consuming quota — but a deviation from the spec's literal order), plus
+  the two nits from checkpoint 1.
+- Tasks-table SHAs for rows 1.6..1.10 reconciled to their post-amend values.
+
+## 2026-09-06T20:14:41Z — Step 2.4 scope decisions
+- New-item case (`item === null`): `ItemAttachments` renders its heading, its shipped empty state
+  and a translated "save the item first" line, but **no dropzone at all** — there is no `itemId` yet
+  for `POST /trips/{tripId}/items/{itemId}/attachments` to target, so nothing is rendered that could
+  throw or silently no-op on the first drop. Pinned down by `itemAttachments.test.tsx`'s "the
+  new-item case" block.
+- `ItemRow` gains `attachmentCount?: number` as an **opt-in prop**, not a direct read of
+  `item.attachment_count` off the item it already receives (which would have painted the paperclip
+  on the timeline too, ahead of Step 2.7). Only `DayDetailPage` passes it (`attachmentCount=
+  {item.attachment_count}`); `TimelinePage` is untouched, matching 2.7's own plan text ("ItemRow's
+  existing callers that pass no count render exactly as before").
+- The `paperclip` glyph was added to the icon sprite here rather than in 2.7: `icons.svg`'s header
+  comment had pencilled it in for "the timeline's per-item badge", but the task brief for this Step
+  explicitly assigns "the paperclip and count on the item row" to 2.4, and the glyph needed a first
+  consumer regardless of which host reaches it first. The sprite's comment is updated accordingly.
+- `AttachmentRow` (the per-attachment card) was factored out of `DayAttachments.tsx` into its own
+  module and imported by both it and the new `ItemAttachments.tsx`, per this Step's explicit
+  instruction not to re-implement the same row twice.
+- The count text (`item.attachmentCount`, "Attachments ({count, number})" / "Załączniki ({count,
+  number})") deliberately does **not** pluralise the noun — that ICU plural key is Step 2.6's own
+  named deliverable. This Step's key can be swapped for 2.6's once it lands without changing where
+  it is called from.
+
+## 2026-09-06T18:25:51Z — Step 2.5 scope decisions
+- `AttachmentRow` owns the whole delete flow, not just the trigger: it renders the download `<a>`,
+  the delete `.button-danger`, and (behind `confirmingDelete` state) the `ConfirmDialog` itself,
+  which calls `deleteAttachment(tripId, attachment.id)` directly. A host never touches the API for
+  delete — it only receives the new required `onDeleted: () => void` prop, fired after the awaited
+  delete resolves, exactly mirroring how upload already bubbles through `onUploaded`.
+- Both hosts gained a same-shaped `onDeleted` prop and forward it unchanged to every row.
+  `DayAttachments` is purely presentational (no local list state), so its `onDeleted` is a straight
+  pass-through; `ItemAttachments` still owns its local `attachments` array, so its `onDeleted` prop
+  wraps a `handleDeleted(attachmentId)` that filters the row out locally *and* bubbles up, the same
+  local-first/bubble-up shape `handleUploaded` already uses.
+- `ItemDialog` gained `onAttachmentDeleted: () => void` — a name deliberately distinct from its
+  existing `onDelete` (which deletes the whole item) — wired by `DayDetailPage` to `() => void
+  load()`, the same refetch `onUploaded` already triggers on both hosts.
+- Download is a real `<a href={attachmentContentUrl(...)}>` wearing `.button-quiet`; a new
+  `.attachment-row__actions a { text-decoration: none }` rule undoes the link underline, the same
+  pattern `.day-nav__link` already uses for its own anchors.
+- Whoever builds Step 4.2's lightbox on top of this row should know: `AttachmentRow`'s own delete
+  button and `ConfirmDialog` stay mounted in the row regardless of what a host does with `onDeleted`
+  (confirmed by `attachmentRow.test.tsx`'s focus-return-on-confirm test), so a lightbox trigger on
+  the image preview can coexist without fighting this row's own confirm-dialog lifecycle.
+
+## 2026-09-06T20:45:00Z — checkpoint 3 (first real browser walk)
+- Steps covered: 2.1..2.5 (`59ff245..d83e6eb`). The whole attachment UI now exists.
+- Gate outcome: PASS — **all eight commands green**, including `npm run build` and 213 frontend
+  tests (up from 149). Backend unchanged at 600 passed / 0 skipped.
+- UI verification: **RAN**, against `.ai/scripts/test-env-up.sh` (production app factory, built SPA,
+  one origin, fresh database), driven with `agent-browser` v0.34.0 in **both locales**.
+  Verdict **PARTIAL** — everything Steps 2.1–2.5 were asked to build works end to end, and the walk
+  still found four major defects plus one nit that **no gate command could see**. That gap is the
+  argument for doing the walk at all, and it is why this entry exists.
+- Defects → two fix Steps appended to the Tasks table (blocker/major fix now, minor/nit defer):
+  - `2.2-review-fix-1` — the `aria-live` announcement is formatted at event time and never
+    re-renders, so Polish leaks into the English UI (R01/R09) and a rejected upload still announces
+    "100%" to a screen reader. `check_locales.py` cannot catch this: both keys exist and are in
+    sync; what is wrong is *when* the string was formatted.
+  - `2.2-review-fix-2` — a completed upload stays in the dropzone queue while also appearing as a
+    real attachment row, so every file shows twice and the queue goes stale after a delete.
+  - Deferred nit: a long filename wraps mid-word in the narrow item modal.
+- Process deviation recorded: Step 2.4 produced a second, docs-only commit (`96fa3a7`) against the
+  one-Step-one-commit rule. Not force-fixed — it changes no code, so bisect-by-Step is unaffected,
+  and rewriting pushed history to tidy a docs commit would cost more than the deviation. Later
+  executor prompts carry an explicit instruction not to repeat it; Step 2.5 produced exactly one.
+- Environment: `agent-browser` is not on `PATH` (cached binary used), and Chrome will not launch
+  unless `TMPDIR` is `/tmp` — this worktree path exceeds Chromium's singleton-socket length limit.
+- Tasks-table SHAs for rows 2.1..2.5 reconciled to their post-amend values.
+
+## 2026-09-06T21:35:00Z — Step 2.8 is a no-op, and is recorded as one
+- Checked, at the moment the Step ran: `frontend/src/features/preview/` **does not exist**; a
+  repository-wide grep for `data-preview` and `PreviewNotice` returns **nothing**; there is no
+  census test. Only `features/auth/` and `features/trips/` exist under `features/`.
+- Therefore this feature had no inert preview surfaces to delete and no census number to update, and
+  Step 2.8 lands no code.
+- **Recorded rather than deleted, deliberately**, because the spec asks for exactly that: "If the
+  folder does not exist, this step is a no-op and is recorded as one — rather than deleted, so a
+  later reader knows the interaction was considered." The interaction was considered.
+- The background, for that later reader: the design-system spec's workstream B specified two of this
+  feature's surfaces as inert previews — the day-documents panel with a disabled file input, and the
+  collapsed reservation disclosure with three disabled fields — and its Phase 5 was cut by the owner
+  mid-run (PR #11). So this feature's UI is a **first build, not an activation**, and every surface
+  Phase 2 and Phase 3 create is new markup. Had workstream B shipped first, this Step would have
+  deleted those two `<PreviewNotice>` blocks, removed the `disabled` attributes and the
+  `data-preview` markers, and lowered that spec's census from four surfaces to two.
+
+## 2026-09-06T22:10:00Z — Step 2.3-review-fix-1: a stale day response could unshow a fresh upload
+- **The defect, from the browser walk.** On `/trips/:id/days/:date`, uploading a ~4.3 MB PNG
+  announced "Dodano big3.png" and then showed the file **nowhere** — neither as an attachment row
+  nor as a queue row. A reload proved the file was on the server all along. 75 B and 594 KB files
+  appeared instantly; the same 4.3 MB file uploaded through the *item* strip appeared instantly.
+  To the owner it looked exactly like silent data loss.
+- **Root cause — confirmed, not the drop zone.** `DayDetailPage.load()` let **whichever day response
+  arrived last win**, regardless of which request was newest. Several loads are in flight routinely
+  (the mount's, one per item save or delete, one per upload or attachment delete), and nothing
+  orders the answers. The losing ordering: an unrelated refetch is issued while the upload is still
+  in flight → the upload finishes and its own refetch renders the list *with* the new attachment →
+  `UploadDropzone` correctly retires the queue row against that list, **permanently**, as
+  `2.2-review-fix-2` designed it → the older request finally answers with the pre-upload list and
+  overwrites the fresh one. The attachment row is gone and the queue row is never coming back. A
+  slow upload widens that window, which is exactly why only large files showed it, and why the item
+  strip — which appends the created attachment to its own local list — never did.
+- **The fix.** `DayDetailPage` now tags every day request with a monotonic counter and drops any
+  response, success *or* failure, that is no longer the newest. That is the same discipline the file
+  already used on the other axis (state tagged with the date it was loaded for, so another day's
+  answer cannot render) extended to the request axis rather than a parallel mechanism. Alongside it,
+  a finished day upload is now appended to the day's own attachment list from the upload's own
+  answer before the refetch replies — the local-first shape `ItemAttachments` already had, so the
+  two hosts behave the same and the panel no longer depends on a round trip for a fact the server
+  has already confirmed. Queue retirement is untouched: the duplicate rows `2.2-review-fix-2` fixed
+  stay fixed, and both properties now hold at once — a file is shown exactly once, never zero times.
+- **Failing-first, on purpose.** `frontend/src/features/trips/dayAttachmentsRace.test.tsx` drives the
+  ordering through the real screen with the day responses held open by hand. It **fails on the
+  pre-fix code** ("expected `[]` to deeply equal `['rezerwacja.pdf']`" at the post-stale-response
+  assertion) and passes after. Verified a second time that the counter alone carries the fix, so it
+  is not the optimistic append masking the race. Three cases: the out-of-order refetch; the upload's
+  own answer rendering without waiting for a round trip; and an unrelated refresh landing *while*
+  the upload is in flight, which must not retire the queue row that is the file's only
+  representation at that moment.
+- **Deferred, still open.** The `aria-live` region keeps its previous message after an unrelated
+  action (a rejection message survives a later successful delete, item creation and locale
+  switches). Clearing it is not a consequence of this change — the announcement lives in
+  `UploadDropzone` and the actions that ought to supersede it happen outside it — so per this Step's
+  own scope note it is left as a deferred minor rather than widening the Step.
+- Gate: `typecheck`, `test --run` (**232 passed**, up from 229), `build`, `check_locales.py`,
+  `check_css_tokens.py`, `check_contrast.py` — all green.
+
+## 2026-09-06T21:55:00Z — checkpoint 4 (Phase 2 closes; run pauses at the safety checkpoint)
+- Steps covered: `2.2-review-fix-1`, `2.2-review-fix-2`, `2.6`, `2.7`, `2.8`, and the
+  `2.3-review-fix-1` this checkpoint produced (`bdcfa5b..02339d2`).
+- Gate: all eight commands green — 600 backend / 0 skips, **232** frontend tests, build clean.
+- UI re-verification: **all four checkpoint-3 defects confirmed FIXED in the running application**,
+  in both locales, rather than inferred from the suite.
+- **A fifth, worse defect was found by the same walk, and fixed.** A ~4.3 MB upload to the day panel
+  announced success and **never appeared in the list** (35 s DOM poll, reproduced 4/4) — the file was
+  on the server, so to a user this is indistinguishable from silent data loss. Root cause:
+  `DayDetailPage.load()` let whichever day response arrived last win; a refetch issued before the
+  upload answered after it and overwrote the fresh list, while the queue row had already retired
+  against the good render. Zero representations. Size-dependent because a long upload widens the
+  window; the item strip was immune because it appends from its own answer.
+  **This is precisely the "appears in neither" failure mode `2.2-review-fix-2` was warned to avoid,
+  and it happened anyway** — the strongest argument this run has produced for walking the UI at
+  every checkpoint instead of trusting a green suite.
+- Fix `2.3-review-fix-1`: a monotonic request tag; a superseded response is dropped on success and
+  on failure alike. Failing-first verified, and the executor reverted its optimistic append to prove
+  the tag alone carries the fix. Confirmed by **8 large uploads, 0 failures**, including a 4.3 MB
+  upload concurrent with an item save (network trace shows the two overlapping day GETs) and a
+  9.3 MB worst case.
+- 2.6 verified in the browser: Polish `few` (2 pliki) and `many` (5 plików) both render. 2.7's
+  "no money on the timeline" is currently *trivially* true — Phase 3 has not run — and must be
+  re-checked afterwards.
+- Environment: **the main checkout's `.ai/qa/test-env.env` holds a stale password**; the worktree
+  copy is the live one. Cost the confirmation walk ~10 minutes of 401s. Also: `agent-browser`'s
+  `fill`/`type` do not work on `input[type=date]` segment spinbuttons.
+- **Run paused here for user review**, per the executor-dispatch safety checkpoint (~20 consecutive
+  successful Steps). 21 of 31 Steps are done; Phases 1 and 2 are complete and independently
+  shippable. Nothing is blocked and nothing awaits an answer.
+
+## 2026-09-06T22:58:00Z — Step 3.7 — the brief's arranging-one-item flow, walked end to end: **PASS**
+- **The flow ran to its end in the running application**, in Polish and then in English:
+  open a day → open an item → set its details → attach `voucher-batu-caves.pdf` → save
+  `SX-9912L` / `1250.00 PLN` → move to *gotowe* → **the readiness counter moved from
+  `0 z 1 załatwionych` to `1 z 1 załatwionych`** (`1 of 1 arranged` under `en`). **R04 is met.**
+  Evidence: eight screenshots and a leg-by-leg log in `step-3.7-artifacts/`.
+- **The three sceptical questions this run's earlier walks taught us to ask, answered.**
+  The confirmation number and the cost **survive a full page reload** (checked twice, once before
+  and once after the status change). Moving to *gotowe* **really moved the counter**, with
+  reservation data present — nothing about the reservation fields conditioned it. **Nothing
+  nagged**: `[role=alert]` was empty at every leg, the dialog count never exceeded the one dialog
+  the click opened, and `details.reservation-panel.open` was `false` on first render, after the
+  upload landed, after the status change and after two reloads with data in it.
+- **What is committed is a full-app integration test, not browser E2E** —
+  `frontend/src/features/trips/arrangingOneItem.test.tsx`, in the pattern
+  `statusPathIndependence.test.tsx` established (real `App`, `MemoryRouter`, a `fetch` stub that
+  *stores* what it is sent so a re-read is a real round trip, and the shared `FakeXhr` for the
+  upload). This repository has no browser-driven runner and this Step did not add one; the browser
+  half of the evidence is the walk above. Verified sensitive by three mutations: forcing the
+  disclosure open, and dropping the confirmation number from the draft and from the `PATCH`, each
+  fail it.
+- **Finding, out of scope, no action taken.** `formatCurrency` in `features/trips/format.ts` has
+  **no call site in the application** — only `format.test.ts`. The saved cost is shown only in the
+  editable input, as the raw wire string `1250.00`; **`1 250,00 zł` never appears on screen.**
+  Arguably correct: the spec's UI/UX says the opened panel shows "three controls … nothing else"
+  and that costs are not shown on the timeline, so it names no display surface. But the
+  cross-cutting rule "money goes through `Intl`, never concatenation" currently governs nothing,
+  and Step 3.4's green test proves a function no user can reach. Worth a decision before the PR
+  claims the rule is implemented.
+- **Harness notes for the next walk.** `agent-browser` cannot drive `input[type=date]` **or**
+  `input[type=time]` — `fill`, `type`, `keyboard type` and per-segment `press` all leave the value
+  empty, so the trip was created through the REST API and the item carries no start time. Separately,
+  `find role button "<label>" click` silently no-ops on this app's dialog buttons while
+  `click 'button[type=submit]'` works; a stuck dialog after it is the harness, not the app.
+- Gate: all eight commands green — backend **635 passed, 0 skipped**, frontend **265 passed**
+  (up from 264), build clean, all three `check_*.py` OK.
+
+## 2026-09-07T00:25:00Z — checkpoint 5 (Phase 3 closes)
+- Run resumed: at the safety checkpoint the user reviewed and chose **"finish all of it"**, so
+  Phases 3 and 4 proceed rather than the run ending at Phase 2.
+- Steps covered: 3.1..3.7 plus `3.4-review-fix-1` (`930da01..8d21299`) — **eight Steps, not five**.
+  Cadence deviation recorded deliberately: Step 3.7 *is* a full UI walk with screenshots, so
+  checkpointing at 3.5 and walking again at 3.7 would have paid for the same browser work twice two
+  Steps apart. The gate commands still ran at the 3.6 boundary and were green, so no window went
+  unvalidated — only the ceremony was batched. Phase 4 returns to the normal cadence.
+- Gate: all eight green — **635 backend / 0 skipped**, **270 frontend**, build clean.
+- **R04 is met.** The brief's own flow was walked in the running application, in both locales:
+  counter `0 z 1 załatwionych` → `1 z 1 załatwionych`. A full reload returned the confirmation
+  number, cost and voucher; the disclosure stayed collapsed even immediately after the upload; and
+  moving to *gotowe* was one click with no request, no prompt and no second dialog.
+- Migration `0006_item_reservation` unwinds **independently** of `0005_attachment` — tested against a
+  database already holding items and attachments, which is assumption A1 made real rather than
+  asserted.
+- **Defect found by the walk and fixed:** `formatCurrency` had no call site in the application, so
+  `1 250,00 zł` never rendered and the spec's "money through `Intl`" rule governed nothing — Step 3.4
+  had shipped a green test over unreachable code. `3.4-review-fix-1` gives it the smallest honest
+  surface: the collapsed disclosure shows a *saved* cost, only when one exists, so it cannot nag and
+  `noNagging.test.tsx` passes unmodified.
+- Worth keeping: Polish CLDR sets `minimumGroupingDigits: 2`, so `Intl`'s default `useGrouping:
+  'auto'` omits the group separator on a four-digit amount and the spec's own cited example does not
+  reproduce without `useGrouping: 'always'`.
+- New deferred minor: manually clearing the pre-filled `PLN` while an amount is present drops both
+  halves silently. Outside ordinary use, but real.
+- Environment: `agent-browser` cannot drive `input[type=date]` **or** `input[type=time]` at all.
+- Tasks-table SHAs for all Phase 3 rows reconciled to their post-amend values.
+
+## 2026-09-07T00:40:00Z — Step 4.1 scope decision: one new locale key for the drag-over hint
+- Situation: AGENTS.md's accessibility rule ("no state conveyed by colour alone") is called out by
+  name for this Step's drag-over fill, and the spec's own recipe comment says the fill to
+  `--surface-sunken` is the *whole* visual change — no new token, no border-style change (the dashed
+  `--hairline-strong` outline "stays").
+- Decision: rather than leave the state colour-only, the zone's existing hint line (`upload.hint`)
+  swaps to a new translated sentence (`upload.dropHint`, both locales) while a drag is over it,
+  reverting on drag-leave/drop. This adds one locale key pair, not present in the spec's own
+  "Uploading" bullet list, but no CSS token and no new contrast pair (the fill still resolves to the
+  one token `check_contrast.py`/`check_css_tokens.py` already know about).
+- Not a blocker: `check_locales.py` passes with the new keys in sync; flagging for the record since
+  a future reader comparing the diff against the spec's literal bullet list would otherwise wonder
+  where the extra string came from.
+
+## 2026-09-07T02:10:00Z — `1.6-review-fix-1`: uploads did their database work on the event loop
+- **The defect (critical, found at the final gate).** Two concurrent uploads to the same trip hung
+  the whole server permanently; `/api/v1/health` then timed out for every client. The upload
+  handlers are `async def` — they must be, because Step 1.6 drives `request.stream()` itself to
+  check the rate window and `Content-Length` before the body is read and to keep every byte out of a
+  `SpooledTemporaryFile` — but they then ran **synchronous psycopg work on the event loop**.
+  FastAPI runs a sync `def` endpoint in a threadpool and an `async def` endpoint on the loop, so the
+  upload waiting on `pg_advisory_xact_lock(hashtext(trip_id))` froze the loop, and the transaction
+  *holding* that lock could never be scheduled to reach `get_db`'s commit and release it.
+- **The fix.** Every synchronous database call in the upload path is now awaited through
+  `starlette.concurrency.run_in_threadpool` — `check_rate` (still before the read), `find_item`, and
+  `store_attachment` (the locking transaction). Only the streaming stays on the loop. The advisory
+  lock is untouched and `SERIALIZABLE` was not considered; the lock was never the problem. The check
+  order is byte-for-byte the same, and both `TestTheOrderOfChecks` and
+  `TestNothingTouchesTheFilesystem` pass unmodified, as does `test_quota.py`'s two-connection
+  concurrency test.
+- **Transaction lifecycle.** The request's session is still touched by one thread at a time: each
+  threadpool hop is awaited to completion before the next begins. `get_db` is a sync generator
+  dependency, so FastAPI already runs both its body and its teardown — the `commit` that releases
+  the lock — in a threadpool. Nothing about the commit-on-success / rollback-on-failure contract
+  moved.
+- **Why the green suite missed it, and what now catches it.** Every existing endpoint test runs
+  through `TestClient` against `conftest`'s single shared, never-committed session: one connection,
+  one request at a time, so no second transaction can ever exist. `tests/test_upload_concurrency.py`
+  builds the missing harness — the *real* `get_db` bound to the test engine, the app driven over
+  `ASGITransport` on a real loop in a daemon thread, and the assertion in the main thread behind a
+  `join(timeout=30)` so a frozen loop is a **failure** and not an infinite CI run.
+- **Worth knowing for the future:** simply gathering two uploads does **not** reproduce this. Under
+  `ASGITransport` the first upload runs through to its commit before the second is scheduled, so
+  that test passes with the bug present (verified). The deterministic reproduction holds the trip's
+  advisory lock on a third, separate connection and then asks whether `/api/v1/health` still
+  answers while an upload waits on it. Both tests fail without the fix; the lock-holder one fails
+  for the right reason on its own.
+
+## 4.3-review-fix-1 — where the duplicate hint actually lives (scope decision)
+
+Step 4.3 put the hint on the upload queue's `done` row. In the composed app that row retires on the
+very commit that paints the attachment row (`2.2-review-fix-2`), so the hint never rendered — the
+browser walk at the final gate found it dead, and the Step's own tests had passed because they
+exercised `UploadDropzone` in isolation, where nothing ever retires.
+
+**The hint now rides on `AttachmentRow`**, derived on every render from the host's own list
+(`duplicatedSha256s`: the hashes appearing more than once in one parent's attachments). Three
+consequences worth recording, because they change the feature's shape slightly:
+
+- **It cannot become a second representation of the file.** It is a line *inside* the file's one
+  row, not a card, a banner or a surviving queue entry. There is nothing to paint when the row is
+  not painted, so neither the exactly-once nor the never-zero guarantee has a new way to break —
+  both suites pass unmodified.
+- **It is derived, not remembered.** The verdict is not carried from the upload that produced it,
+  so it cannot go stale: delete either copy and the sentence stops being shown, because it has
+  stopped being true.
+- **Therefore it also shows for duplicates that were already there** — two identical files attached
+  on an earlier visit now say so on load, where before the hint could only ever have appeared in
+  the seconds after an upload. This is a widening of 4.3 as written. It is the price of deriving it
+  from the list rather than from an event, and it is judged an improvement: A14's sentence ("a file
+  with the same contents is already attached here") is a fact about the parent, not about a click.
+
+The queue row's own hint is **kept**, unchanged, for the window where the queue row is genuinely the
+file's only representation (a dropzone with no host list; a host whose refetch has not caught up).
+The retirement rule makes the two surfaces mutually exclusive, so the hint can exist in both places
+without ever appearing twice, and both read the same `upload.duplicateHint` key.
+
+Nothing about A14's substance moved: nothing is deduplicated, nothing is refused, both copies are
+stored and listed, and the hint carries no `role="alert"`, no undo and no dismissal.
+
+## Step 3.4-review-fix-2 — three decisions inside the cost input
+
+**The comma is normalised, the English grouping style is not.** `normaliseAmount` (`format.ts`)
+strips whitespace — which also covers the group separator in `1 250,50`, including the non-breaking
+one `Intl` itself prints — turns every comma into a dot, and drops a trailing separator so a
+half-typed `249,` is not an error between two keystrokes. It deliberately stops there: `1,250.50`
+(the English grouping style), a leading `+`, a currency symbol typed into the amount box, non-ASCII
+digits and scientific notation are all **refused** rather than guessed at. Reading `1,250.50` as a
+decimal comma would send the server a number a thousand times too small; failing the wire pattern
+marks the field instead. This is not, and must not become, a locale-aware number parser.
+
+**`formatCurrency` renders nothing rather than a lie.** An empty or unparseable amount, or a
+currency that is not ISO-4217 shaped, now yields `''` — no `NaN`, and no `RangeError` either
+(`new Intl.NumberFormat('pl', { currency: 'P' })` throws, and `P` is two keystrokes into typing
+`PLN`, so the old code could crash the editor). The collapsed summary renders no cost element at
+all for those values, which is also what the no-nagging invariant wants.
+
+**A cost the server would refuse now blocks the save on the client — a widening worth naming.**
+Invariant 1 says no reservation field is ever *required*; it does not say a typed value that
+`domain/money.py` would answer with `422 invalid_cost` must be sent anyway. An empty cost is still
+never marked and never blocks anything, and the ordinary Save is untouched. What changed is that a
+malformed **pair that would actually be transmitted** (both halves non-blank, the same `hasCost`
+rule `reservationInput` uses) marks its own half with `aria-invalid` + `aria-describedby` pointing
+at the translated `error.invalid_cost` message, and disables Save until it is fixed — the same
+computed-message-under-the-field pattern `TripCreatePage` uses for a stage outside the trip, and the
+same string the server's own 422 maps to. A malformed half beside a blank one is *not* marked: it is
+dropped rather than sent, so complaining about it would be a complaint about a value the server
+never sees. That is what replaces "Sprawdź zaznaczone pola" with nothing marked.
+
+## 2026-09-07T01:35:00Z — final gate (ran twice)
+- Every Tasks row is `done`: **35 Steps** — the spec's 28 plus 7 fix Steps appended from browser
+  findings.
+- **First pass FAILED, and it is recorded as a failure.** All eight gate commands were green
+  (635 backend / 0 skips, 293 frontend, clean build) and the UI walk beside them found a
+  **critical** defect that would otherwise have shipped: two concurrent uploads to one trip
+  **permanently hung the whole server** — one `201`, the other never returning, `/api/v1/health`
+  timing out for every client until the database backend was killed.
+- Cause: the upload handlers are `async def` (they must be, to check the rate window and
+  `Content-Length` before reading `request.stream()`), but did **synchronous psycopg work on the
+  event loop**. The request waiting on `pg_advisory_xact_lock` froze the loop, so the request
+  holding the lock could never be served to commit. The lock was never the problem.
+- Fixed by `1.6-review-fix-1` (blocking DB work through `run_in_threadpool`). Its test is worth
+  knowing about: `gather`ing two uploads does **not** reproduce the hang under `ASGITransport`, so
+  the regression test holds the trip's advisory lock on a third connection and asks whether health
+  still answers, with the deadline enforced from another thread — a timeout scheduled on a frozen
+  loop never fires.
+- Two more defects from the same walk: Step 4.3's duplicate hint was **dead code** that never
+  rendered anywhere (`4.3-review-fix-1`), and `249,50` — the Polish decimal separator in the Polish
+  UI — rendered a literal `NaN €` then failed to save with "check the marked fields" while nothing
+  was marked (`3.4-review-fix-2`).
+- **Second pass PASSED:** 637 backend / 0 skipped, 336 frontend across 22 files, build clean, all
+  three script gates green.
+- Re-verified in the browser: 2, 8 and 16 concurrent uploads to one trip all `201`; a 5-file UI drop
+  all stored; `/api/v1/health` polled **18 153 times during** the bursts, **100 % `200`, zero
+  timeouts**; md5 matched source on 10/10 sampled uploads; 0× 5xx in the app log.
+- Integration suite: the repo has **no separate E2E runner** and this run added none. Its
+  integration-level coverage is the full-app vitest tests, run in full at command 7 — recorded as
+  what it is, not dressed up as browser E2E.
+- Design-system pass: `check_css_tokens.py` + `check_contrast.py` are the repo's compliance tooling,
+  both green; no new contrast pair was ever needed. `oxlint` (not a gate command) reports warnings
+  only; the two in this feature's code are deliberate documented patterns, surfaced for the reviewer
+  rather than rewritten at the gate.
+- Seven residual findings recorded for the reviewer in `final-gate-checks.md`.
+
+## 2026-09-06T22:46:17Z — review-fix batch (backend findings of the PR #12 review)
+One commit, five findings, no new Steps — these are review findings, not plan Steps.
+
+- **MAJOR 1 — a cost ≥ 10¹⁰ was a 500, not a 422.** `validate_cost` checked scale but never
+  magnitude, so `12345678901.00` reached `NUMERIC(12,2)` and came back as psycopg's
+  `numeric field overflow` — an unhandled `DataError` (`app.py` maps only `ApiError`,
+  `RequestValidationError`, `StarletteHTTPException`, `OperationalError`), with the failed
+  statement poisoning the session. `domain/money.py` now states **both** halves of the column:
+  `MAX_COST_DIGITS = 12` beside the existing `MAX_COST_DECIMAL_PLACES = 2`, with
+  `MAX_COST_AMOUNT` **derived** from them rather than typed out, so `ItemUpdate`'s deliberate
+  omission of `max_digits` is honest again. Pinned by two new rows in the parametrised refusal
+  test and four unit tests, including the inclusive `9999999999.99`.
+- **MAJOR 2 — a multi-part body amplified memory ~14×.** `read_body` bounded the bytes; nothing
+  bounded the `_Part` objects built out of them (measured: 1 165 084 parts in a 10 MB body,
+  84 MB → 229 MB RSS, *then* a correct `422`). `MAX_PARTS = 8` is now checked in `on_part_begin`,
+  so the parse **stops** instead of completing. Eight, not two: the one-part rule is about `file`
+  parts, and a stray field must still be accepted. The regression test asserts the **bound** —
+  exactly 8 `_Part`s built for a 20 000-part body — not the outcome, which already held.
+- **MINOR 3 — the last ~200 bytes of the 10 MB cap were unusable.** The body bound is now
+  `MAX_BODY_BYTES = MAX_ATTACHMENT_BYTES + 4096`; the real per-file limit is the counted length of
+  the parsed `file` part, checked in `_receive`. `ck_attachment_byte_size` is reachable again, and
+  a file of exactly `MAX_ATTACHMENT_BYTES` is stored (new test) rather than told it is over 10 MB.
+- **MINOR 4 — a JPEG declaring 0×0 was accepted where the PNG was refused.** The zero check is
+  hoisted into one `_check_dimensions` both formats call; six new refusal rows.
+- **MINOR 7 / NIT — the pre-read prune locked every owner's rows.** `prune` is now scoped to
+  `owner_id`, so `check_rate` no longer holds unrelated row locks across `read_body` and the
+  upload. `record_upload`'s duplicate prune is gone with it: `check_rate` always precedes it in the
+  same transaction, so it only ever deleted the row just written.
+- **MINOR 8 — no code change, by the reviewer's instruction.** The remaining bound (uploads
+  waiting on `pg_advisory_xact_lock` occupy shared anyio worker threads; it drains, it does not
+  wedge) is now named in the module docstring, with the reason a semaphore is the wrong trade.
+
+Gate: `ruff` clean; **654 backend tests passed, 0 skipped**; all three `scripts/check_*.py` green.
+No frontend file touched (the client-side mirror of MAJOR 1 is a separate executor's).
+`test_a_field_value_within_the_cap_is_ignored_not_refused` passes **unmodified**. One existing test
+was renamed, not weakened: `test_a_declared_length_over_the_cap_is_refused` →
+`test_a_file_one_byte_over_the_cap_is_refused`, because with the envelope allowance that body is
+now refused by the counted file length rather than by its declared length — same status, same code,
+different mechanism, so the old name described a path it no longer took. The declared-length path
+keeps its own test against `MAX_BODY_BYTES`.
+
+## 2026-09-07T00:00:00Z — review-fix batch (frontend findings of the PR #12 review)
+One commit, three findings, no new Steps. No backend file touched — the server half of
+FINDING 1 landed in `46d4d9f` from the parallel executor, and this is its client mirror.
+
+- **FINDING 1 (client mirror of MAJOR 1) — the magnitude bound now exists client-side.**
+  `COST_AMOUNT_PATTERN` is a *shape* rule (`^\d+(\.\d{1,2})?$`) and cannot carry a length, so
+  `12345678901` sailed past the client check and came back as the server's generic
+  "check the marked fields" with **nothing marked** — the exact dead end `3.4-review-fix-2`
+  existed to remove. `format.ts` now mirrors `domain/money.py`'s other half: `MAX_COST_DIGITS`
+  and `MAX_COST_DECIMAL_PLACES`, with `MAX_COST_AMOUNT` **derived** from them exactly as the
+  server derives it, and `exceedsMaxCostAmount` judging it. `costFieldErrors` folds it into the
+  amount half, so the refusal marks the box with the same `aria-invalid` + `aria-describedby`
+  → `error.invalid_cost` pair every other cost refusal uses. Still only a convenience: the
+  server repeats the check, and the client is never the reason something is *accepted*. The
+  `error.invalid_cost` sentence gained the magnitude clause in **both** locales, so the one
+  wire code still has exactly one message. Pinned by four unit blocks in `format.test.ts`
+  (including the inclusive `9999999999.99`) and two editor-level tests in
+  `reservationDecimal.test.tsx`, pl and en, asserting the mark, the resolved message, the
+  disabled save and the silent summary.
+- **FINDING 5 — a failed attachment delete said nothing.** `onConfirm` had no `catch`, and
+  `ConfirmDialog` does `void Promise.resolve(onConfirm()).finally(...)`: a `503`, a dropped
+  connection or a `404` from a second tab was an **unhandled rejection** that left the dialog
+  open, the button re-enabled and the owner uninformed. `AttachmentRow` now catches and renders
+  `t(err.translationKey)` **inside the dialog**, through a new optional `error` prop on
+  `ConfirmDialog` — that is where the owner is looking, where the confirm button *is* the retry,
+  and the one place the dialog is not covering. The row is kept and `onDeleted` is not called:
+  the file very likely still exists. Three tests in `attachmentRow.test.tsx` (pl `503`, en `404`,
+  and a retry that succeeds and clears the message).
+- **FINDING 6 — in-flight uploads outlived the panel, and a map leaked per upload.** Unmount now
+  aborts every controller (closing the item dialog mid-upload cancels the request instead of
+  letting `patch`/`setAnnouncement`/`onUploaded` fire into a tree and a host that are gone), and
+  the retirement effect prunes `controllers` and `announcedStep` alongside the row, the same pair
+  `drop()` deletes. The prune moved out of the state updater into the effect body (`rows` is now
+  a dependency) so it happens when the effect runs rather than whenever React next invokes a lazy
+  updater. Two tests: an unmount-mid-upload one asserting the abort, no `onUploaded`, and no
+  React update warning afterwards; and one that records every `Map` the component builds and
+  pins that nothing keyed by a row key survives three successive successful uploads.
+
+Gate: `npm run typecheck` clean, **353 frontend tests passed in 22 files**, `npm run build` clean,
+`npm run lint` warnings only (all pre-existing), all three `scripts/check_*.py` green. No new
+colour pair: the dialog's failure line is the shipped `[role='alert']` recipe (`--danger` on the
+dialog's `--surface`), restated only because `.dialog--confirm p` outranked it on specificity.
+The six protected suites pass **unmodified** — `uploadDropzone.test.tsx` and
+`attachmentRow.test.tsx` are additions at the end of the file, 0 deletions.
+
+## 2026-09-07T03:05:00Z — run complete
+- `om-auto-review-pr 12 --autofix` ran as the single authoritative review pass. An **independent**
+  reviewer was used deliberately rather than self-review: the main session had supervised all 35
+  Steps and would have been anchored.
+- Verdict: **changes requested**, two majors, both reproduced with measurements —
+  (1) a `cost_amount >= 10^10` passed every validator and overflowed `NUMERIC(12,2)` into an
+  unhandled `500` instead of `422 invalid_cost`; (2) the "exactly one part" rule was enforced
+  *after* parsing, so a 10 MiB body of ~1.16M empty parts allocated ~145 MB RSS (measured
+  84 MB → 229 MB) before rejection — the spec explicitly wanted that bound in the parser.
+- Both majors, all six minors and the actionable nits were fixed in two batches (`46d4d9f` backend,
+  `a380204` frontend) and re-verified. Re-review: **approve**.
+- GitHub refuses `addPullRequestReview` on one's own PR, so both the review and the re-review were
+  posted as comments with that substitution stated plainly. The pipeline label moved
+  `review → changes-requested → merge-queue` as if they had been formal reviews.
+- Final state: **654 backend passed / 0 skipped**, **353 frontend passed**, build clean, all three
+  script gates green, **CI green**. PR flipped to ready, `needs-qa` retained — with `qaGate` on it
+  cannot merge until a human adds `qa-approved`, and a P0/P1/P2 QA plan is posted on the PR.
+- Closing note for the record: **eight major defects passed the full eight-command gate** across
+  this run and were caught only by driving the application in a browser. That is the run's clearest
+  finding and it is written into `final-gate-checks.md` rather than left implicit.

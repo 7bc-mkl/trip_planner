@@ -13,6 +13,15 @@ import { useTranslation } from 'react-i18next'
  * trapped while open, and returns to the trigger on unmount. It opens focused on
  * the **cancel** button rather than the destructive one, so a stray Return on a
  * dialog that appeared unexpectedly does not delete a trip.
+ *
+ * **A failed confirmation is reported here, inside the dialog.** `onConfirm`
+ * can reject — a `503`, a dropped connection, a `404` for a row a second tab
+ * already deleted — and when it does, the dialog stays open with `busy`
+ * cleared. That is the only place the owner is still looking, and it is where
+ * the retry (the same confirm button) is, so the host passes the translated
+ * message back down through `error` rather than putting it somewhere the
+ * dialog is covering. The host owns the string: it is the one that caught the
+ * failure and knows its `translationKey`.
  */
 
 const FOCUSABLE = 'button:not([disabled])'
@@ -21,12 +30,19 @@ export function ConfirmDialog({
   title,
   message,
   confirmLabel,
+  error = null,
   onConfirm,
   onCancel,
 }: {
   title: string
   message: string
   confirmLabel: string
+  /**
+   * The translated message for a confirmation that failed — already through
+   * `t(...)` by the host, never a code and never an English fallback. `null`
+   * while nothing has failed, which is every render until one does.
+   */
+  error?: string | null
   onConfirm: () => Promise<void> | void
   onCancel: () => void
 }) {
@@ -88,6 +104,11 @@ export function ConfirmDialog({
       >
         <h2 id={headingId}>{title}</h2>
         <p>{message}</p>
+
+        {/* `role="alert"`, so it is announced when it appears rather than
+            waiting for the owner to go looking: the action they asked for did
+            not happen, and the dialog is still standing. */}
+        {error !== null && <p role="alert">{error}</p>}
 
         <div className="dialog__actions">
           <button type="button" className="button-quiet" ref={cancel} onClick={onCancel}>
