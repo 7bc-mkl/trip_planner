@@ -80,6 +80,13 @@ function mockApi(handler: Handler) {
 /** A backend that serves `trip` and answers `PATCH /trips/{id}` however asked. */
 function backend(trip: unknown = TRIP, onPatch: () => Response = () => json(200, trip)): Handler {
   return (url, init) => {
+    // The locale switch persists the owner's choice, and the app applies what
+    // comes back — so a stub that always answered `pl` would drag the UI back
+    // to Polish the moment anyone switched.
+    if (url.endsWith('/auth/me') && init?.method === 'PATCH') {
+      const { locale } = JSON.parse(String(init.body)) as { locale: string }
+      return json(200, { ...OWNER, locale })
+    }
     if (url.endsWith('/auth/me')) return json(200, OWNER)
     if (url.endsWith('/trips') && (init?.method ?? 'GET') === 'GET') return json(200, [trip])
     if (/\/trips\/[^/]+$/u.test(url) && init?.method === 'PATCH') return onPatch()
@@ -381,6 +388,20 @@ describe('the four refusals', () => {
     expect(screen.getByLabelText('Nazwa podróży')).toHaveValue(TRIP.title)
     // And it stays on the editor rather than navigating away from a failure.
     expect(screen.getByRole('heading', { name: 'Edytuj podróż' })).toBeInTheDocument()
+  })
+
+  it('re-renders the refusal in the language the owner switches to', async () => {
+    // QA finding: the message used to be formatted once and stored, so it
+    // stayed Polish on an otherwise English page. The error is the fact; the
+    // sentence is a rendering of it.
+    const user = userEvent.setup()
+    await refuse('days_have_items', '2026-10-13')
+
+    await user.selectOptions(screen.getByRole('combobox'), 'en')
+
+    const alert = await screen.findByText(/These days already have items/u)
+    expect(alert).toHaveTextContent('October 13, 2026')
+    expect(alert).not.toHaveTextContent('października')
   })
 
   it('marks the date fields when the refusal is about the dates', async () => {

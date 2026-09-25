@@ -9,7 +9,6 @@ import type { TripDetail } from '../../api/trips'
 import { AppShell } from './AppShell'
 import { StageEditor } from './StageEditor'
 import { detailedErrorMessage, refusalAnchor } from './errorDetail'
-import type { RefusalAnchor } from './errorDetail'
 import { dayCount, formatDateRange, nightCount } from './format'
 import { ROUTE_MODES, returnPlaceFor, routeModeOf } from './routeMode'
 import type { RouteMode } from './routeMode'
@@ -78,7 +77,16 @@ export function TripEditPage() {
   const [trip, setTrip] = useState<TripDetail | null>(null)
   const [draft, setDraft] = useState<Draft | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
-  const [refusal, setRefusal] = useState<{ message: string; anchor: RefusalAnchor } | null>(null)
+  /**
+   * The refused save itself, **not** the sentence built from it.
+   *
+   * Storing the formatted message would freeze it in whichever language was
+   * active when the save failed: switching the locale switch afterwards left a
+   * Polish refusal sitting on an otherwise English page (caught in QA). The
+   * error is the fact; the sentence is a rendering of it, so it is built
+   * during render, from the locale in force then.
+   */
+  const [refusedWith, setRefusedWith] = useState<unknown>(null)
   const [saving, setSaving] = useState(false)
   /**
    * The other half of the mutual lock. `StageEditor` disables its cards while
@@ -126,11 +134,20 @@ export function TripEditPage() {
     return () => controller.abort()
   }, [tripId, t])
 
+  /** The refusal as it is rendered right now, in the language in force now. */
+  const refusal =
+    refusedWith === null
+      ? null
+      : {
+          message: detailedErrorMessage(refusedWith, t, i18n.language),
+          anchor: refusalAnchor(refusedWith),
+        }
+
   useEffect(() => {
-    if (refusal !== null) {
+    if (refusedWith !== null) {
       alertRef.current?.focus()
     }
-  }, [refusal])
+  }, [refusedWith])
 
   const rangeIsValid =
     draft !== null && draft.startDate !== '' && draft.endDate !== '' && draft.endDate >= draft.startDate
@@ -175,7 +192,7 @@ export function TripEditPage() {
     }
 
     setSaving(true)
-    setRefusal(null)
+    setRefusedWith(null)
 
     try {
       await updateTrip(tripId, {
@@ -194,10 +211,7 @@ export function TripEditPage() {
       if (caught instanceof ApiError && caught.isUnauthenticated) {
         return // The global handler is already routing to /login.
       }
-      setRefusal({
-        message: detailedErrorMessage(caught, t, i18n.language),
-        anchor: refusalAnchor(caught),
-      })
+      setRefusedWith(caught)
       setSaving(false)
     }
   }
@@ -228,6 +242,10 @@ export function TripEditPage() {
       breadcrumb={
         <nav aria-label={t('nav.breadcrumb')} className="breadcrumb">
           <Link to="/trips">{t('trips.title')}</Link>
+          {/* The separator is markup, the way the day detail writes it: with
+              two links and no character between them the crumbs render as one
+              run-together word ("PodróżeMalezja, październik 2026"). */}
+          {' / '}
           <Link to={`/trips/${trip.id}`}>{trip.title}</Link>
         </nav>
       }
