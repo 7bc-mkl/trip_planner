@@ -15,6 +15,9 @@
 set -euo pipefail
 
 TARGET="${1:-${DEPLOY_TARGET:-}}"
+# Override to pin an identity without editing ~/.ssh/config, e.g.
+#   DEPLOY_SSH="ssh -i ~/.ssh/trip-planner -o IdentitiesOnly=yes"
+SSH="${DEPLOY_SSH:-ssh}"
 REMOTE_ROOT="${DEPLOY_ROOT:-/srv/trip-planner}"
 REMOTE_APP="${REMOTE_ROOT}/app"
 ENV_FILE="${REMOTE_ROOT}/.env"
@@ -35,7 +38,7 @@ fi
 REVISION="$(git rev-parse --short HEAD)"
 echo "==> Deploying ${REVISION} to ${TARGET}:${REMOTE_APP}"
 
-ssh "$TARGET" "test -f '${ENV_FILE}'" || {
+$SSH "$TARGET" "test -f '${ENV_FILE}'" || {
 	echo "Refusing to deploy: ${ENV_FILE} does not exist on ${TARGET}." >&2
 	echo "Create it first — deploy/README.md, 'First release', step 2." >&2
 	exit 1
@@ -44,24 +47,24 @@ ssh "$TARGET" "test -f '${ENV_FILE}'" || {
 # git archive rather than rsync: it ships exactly what is committed, honours
 # .gitattributes, and needs nothing installed on the host but tar.
 echo "==> Shipping the tree"
-ssh "$TARGET" "rm -rf '${REMOTE_APP}.incoming' && mkdir -p '${REMOTE_APP}.incoming'"
-git archive --format=tar HEAD | ssh "$TARGET" "tar -x -C '${REMOTE_APP}.incoming'"
-ssh "$TARGET" "rm -rf '${REMOTE_APP}' && mv '${REMOTE_APP}.incoming' '${REMOTE_APP}'"
-ssh "$TARGET" "printf '%s\n' '${REVISION}' > '${REMOTE_ROOT}/REVISION'"
+$SSH "$TARGET" "rm -rf '${REMOTE_APP}.incoming' && mkdir -p '${REMOTE_APP}.incoming'"
+git archive --format=tar HEAD | $SSH "$TARGET" "tar -x -C '${REMOTE_APP}.incoming'"
+$SSH "$TARGET" "rm -rf '${REMOTE_APP}' && mv '${REMOTE_APP}.incoming' '${REMOTE_APP}'"
+$SSH "$TARGET" "printf '%s\n' '${REVISION}' > '${REMOTE_ROOT}/REVISION'"
 
 COMPOSE="docker compose -f deploy/compose.prod.yml --env-file '${ENV_FILE}'"
 
 echo "==> Building the image"
-ssh "$TARGET" "cd '${REMOTE_APP}' && ${COMPOSE} build"
+$SSH "$TARGET" "cd '${REMOTE_APP}' && ${COMPOSE} build"
 
 # `up -d` starts db, waits for it to be healthy, runs migrate to completion, and
 # only then starts the app. A failed migration therefore leaves the previous
 # container serving rather than pointing a new image at a half-migrated database.
 echo "==> Migrating and starting"
-ssh "$TARGET" "cd '${REMOTE_APP}' && ${COMPOSE} up -d --remove-orphans"
+$SSH "$TARGET" "cd '${REMOTE_APP}' && ${COMPOSE} up -d --remove-orphans"
 
 echo "==> Waiting for the app to answer"
-ssh "$TARGET" "cd '${REMOTE_APP}' && for i in \$(seq 1 30); do
+$SSH "$TARGET" "cd '${REMOTE_APP}' && for i in \$(seq 1 30); do
 	if ${COMPOSE} exec -T app python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health')\" 2>/dev/null; then
 		echo 'app is healthy'; exit 0
 	fi

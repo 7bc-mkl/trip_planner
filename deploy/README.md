@@ -81,6 +81,9 @@ because a short secret looks configured.
 
 ```bash
 ./deploy/deploy.sh root@HOST
+
+# Or, to pin an identity without editing ~/.ssh/config:
+DEPLOY_SSH="ssh -i ~/.ssh/trip-planner -o IdentitiesOnly=yes" ./deploy/deploy.sh root@HOST
 ```
 
 **4. Create the owner.** There is no sign-up; the owner account is made here, and
