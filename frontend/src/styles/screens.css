@@ -481,6 +481,29 @@ fieldset.field-card {
   width: 100%;
 }
 
+/* The editor's footer: Save keeps the creator's full-width treatment and Cancel
+   sits beside it at its own width, so the two are not mistaken for a pair of
+   equally weighted choices. */
+.trip-form__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+/* The refused-save message. It is the shipped `[role='alert']` recipe — same
+   `--danger` on the same surface, so the contrast table gains no pair — moved
+   to the TOP of the form and given the weight of a heading, because it is the
+   one thing the owner has to read before touching anything else. `tabindex="-1"`
+   in the markup is what lets focus land here; the ring is the global one. */
+.trip-form__refusal {
+  margin: 0 0 var(--space-xs);
+  padding: var(--space-md);
+  border: 1px solid var(--danger);
+  border-radius: var(--radius-lg);
+  font: var(--type-body-md);
+  letter-spacing: var(--tracking-body-md);
+}
+
 /* The live summary, now inside the dock's "trip at a glance" card. */
 .trip-form__summary {
   margin: 0;

@@ -25,6 +25,7 @@
   "trip": {
     "stageCount": "{count, plural, one {# stage} other {# stages}}",
     "nightCount": "{count, plural, one {# night} other {# nights}}",
+    "edit": "Edit trip",
     "delete": "Delete trip",
     "deleteTitle": "Delete this trip?",
     "deleteMessage": "“{title}” and everything planned in it — every destination, every day and every item — will be deleted. This cannot be undone.",
@@ -42,6 +43,13 @@
     "new": "New trip",
     "emptyTitle": "No trips yet",
     "emptyBody": "Create your first trip and its empty timeline, then fill it in day by day."
+  },
+  "tripEdit": {
+    "title": "Edit trip",
+    "subtitle": "Change the name, the dates, the route and the destinations. Nothing you have planned is thrown away: if the new dates clash with the plan, the save is refused and says exactly what is in the way.",
+    "save": "Save changes",
+    "saving": "Saving…",
+    "cancel": "Cancel"
   },
   "tripCreate": {
     "eyebrow": "Trip planning",

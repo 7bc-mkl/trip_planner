@@ -5,10 +5,11 @@ import { RequireSession } from './features/auth/RequireSession'
 import { DayDetailPage } from './features/trips/DayDetailPage'
 import { TimelinePage } from './features/trips/TimelinePage'
 import { TripCreatePage } from './features/trips/TripCreatePage'
+import { TripEditPage } from './features/trips/TripEditPage'
 import { TripListPage } from './features/trips/TripListPage'
 
 /**
- * The four routes of the milestone.
+ * The routes of the milestone.
  *
  * `/trips/new` is declared before `/trips/:tripId` so "new" is never read as a
  * trip id. React Router 7 ranks static segments above dynamic ones regardless of
@@ -23,6 +24,7 @@ export default function App() {
         <Route path="/trips" element={<TripListPage />} />
         <Route path="/trips/new" element={<TripCreatePage />} />
         <Route path="/trips/:tripId" element={<TimelinePage />} />
+        <Route path="/trips/:tripId/edit" element={<TripEditPage />} />
         <Route path="/trips/:tripId/days/:date" element={<DayDetailPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/trips" replace />} />
