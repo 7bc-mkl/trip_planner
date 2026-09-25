@@ -105,11 +105,11 @@ reverse:
 
 ### Phase 1: The production deployment shape, in the repository
 
-- [ ] 1.1 `deploy/Caddyfile` — automatic HTTPS, HTTP redirect, HSTS
-- [ ] 1.2 `deploy/compose.prod.yml` — proxy, private Postgres, migrate gate, app
-- [ ] 1.3 `deploy/deploy.sh` — the repeatable release
-- [ ] 1.4 `deploy/README.md` — provisioning, variables, owner, rollback
-- [ ] 1.5 Tests locking the production deployment shape down
+- [x] 1.1 `deploy/Caddyfile` — automatic HTTPS, HTTP redirect, HSTS — af0ccf3
+- [x] 1.2 `deploy/compose.prod.yml` — proxy, private Postgres, migrate gate, app — af0ccf3
+- [x] 1.3 `deploy/deploy.sh` — the repeatable release — af0ccf3
+- [x] 1.4 `deploy/README.md` — provisioning, variables, owner, rollback — af0ccf3
+- [x] 1.5 Tests locking the production deployment shape down — af0ccf3
 
 ### Phase 2: Provision and release
 
