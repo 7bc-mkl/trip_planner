@@ -11,6 +11,7 @@ import json
 from pathlib import Path
 
 import pytest
+import yaml
 from fastapi.testclient import TestClient
 
 from trip_planner.app import API_PREFIX, create_app
@@ -177,6 +178,119 @@ class TestDeploymentArtifacts:
             assert "SESSION_SECRET:" not in text or "${SESSION_SECRET" in text, (
                 f"{path.name} appears to hard-code SESSION_SECRET"
             )
+
+
+class TestProductionDeploymentShape:
+    """What the deployed stack must be, asserted on the parsed compose document.
+
+    These are not style checks. Each one is a way the deployment has silently
+    gone wrong before: a database that ended up on a public port, an app started
+    against an unmigrated schema, a proxy that served plain HTTP because the
+    redirect was never configured.
+    """
+
+    @pytest.fixture
+    def deploy_dir(self) -> Path:
+        return Path(__file__).resolve().parents[2] / "deploy"
+
+    @pytest.fixture
+    def compose(self, deploy_dir: Path) -> dict:
+        return yaml.safe_load((deploy_dir / "compose.prod.yml").read_text())
+
+    def test_only_the_proxy_is_published(self, compose: dict) -> None:
+        """The database and the app must be unreachable except through Caddy."""
+        published = {
+            name: service["ports"]
+            for name, service in compose["services"].items()
+            if service.get("ports")
+        }
+
+        also_published = sorted(set(published) - {"caddy"})
+        assert set(published) == {"caddy"}, (
+            f"only the proxy may publish a port; these also do: {also_published}"
+        )
+        assert sorted(published["caddy"]) == ["443:443", "80:80"]
+
+    def test_the_database_is_on_an_internal_network_only(self, compose: dict) -> None:
+        assert compose["services"]["db"]["networks"] == ["internal"]
+        assert compose["networks"]["internal"]["internal"] is True, (
+            "the database's network must have no route off the host"
+        )
+
+    def test_the_app_waits_for_the_migration_to_complete(self, compose: dict) -> None:
+        """Not 'waits for it to start' — an app on an unmigrated schema 500s."""
+        assert compose["services"]["app"]["depends_on"]["migrate"] == {
+            "condition": "service_completed_successfully"
+        }
+
+    def test_the_release_step_migrates_rather_than_serving(self, compose: dict) -> None:
+        """`migrate-and-serve` is the single-instance fallback, not the hook."""
+        assert compose["services"]["migrate"]["command"] == ["migrate"]
+        assert compose["services"]["app"]["command"] == ["serve"]
+
+    def test_every_required_variable_is_set_for_both_the_app_and_the_migration(
+        self, compose: dict
+    ) -> None:
+        """A migration step missing DATABASE_URL fails the release, loudly but late."""
+        for service in ("app", "migrate"):
+            environment = compose["services"][service]["environment"]
+            for name in REQUIRED_ENVIRONMENT_VARIABLES:
+                assert name in environment, f"compose.prod.yml never sets {name} for {service}"
+
+    def test_no_required_variable_has_a_default_that_would_half_configure_the_stack(
+        self, compose: dict
+    ) -> None:
+        """`${VAR:-fallback}` would start production on a development value."""
+        environment = compose["services"]["app"]["environment"]
+        for name in REQUIRED_ENVIRONMENT_VARIABLES:
+            assert ":-" not in environment[name], (
+                f"{name} has a compose default; an unset variable must refuse to start"
+            )
+
+    def test_the_stack_comes_back_after_a_reboot(self, compose: dict) -> None:
+        """A URL that dies on the first reboot has not been deployed."""
+        for service in ("db", "app", "caddy"):
+            assert compose["services"][service]["restart"] == "unless-stopped"
+
+    def test_the_proxy_waits_for_the_app_to_be_healthy(self, compose: dict) -> None:
+        """Otherwise the proxy answers 502 for the seconds the app spends booting."""
+        assert compose["services"]["caddy"]["depends_on"]["app"] == {
+            "condition": "service_healthy"
+        }
+        assert "healthcheck" in compose["services"]["app"], "…which needs something to wait on"
+
+    def test_the_proxy_sends_hsts(self, deploy_dir: Path) -> None:
+        """The session cookie is Secure; a downgrade to http logs the user out."""
+        caddyfile = (deploy_dir / "Caddyfile").read_text()
+
+        assert "Strict-Transport-Security" in caddyfile
+        assert "reverse_proxy app:8000" in caddyfile
+
+    def test_the_proxy_does_not_cap_the_request_body(self, deploy_dir: Path) -> None:
+        """The upload limit belongs to the API, which answers in the API's shape.
+
+        `read_body` already refuses on `Content-Length` before a byte is read and
+        counts the bytes while streaming. A cap in the proxy could only fire
+        above that one, and when it did the caller would get Caddy's HTML 413
+        instead of `{"error":{"code":"attachment_too_large"}}` — the response
+        shape BACKWARD_COMPATIBILITY.md §1 protects.
+        """
+        directives = [
+            line.strip()
+            for line in (deploy_dir / "Caddyfile").read_text().splitlines()
+            if not line.strip().startswith("#")
+        ]
+
+        assert not [line for line in directives if "max_size" in line], (
+            "a proxy-level body cap would answer oversize uploads outside the API's error shape"
+        )
+
+    def test_the_release_script_refuses_without_the_env_file(self, deploy_dir: Path) -> None:
+        """Secrets are written on the host by a human, never by this repository."""
+        script = deploy_dir / "deploy.sh"
+
+        assert script.stat().st_mode & 0o111, "deploy.sh must be executable"
+        assert "does not exist on" in script.read_text()
 
 
 def test_the_gate_and_the_ci_workflow_run_the_same_commands() -> None:

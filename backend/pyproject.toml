@@ -24,6 +24,10 @@ dev = [
     "pytest>=8.3",
     "httpx2>=0.29",
     "ruff>=0.8",
+    # Read by the deployment-shape tests, which assert on the compose files'
+    # structure rather than on substrings — "db publishes no port" is a claim
+    # about the parsed document, and a grep for it would pass on a comment.
+    "pyyaml>=6",
 ]
 
 [build-system]

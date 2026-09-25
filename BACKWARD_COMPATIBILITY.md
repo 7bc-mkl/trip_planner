@@ -68,7 +68,12 @@ Locale keys are an internal contract between the code and the locale files, enfo
 
 ### 5. Configuration and environment variables
 
-*State: not yet created.*
+*State: in place.* The application requires `DATABASE_URL`, `SESSION_SECRET`,
+`APP_BASE_URL` and `ENVIRONMENT` (`backend/trip_planner/config.py`), and the
+deployment additionally requires `POSTGRES_PASSWORD`, `APP_HOSTNAME` and
+`ACME_EMAIL` (`deploy/compose.prod.yml`; see `deploy/README.md`). Every one of
+them is unset-is-fatal: the application names the variable it is missing, and
+compose refuses to start rather than substituting a default.
 
 - Adding an **optional** variable with a sensible default: safe.
 - Adding a **required** variable: breaking for every deployment — call it out in the PR body, document it, and provide a clear startup error naming the missing variable.
