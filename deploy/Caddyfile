@@ -1,0 +1,51 @@
+# The public edge of the deployment.
+#
+# Caddy terminates TLS and talks plain HTTP to the app on the private compose
+# network. The app never listens on a public port; `app:8000` is only resolvable
+# from inside that network, which is what keeps the single-origin arrangement
+# (spec A12) from needing CORS or a second certificate.
+#
+# APP_HOSTNAME is the DNS name the certificate is issued for, and ACME_EMAIL is
+# where Let's Encrypt sends expiry warnings. Both come from the host's env file.
+
+{
+	email {$ACME_EMAIL}
+}
+
+{$APP_HOSTNAME} {
+	# Automatic HTTPS: Caddy obtains and renews the certificate over HTTP-01 and
+	# redirects http:// to https:// on its own. The redirect matters beyond
+	# tidiness — the session cookie is `Secure`, so a request that reached the
+	# app over plain HTTP would be handed a cookie the browser then refuses to
+	# send back, and every subsequent request would fail authentication for a
+	# reason nothing in the logs explains.
+
+	header {
+		# Two years, because a shorter window is a window. `preload` is
+		# deliberately absent: it is effectively irreversible, and this host is
+		# expected to move to a real domain.
+		Strict-Transport-Security "max-age=63072000; includeSubDomains"
+
+		# The app is same-origin with its own API and loads no third-party frames.
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+
+		# Naming the server names a version to look up exploits for.
+		-Server
+	}
+
+	# Attachments are up to 10 MB plus the multipart envelope; the ceiling here is
+	# generous enough not to mask the API's own `attachment_too_large`, which is
+	# the error the user is meant to see.
+	request_body {
+		max_size 12MB
+	}
+
+	reverse_proxy app:8000 {
+		# uvicorn runs with --proxy-headers --forwarded-allow-ips '*', so it reads
+		# the client address and scheme from here rather than from the socket.
+		header_up X-Forwarded-Proto {scheme}
+		header_up X-Forwarded-For {remote_host}
+	}
+}

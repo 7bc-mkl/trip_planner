@@ -1,0 +1,109 @@
+# The deployment that actually runs in production.
+#
+# `compose.yml` is the local stand-up of the same image; this file is the real
+# thing, and the differences are the whole point:
+#
+#   * TLS is terminated by Caddy in front, so the app keeps speaking plain HTTP
+#     and is never published to the host's public interface.
+#   * Postgres publishes no port at all. It is reachable on the compose network
+#     and nowhere else, which is the spec's "reachable only from the application".
+#   * Everything restarts unless it was stopped on purpose, because a milestone
+#     whose URL dies on the first reboot has not been deployed.
+#
+# Every value comes from the host's env file (`deploy.sh` points compose at it).
+# Nothing here has a default that would let the stack start half-configured —
+# `?` on each variable makes an unset one a refusal, not a surprise.
+#
+#   docker compose -f deploy/compose.prod.yml --env-file /srv/trip-planner/.env up -d
+#
+# See deploy/README.md; `deploy.sh` is the supported way to run it.
+
+name: trip-planner
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: trip_planner
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in the env file}
+      POSTGRES_DB: trip_planner
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U trip_planner"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    networks:
+      - internal
+
+  # The release step, and the reason the app can be trusted to start. It runs to
+  # completion first, so migrations land before the new image takes traffic —
+  # never `migrate-and-serve`, which exists only for platforms with no hook and
+  # would have every replica racing the moment a second one appears.
+  migrate:
+    image: trip-planner:latest
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    command: ["migrate"]
+    environment: &app_environment
+      DATABASE_URL: postgresql+psycopg://trip_planner:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in the env file}@db:5432/trip_planner
+      SESSION_SECRET: ${SESSION_SECRET:?set SESSION_SECRET in the env file — 32+ characters}
+      APP_BASE_URL: ${APP_BASE_URL:?set APP_BASE_URL in the env file — must be https:// in production}
+      ENVIRONMENT: ${ENVIRONMENT:?set ENVIRONMENT in the env file}
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - internal
+
+  app:
+    image: trip-planner:latest
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    restart: unless-stopped
+    command: ["serve"]
+    environment: *app_environment
+    # No `ports`: the only way in is through the proxy.
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    networks:
+      - internal
+      - edge
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    environment:
+      APP_HOSTNAME: ${APP_HOSTNAME:?set APP_HOSTNAME in the env file — the DNS name the certificate is issued for}
+      ACME_EMAIL: ${ACME_EMAIL:?set ACME_EMAIL in the env file}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      # Certificates and the ACME account key. Losing this volume means
+      # re-issuing on the next start, which the rate limit eventually notices.
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - app
+    networks:
+      - edge
+
+networks:
+  # The app and the database talk here, and nothing on this network is published.
+  internal:
+    internal: true
+  # Only the proxy and the app share this one, so the proxy can reach the app
+  # while the database stays unreachable from anything holding a public port.
+  edge:
+
+volumes:
+  db-data:
+  caddy-data:
+  caddy-config:
