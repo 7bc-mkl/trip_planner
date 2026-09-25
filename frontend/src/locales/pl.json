@@ -199,6 +199,10 @@
     "invalid_cost": "Sprawdź koszt: musi mieć kwotę i walutę, nie może być ujemny, może mieć co najwyżej dwa miejsca po przecinku i nie może przekraczać 9 999 999 999,99.",
     "invalid_reservation_field": "Numer potwierdzenia jest za długi. Skróć go do 500 znaków lub mniej.",
     "days_have_attachments": "Te dni mają już załączniki. Najpierw je usuń, potem skróć podróż.",
+    "days_have_items_detail": "Te dni mają już zaplanowane pozycje: {dates}. Najpierw przenieś je lub usuń, potem skróć podróż.",
+    "days_have_attachments_detail": "Te dni mają już załączniki: {dates}. Najpierw przenieś je lub usuń, potem skróć podróż.",
+    "items_outside_new_range_detail": "Pozycje zaczynające się {dates} wykraczają poza nową datę zakończenia. Najpierw je skróć lub usuń, potem skróć podróż.",
+    "stages_outside_new_range_detail": "Te cele wykraczają poza nowe daty: {places}. Najpierw je popraw, potem skróć podróż.",
     "unknown": "Coś poszło nie tak. Spróbuj ponownie."
   }
 }
