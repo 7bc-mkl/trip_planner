@@ -331,7 +331,7 @@ describe('what the refetch after a save may not throw away', () => {
     await waitFor(() => expect(api.stagesNow()[1]?.place).toBe('Langkawi'))
     // One card showing the saved value, not two showing two versions of it.
     await waitFor(() => expect(screen.getAllByDisplayValue('Langkawi')).toHaveLength(1))
-    expect(screen.queryByDisplayValue('Penang')).not.toBeInTheDocument()
+    await waitFor(() => expect(screen.queryByDisplayValue('Penang')).not.toBeInTheDocument())
   })
 })
 
@@ -388,7 +388,11 @@ describe('removing a base', () => {
     await user.click(within(dialog).getByRole('button', { name: 'Usuń' }))
 
     await waitFor(() => expect(api.stagesNow()).toHaveLength(1))
-    expect(screen.queryByDisplayValue('Penang')).not.toBeInTheDocument()
+    // On the screen, not just on the fake backend: the row goes during the
+    // DELETE, the card only once the refetch after it has been reconciled.
+    // Asserting the backend and then the DOM without waiting is the race that
+    // went red in CI.
+    await waitFor(() => expect(screen.queryByDisplayValue('Penang')).not.toBeInTheDocument())
   })
 
   it('sends nothing when the confirmation is cancelled', async () => {
