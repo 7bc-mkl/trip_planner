@@ -148,6 +148,13 @@ declare — in particular `stages` is not part of `TripUpdate`.
 
 ## 📝 UI/UX
 
+Prototype: `.ai/specs/assets/trip-and-stage-editing/` — illustrative static
+mockups, `mockup-01-edit` (the screen) and `mockup-02-refusal` (the 409 state
+this spec is mostly about), beside `current-01-timeline` and
+`current-02-creator`, which are screenshots of the app as it stands today. The
+mockups show layout and copy; they are not a pixel specification and they prove
+no behavior.
+
 ### The entry point
 
 `TimelinePage`'s `actions` slot gains a `button-quiet` "Edit trip" before the
