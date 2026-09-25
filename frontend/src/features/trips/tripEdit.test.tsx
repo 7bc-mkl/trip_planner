@@ -390,6 +390,20 @@ describe('the four refusals', () => {
     expect(screen.getByRole('heading', { name: 'Edytuj podróż' })).toBeInTheDocument()
   })
 
+  it('does not throw away the edit when the owner switches language', async () => {
+    // QA finding: the load effect depended on `t`, whose identity changes with
+    // the language — so switching the locale re-fetched the trip and re-seeded
+    // the form, wiping everything typed into it.
+    const user = userEvent.setup()
+    await refuse('days_have_items', '2026-10-13')
+
+    expect(screen.getByLabelText('Data zakończenia')).toHaveValue('2026-10-11')
+
+    await user.selectOptions(screen.getByRole('combobox'), 'en')
+
+    expect(await screen.findByLabelText('End date')).toHaveValue('2026-10-11')
+  })
+
   it('re-renders the refusal in the language the owner switches to', async () => {
     // QA finding: the message used to be formatted once and stored, so it
     // stayed Polish on an otherwise English page. The error is the fact; the

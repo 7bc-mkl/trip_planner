@@ -457,7 +457,10 @@ describe('the whole base-management walk', () => {
       await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Usuń' }))
 
       await waitFor(() => expect(api.stagesNow()).toHaveLength(1))
-      expect(screen.queryByDisplayValue('Penang')).not.toBeInTheDocument()
+      // Waited on the *screen*, not just the fake backend: the backend drops
+      // the row during the DELETE, while the card only goes when the refetch
+      // that follows has landed and been reconciled.
+      await waitFor(() => expect(screen.queryByDisplayValue('Penang')).not.toBeInTheDocument())
       // Back to one base, which can no longer be removed.
       expect(within(cardFor('Kuala Lumpur')).getByRole('button', { name: 'Usuń' })).toBeDisabled()
     },

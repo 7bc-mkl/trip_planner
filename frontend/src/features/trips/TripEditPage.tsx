@@ -76,7 +76,15 @@ export function TripEditPage() {
 
   const [trip, setTrip] = useState<TripDetail | null>(null)
   const [draft, setDraft] = useState<Draft | null>(null)
-  const [loadError, setLoadError] = useState<string | null>(null)
+  /**
+   * The failed load itself, for the same reason `refusedWith` below holds the
+   * error rather than its sentence — **and for a sharper one.** Keeping the
+   * translated string here meant `t` had to be a dependency of the load
+   * effect, and `t` changes identity on every language change: switching the
+   * locale re-ran the fetch and re-seeded the form, silently throwing away
+   * everything the owner had typed. Caught in QA.
+   */
+  const [loadFailure, setLoadFailure] = useState<unknown>(null)
   /**
    * The refused save itself, **not** the sentence built from it.
    *
@@ -128,11 +136,13 @@ export function TripEditPage() {
         }
         // An empty form would be a lie about the trip, the same reason the
         // timeline refuses to render a blank page on a failed load.
-        setLoadError(caught instanceof ApiError ? t(caught.translationKey) : t('error.unknown'))
+        setLoadFailure(caught)
       })
 
     return () => controller.abort()
-  }, [tripId, t])
+    // `t` is deliberately absent: see `loadFailure`. Changing the language
+    // must re-render this screen, never re-fetch and re-seed it.
+  }, [tripId])
 
   /** The refusal as it is rendered right now, in the language in force now. */
   const refusal =
@@ -216,10 +226,10 @@ export function TripEditPage() {
     }
   }
 
-  if (loadError !== null) {
+  if (loadFailure !== null) {
     return (
       <AppShell title={t('tripEdit.title')}>
-        <p role="alert">{loadError}</p>
+        <p role="alert">{detailedErrorMessage(loadFailure, t, i18n.language)}</p>
       </AppShell>
     )
   }
