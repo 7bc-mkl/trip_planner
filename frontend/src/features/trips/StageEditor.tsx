@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { ApiError } from '../../api/client'
@@ -58,6 +58,10 @@ const draftOf = (stage: Stage): StageDraft => ({
   endDate: stage.end_date ?? '',
 })
 
+/** A stage's editable content, for "did this change on the server?" comparisons. */
+const serialize = (stage: Stage): string =>
+  JSON.stringify([stage.place, stage.start_date, stage.end_date])
+
 /** `''` is not a date: an empty box means "undecided" (R03), which is `null`. */
 const dateOrNull = (value: string): string | null => (value === '' ? null : value)
 
@@ -90,11 +94,47 @@ export function StageEditor({
   const [removing, setRemoving] = useState<StageDraft | null>(null)
   const [removeError, setRemoveError] = useState<string | null>(null)
 
-  // Rebuild from the server after every refetch, but keep any card that has
-  // never been saved: adding a base and then saving a different one must not
-  // silently discard what was typed into the new card.
+  /**
+   * The server's copy of each stage as of the last rebuild. Compared against
+   * on the next one to tell "this base changed on the server" from "this base
+   * is unchanged and the card may be holding unsaved edits".
+   */
+  const lastSeen = useRef(new Map(stages.map((stage) => [stage.id, serialize(stage)])))
+
+  /**
+   * Reconcile with the server after every refetch — **without discarding what
+   * the owner has typed.**
+   *
+   * Every stage write refetches the whole trip, so this runs after each one.
+   * Replacing every card with the server's copy was wrong in a way that is
+   * easy to miss and impossible to undo: typing a correction into one base and
+   * then saving a *different* one silently reverted the first, with no error
+   * and nothing to click.
+   *
+   * The rule is per card: when the server's value for an id is **unchanged**
+   * since the last rebuild, the local card wins — it is the only one that can
+   * be holding unsaved edits. When the server's value **changed**, the server
+   * wins — it is fresher than anything typed against the old one, and that is
+   * also how the card that was just saved picks up its canonical values.
+   * A card that has never been saved has no server counterpart and is always
+   * kept.
+   */
   useEffect(() => {
-    setDrafts((current) => [...stages.map(draftOf), ...current.filter((one) => one.id === null)])
+    const incoming = new Map(stages.map((stage) => [stage.id, serialize(stage)]))
+
+    setDrafts((current) => {
+      const byId = new Map(current.filter((one) => one.id !== null).map((one) => [one.id, one]))
+
+      const reconciled = stages.map((stage) => {
+        const local = byId.get(stage.id)
+        const changedOnServer = lastSeen.current.get(stage.id) !== incoming.get(stage.id)
+        return local === undefined || changedOnServer ? draftOf(stage) : local
+      })
+
+      return [...reconciled, ...current.filter((one) => one.id === null)]
+    })
+
+    lastSeen.current = incoming
   }, [stages])
 
   useEffect(() => {
@@ -216,99 +256,106 @@ export function StageEditor({
   }
 
   return (
-    <fieldset className="field-card stages" disabled={disabled}>
-      <legend>{t('tripCreate.stages')}</legend>
-      <p className="hint">{t('tripEdit.stagesHint')}</p>
+    <>
+      <fieldset className="field-card stages" disabled={disabled}>
+        <legend>{t('tripCreate.stages')}</legend>
+        <p className="hint">{t('tripEdit.stagesHint')}</p>
 
-      {drafts.map((draft, index) => {
-        const complaint = complaintFor(draft)
-        const busy = busyKey === draft.key
-        const error = errors[draft.key]
+        {drafts.map((draft, index) => {
+          const complaint = complaintFor(draft)
+          const busy = busyKey === draft.key
+          const error = errors[draft.key]
 
-        return (
-          <div className="stage-card" key={draft.key}>
-            <div className="stage-card__head">
-              <span className="stage-card__number" aria-hidden="true">
-                {index + 1}
-              </span>
+          return (
+            <div className="stage-card" key={draft.key}>
+              <div className="stage-card__head">
+                <span className="stage-card__number" aria-hidden="true">
+                  {index + 1}
+                </span>
 
-              <span className="stage-card__actions">
-                <button
-                  type="button"
-                  className="button-quiet"
-                  disabled={
-                    busy || !isDirty(draft) || complaint !== null || draft.place.trim() === ''
-                  }
-                  onClick={() => void save(draft)}
-                >
-                  {busy ? t('tripEdit.saving') : t('tripEdit.saveStage')}
-                </button>
+                <span className="stage-card__actions">
+                  <button
+                    type="button"
+                    className="button-quiet"
+                    disabled={
+                      busy || !isDirty(draft) || complaint !== null || draft.place.trim() === ''
+                    }
+                    onClick={() => void save(draft)}
+                  >
+                    {busy ? t('tripEdit.saving') : t('tripEdit.saveStage')}
+                  </button>
 
-                <button
-                  type="button"
-                  className="button-quiet stage-card__remove"
-                  // R03 again: the trip's last *saved* base stays. An unsaved
-                  // card is always removable — nothing is lost by discarding it.
-                  disabled={busy || (draft.id !== null && stages.length === 1)}
-                  onClick={() => {
-                    setRemoveError(null)
-                    setRemoving(draft)
-                  }}
-                >
-                  {t('tripCreate.removeStage')}
-                </button>
-              </span>
-            </div>
-
-            <div className="stage-card__fields">
-              <div>
-                <label htmlFor={`stage-place-${draft.key}`}>
-                  {t('tripCreate.stagePlace', { position: index + 1 })}
-                </label>
-                <input
-                  id={`stage-place-${draft.key}`}
-                  value={draft.place}
-                  onChange={(event) => update(draft.key, { place: event.target.value })}
-                />
+                  <button
+                    type="button"
+                    className="button-quiet stage-card__remove"
+                    // R03 again: the trip's last *saved* base stays. An unsaved
+                    // card is always removable — nothing is lost by discarding it.
+                    disabled={busy || (draft.id !== null && stages.length === 1)}
+                    onClick={() => {
+                      setRemoveError(null)
+                      setRemoving(draft)
+                    }}
+                  >
+                    {t('tripCreate.removeStage')}
+                  </button>
+                </span>
               </div>
 
-              <div>
-                <label htmlFor={`stage-start-${draft.key}`}>{t('tripCreate.stageStart')}</label>
-                <input
-                  id={`stage-start-${draft.key}`}
-                  type="date"
-                  value={draft.startDate}
-                  onChange={(event) => update(draft.key, { startDate: event.target.value })}
-                />
+              <div className="stage-card__fields">
+                <div>
+                  <label htmlFor={`stage-place-${draft.key}`}>
+                    {t('tripCreate.stagePlace', { position: index + 1 })}
+                  </label>
+                  <input
+                    id={`stage-place-${draft.key}`}
+                    value={draft.place}
+                    onChange={(event) => update(draft.key, { place: event.target.value })}
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor={`stage-start-${draft.key}`}>{t('tripCreate.stageStart')}</label>
+                  <input
+                    id={`stage-start-${draft.key}`}
+                    type="date"
+                    value={draft.startDate}
+                    onChange={(event) => update(draft.key, { startDate: event.target.value })}
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor={`stage-end-${draft.key}`}>{t('tripCreate.stageEnd')}</label>
+                  <input
+                    id={`stage-end-${draft.key}`}
+                    type="date"
+                    value={draft.endDate}
+                    onChange={(event) => update(draft.key, { endDate: event.target.value })}
+                  />
+                </div>
               </div>
 
-              <div>
-                <label htmlFor={`stage-end-${draft.key}`}>{t('tripCreate.stageEnd')}</label>
-                <input
-                  id={`stage-end-${draft.key}`}
-                  type="date"
-                  value={draft.endDate}
-                  onChange={(event) => update(draft.key, { endDate: event.target.value })}
-                />
-              </div>
-            </div>
-
-            {/* The client's complaint first — it is about what is on screen
+              {/* The client's complaint first — it is about what is on screen
                 right now — then whatever the server said about the last save. */}
-            {complaint !== null && <p role="alert">{complaint}</p>}
-            {complaint === null && error !== undefined && <p role="alert">{error}</p>}
-          </div>
-        )
-      })}
+              {complaint !== null && <p role="alert">{complaint}</p>}
+              {complaint === null && error !== undefined && <p role="alert">{error}</p>}
+            </div>
+          )
+        })}
 
-      <button
-        type="button"
-        className="button-quiet stages__add"
-        onClick={() => setDrafts((current) => [...current, blankDraft()])}
-      >
-        {t('tripCreate.addStage')}
-      </button>
+        <button
+          type="button"
+          className="button-quiet stages__add"
+          onClick={() => setDrafts((current) => [...current, blankDraft()])}
+        >
+          {t('tripCreate.addStage')}
+        </button>
+      </fieldset>
 
+      {/* **Outside the fieldset, deliberately.** `disabled` on a `<fieldset>`
+          disables every control inside it, dialog included — so a trip save
+          starting while this dialog is open would grey out its own Cancel
+          button and leave the owner shut inside a dialog they cannot dismiss.
+          The dialog is a modal over the page, not a field of the group. */}
       {removing !== null && (
         <ConfirmDialog
           title={t('tripEdit.removeStageTitle')}
@@ -324,6 +371,6 @@ export function StageEditor({
           onConfirm={() => remove(removing)}
         />
       )}
-    </fieldset>
+    </>
   )
 }

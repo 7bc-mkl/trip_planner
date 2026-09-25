@@ -294,6 +294,47 @@ describe('editing a base', () => {
   })
 })
 
+describe('what the refetch after a save may not throw away', () => {
+  it('keeps unsaved edits in the other cards', async () => {
+    // Review finding: every stage write refetches the trip, and the rebuild
+    // used to replace every card with the server's copy — so typing into one
+    // base and then saving a different one silently reverted the first.
+    const user = userEvent.setup()
+    const api = backend()
+    mount(api)
+
+    await retype(user, await screen.findByDisplayValue('Kuala Lumpur'), 'Johor Bahru')
+
+    // Save the *other* card, which triggers the refetch.
+    await retype(user, screen.getByDisplayValue('Penang'), 'Langkawi')
+    await user.click(within(cardFor('Langkawi')).getByRole('button', { name: 'Zapisz cel' }))
+
+    // Wait for the rebuild to have actually happened — asserting before it
+    // lands would pass whether or not the bug is fixed.
+    await waitFor(() => expect(api.stagesNow()[1]?.place).toBe('Langkawi'))
+    await waitFor(() => expect(screen.getAllByDisplayValue('Langkawi')).toHaveLength(1))
+
+    // The untouched-on-the-server card still holds what was typed into it.
+    expect(screen.getByDisplayValue('Johor Bahru')).toBeInTheDocument()
+  })
+
+  it('does take the server’s value when that base really changed', async () => {
+    // The other side of the same rule: a stale local copy must not win over a
+    // value the server has since changed.
+    const user = userEvent.setup()
+    const api = backend()
+    mount(api)
+
+    await retype(user, await screen.findByDisplayValue('Penang'), 'Langkawi')
+    await user.click(within(cardFor('Langkawi')).getByRole('button', { name: 'Zapisz cel' }))
+
+    await waitFor(() => expect(api.stagesNow()[1]?.place).toBe('Langkawi'))
+    // One card showing the saved value, not two showing two versions of it.
+    await waitFor(() => expect(screen.getAllByDisplayValue('Langkawi')).toHaveLength(1))
+    expect(screen.queryByDisplayValue('Penang')).not.toBeInTheDocument()
+  })
+})
+
 describe('adding a base', () => {
   it('appends a blank card that sends a POST once it has a place', async () => {
     const user = userEvent.setup()
