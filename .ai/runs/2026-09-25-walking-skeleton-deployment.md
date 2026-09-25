@@ -101,6 +101,8 @@ reverse:
 
 ## Progress
 
+PR: #13
+
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
 ### Phase 1: The production deployment shape, in the repository
@@ -113,11 +115,11 @@ reverse:
 
 ### Phase 2: Provision and release
 
-- [ ] 2.1 Provision the host (Docker, firewall)
-- [ ] 2.2 Generate secrets, write the env file, run the first release
-- [ ] 2.3 Create the owner account
+- [x] 2.1 Provision the host (Docker, firewall) — Docker 29.8.1 + compose v5.5.1; ufw allows only 22/80/443
+- [x] 2.2 Generate secrets, write the env file, run the first release — `/srv/trip-planner/.env` (0600, host-only); released f23263e
+- [x] 2.3 Create the owner account — `trip-planner create-owner`, password on stdin
 
 ### Phase 3: Verify and record
 
-- [ ] 3.1 Probe `/login`, `/api/v1/trips` and `/api/v1/auth/me` over TLS
-- [ ] 3.2 Browser evidence of the deployed app, attached to the PR
+- [x] 3.1 Probe `/login`, `/api/v1/trips` and `/api/v1/auth/me` over TLS — 200 / 401 / 401, Let's Encrypt certificate, HSTS present
+- [x] 3.2 Browser evidence of the deployed app, attached to the PR — login, signed-in trip list, and a trip created against the live database
