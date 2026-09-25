@@ -106,6 +106,25 @@ async function useLocale(locale: Locale) {
   await applyLocale(locale)
 }
 
+/**
+ * Replace an input's value, deterministically.
+ *
+ * `user.clear()` followed straight by `user.type()` is a race on a *controlled*
+ * input: clear dispatches its event, but if React has not re-rendered with the
+ * empty value by the time typing starts, the new text is appended to the old
+ * one and the assertion fails somewhere far away with "no element has that
+ * value". Waiting for the box to actually be empty is what makes it honest.
+ */
+async function retype(
+  user: ReturnType<typeof userEvent.setup>,
+  input: HTMLElement,
+  value: string,
+) {
+  await user.clear(input)
+  await waitFor(() => expect(input).toHaveValue(''))
+  await user.type(input, value)
+}
+
 const patches = () => requests.filter((request) => request.method === 'PATCH')
 
 beforeEach(async () => {
@@ -196,9 +215,11 @@ describe('the loaded form', () => {
 
     renderApp('/trips/trip-1/edit')
 
-    expect(await screen.findByText('Kuala Lumpur')).toBeInTheDocument()
-    expect(screen.getByText('Penang')).toBeInTheDocument()
-    expect(screen.getByText('Daty nieustalone')).toBeInTheDocument()
+    // Editable cards, so the places are field values rather than text nodes;
+    // a base whose dates were never decided has two empty date boxes.
+    expect(await screen.findByDisplayValue('Kuala Lumpur')).toBeInTheDocument()
+    expect(screen.getByDisplayValue('Penang')).toBeInTheDocument()
+    expect(document.querySelector('#stage-start-stage-2')).toHaveValue('')
   })
 
   it('says the service is unavailable rather than showing an empty form', async () => {
@@ -259,8 +280,7 @@ describe('saving', () => {
 
     renderApp('/trips/trip-1/edit')
 
-    await user.clear(await screen.findByLabelText('Wyjazd z'))
-    await user.type(screen.getByLabelText('Wyjazd z'), 'Kraków')
+    await retype(user, await screen.findByLabelText('Wyjazd z'), 'Kraków')
     await user.click(screen.getByRole('button', { name: 'Zapisz zmiany' }))
 
     await waitFor(() => expect(patches()).toHaveLength(1))
@@ -302,8 +322,7 @@ describe('saving', () => {
 
     renderApp('/trips/trip-1/edit')
 
-    await user.clear(await screen.findByLabelText('Data zakończenia'))
-    await user.type(screen.getByLabelText('Data zakończenia'), '2026-10-01')
+    await retype(user, await screen.findByLabelText('Data zakończenia'), '2026-10-01')
 
     expect(screen.getByRole('button', { name: 'Zapisz zmiany' })).toBeDisabled()
     expect(patches()).toHaveLength(0)
@@ -317,8 +336,7 @@ describe('the four refusals', () => {
 
     renderApp('/trips/trip-1/edit')
 
-    await user.clear(await screen.findByLabelText('Data zakończenia'))
-    await user.type(screen.getByLabelText('Data zakończenia'), '2026-10-11')
+    await retype(user, await screen.findByLabelText('Data zakończenia'), '2026-10-11')
     await user.click(screen.getByRole('button', { name: 'Zapisz zmiany' }))
 
     return await screen.findByText(/Te dni|Pozycje|Te cele/u)
@@ -393,8 +411,7 @@ describe('the four refusals', () => {
     renderApp('/trips/trip-1/edit')
 
     const endDate = await screen.findByLabelText('Data zakończenia')
-    await user.clear(endDate)
-    await user.type(endDate, '2026-10-11')
+    await retype(user, endDate, '2026-10-11')
     await user.click(screen.getByRole('button', { name: 'Zapisz zmiany' }))
 
     expect(await screen.findByRole('alert')).toHaveTextContent('13 października 2026')

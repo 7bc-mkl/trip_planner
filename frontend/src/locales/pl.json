@@ -49,7 +49,11 @@
     "subtitle": "Zmień nazwę, daty, trasę i cele. Nic z tego, co zaplanowane, nie przepada: jeśli nowe daty kolidują z planem, zapis zostanie odrzucony i powie dokładnie, co stoi na przeszkodzie.",
     "save": "Zapisz zmiany",
     "saving": "Zapisywanie…",
-    "cancel": "Anuluj"
+    "cancel": "Anuluj",
+    "saveStage": "Zapisz cel",
+    "stagesHint": "Każdy cel zapisuje się osobno, w chwili gdy go zapiszesz — przycisk na dole strony zapisuje same dane podróży.",
+    "removeStageTitle": "Usunąć ten cel?",
+    "removeStageMessage": "„{place}” zostanie usunięty z podróży. Dni zostają bez zmian; zmienia się tylko cel, którym są opisane. Tej operacji nie można cofnąć."
   },
   "tripCreate": {
     "eyebrow": "Planowanie podróży",

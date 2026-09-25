@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -136,6 +136,25 @@ function statefulBackend() {
   return { handler, clearLastDay, trip }
 }
 
+/**
+ * Replace an input's value, deterministically.
+ *
+ * `user.clear()` followed straight by `user.type()` is a race on a *controlled*
+ * input: clear dispatches its event, but if React has not re-rendered with the
+ * empty value by the time typing starts, the new text is appended to the old
+ * one and the assertion fails somewhere far away with "no element has that
+ * value". Waiting for the box to actually be empty is what makes it honest.
+ */
+async function retype(
+  user: ReturnType<typeof userEvent.setup>,
+  input: HTMLElement,
+  value: string,
+) {
+  await user.clear(input)
+  await waitFor(() => expect(input).toHaveValue(''))
+  await user.type(input, value)
+}
+
 function renderApp(path: string) {
   return render(
     <MemoryRouter initialEntries={[path]}>
@@ -179,8 +198,7 @@ describe("issue #8's scenario: the owner got a date wrong", () => {
       expect(endDate).toHaveValue('2026-10-13')
 
       // ── Move the end date back past the day that carries the flight home ────
-      await user.clear(endDate)
-      await user.type(endDate, '2026-10-11')
+      await retype(user, endDate, '2026-10-11')
       await user.click(screen.getByRole('button', { name: 'Zapisz zmiany' }))
 
       // The refusal names THAT day — not "something went wrong", and not a

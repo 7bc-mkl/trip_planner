@@ -49,7 +49,11 @@
     "subtitle": "Change the name, the dates, the route and the destinations. Nothing you have planned is thrown away: if the new dates clash with the plan, the save is refused and says exactly what is in the way.",
     "save": "Save changes",
     "saving": "Saving…",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "saveStage": "Save destination",
+    "stagesHint": "Each destination is saved on its own, as soon as you save it — the button at the foot of the page saves the trip's own details.",
+    "removeStageTitle": "Remove this destination?",
+    "removeStageMessage": "“{place}” will be removed from the trip. The days stay where they are; only the destination they are labelled with changes. This cannot be undone."
   },
   "tripCreate": {
     "eyebrow": "Trip planning",

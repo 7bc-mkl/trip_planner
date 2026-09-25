@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useParams } from 'react-router-dom'
@@ -7,6 +7,7 @@ import { ApiError } from '../../api/client'
 import { fetchTrip, updateTrip } from '../../api/trips'
 import type { TripDetail } from '../../api/trips'
 import { AppShell } from './AppShell'
+import { StageEditor } from './StageEditor'
 import { detailedErrorMessage, refusalAnchor } from './errorDetail'
 import type { RefusalAnchor } from './errorDetail'
 import { dayCount, formatDateRange, nightCount } from './format'
@@ -79,9 +80,28 @@ export function TripEditPage() {
   const [loadError, setLoadError] = useState<string | null>(null)
   const [refusal, setRefusal] = useState<{ message: string; anchor: RefusalAnchor } | null>(null)
   const [saving, setSaving] = useState(false)
+  /**
+   * The other half of the mutual lock. `StageEditor` disables its cards while
+   * the trip save runs; this is what stops the reverse — a trip `PATCH` fired
+   * against a trip an in-flight stage refetch is about to replace, which would
+   * save one view of the trip and then navigate away from a different one.
+   */
+  const [stagesBusy, setStagesBusy] = useState(false)
 
   /** Focused when a save is refused — see the note about silent failure above. */
   const alertRef = useRef<HTMLParagraphElement>(null)
+
+  /**
+   * Re-read the trip after a stage changed. The trip-level draft is *not*
+   * rebuilt: whatever the owner has typed into the fields above is theirs, and
+   * adding a base must not quietly revert a half-typed title.
+   */
+  const reload = useCallback(async () => {
+    if (tripId === undefined) {
+      return
+    }
+    setTrip(await fetchTrip(tripId))
+  }, [tripId])
 
   useEffect(() => {
     if (tripId === undefined) {
@@ -141,7 +161,8 @@ export function TripEditPage() {
     draft.title.trim() !== '' &&
     draft.departurePlace.trim() !== '' &&
     (draft.routeMode !== 'openJaw' || draft.returnPlace.trim() !== '') &&
-    !saving
+    !saving &&
+    !stagesBusy
 
   function update(patch: Partial<Draft>) {
     setDraft((current) => (current === null ? current : { ...current, ...patch }))
@@ -313,27 +334,22 @@ export function TripEditPage() {
           )}
         </fieldset>
 
-        {/* Phase 1 shows the bases without editing them, rather than pretending
-            the screen can already change them. Phase 2 replaces this block with
-            the editable cards. */}
-        <section
-          className="field-card stages"
-          aria-invalid={refusal?.anchor === 'stages' ? true : undefined}
-        >
-          <h2>{t('tripCreate.stages')}</h2>
-          <dl className="trip-dock__list">
-            {trip.stages.map((stage) => (
-              <div className="trip-dock__entry" key={stage.id}>
-                <dt>{stage.place}</dt>
-                <dd>
-                  {stage.start_date !== null && stage.end_date !== null
-                    ? formatDateRange(stage.start_date, stage.end_date, i18n.language)
-                    : t('trip.dockUndated')}
-                </dd>
-              </div>
-            ))}
-          </dl>
-        </section>
+        {/* The bases, each saving on its own — see `StageEditor` for why they
+            are not batched behind the button below. The stage range check uses
+            the trip's *saved* dates rather than the ones being typed above:
+            a base is compared with the trip the server holds, which is the
+            same trip the stage endpoints will compare it with. */}
+        <div data-refusal-anchor={refusal?.anchor === 'stages' ? 'stages' : undefined}>
+          <StageEditor
+            tripId={trip.id}
+            stages={trip.stages}
+            tripStart={trip.start_date}
+            tripEnd={trip.end_date}
+            disabled={saving}
+            onChanged={reload}
+            onBusyChange={setStagesBusy}
+          />
+        </div>
 
         <div className="trip-form__actions">
           <button
