@@ -8,7 +8,9 @@ number, which is the only way to catch the two drifting apart.
 
 from __future__ import annotations
 
+import re
 import uuid
+from datetime import date
 
 import pytest
 import sqlalchemy as sa
@@ -16,6 +18,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
 from tests.test_trips_api import TRIPS, create, error_code
+from trip_planner.db.models import Item, Owner, Trip, TripDay
 from trip_planner.domain.readiness import readiness
 
 DAY = "2026-10-11"
@@ -533,7 +536,14 @@ class TestReadinessOnThePayloads:
         statements: list[str] = []
         connection = db_session.connection()
 
-        def record(conn, cursor, statement, parameters, context, executemany) -> None:  # noqa: ANN001
+        def record(
+            conn: object,
+            cursor: object,
+            statement: str,
+            parameters: object,
+            context: object,
+            executemany: bool,
+        ) -> None:
             statements.append(" ".join(statement.split()).lower())
 
         sa.event.listen(connection, "before_cursor_execute", record)
@@ -542,14 +552,59 @@ class TestReadinessOnThePayloads:
         finally:
             sa.event.remove(connection, "before_cursor_execute", record)
 
+        #: Matched on word boundaries rather than by substring, so a future column
+        #: or alias that merely contains "item" cannot quietly join this set.
         touching_items = [
             statement
             for statement in statements
-            if " item" in statement or "trip_day" in statement
+            if re.search(r"\b(item|trip_day)\b", statement)
         ]
         assert len(touching_items) == 1, statements
         assert "count(" in touching_items[0]
         assert "group by" in touching_items[0]
+
+    def test_another_owners_items_never_reach_the_counter(
+        self,
+        signed_in_client: TestClient,
+        trip: dict,
+        db_session: Session,
+        other_owner: Owner,
+    ) -> None:
+        """No owner may see another's items in his counter.
+
+        What actually keeps that true is the grouping key, not the `trip_id IN (…)`
+        filter: the counter is looked up per trip id, so even an aggregate that
+        counted the whole table would still hand each row its own figure — the
+        `WHERE` is there to keep the scan small, and dropping it is a performance
+        bug rather than a leak. What *would* leak is a wrong join or a wrong group
+        key, and that is what this pins: mutating the join to a cross join fails it.
+        The existing `test_another_owners_trips_are_not_listed` cannot, because its
+        second owner has a trip with no items at all."""
+        theirs = Trip(
+            owner_id=other_owner.id,
+            title="Not yours",
+            start_date=date(2026, 10, 10),
+            end_date=date(2026, 10, 11),
+            departure_place="Gdańsk",
+        )
+        their_day = TripDay(trip=theirs, date=date(2026, 10, 10))
+        db_session.add_all(
+            [
+                theirs,
+                their_day,
+                Item(trip_day=their_day, position=0, kind="activity", title="t", status="done"),
+                Item(trip_day=their_day, position=1, kind="activity", title="u", status="to_book"),
+            ]
+        )
+        db_session.flush()
+        self.statuses(signed_in_client, trip, "done")
+
+        rows = signed_in_client.get(TRIPS).json()
+
+        assert [row["id"] for row in rows] == [trip["id"]], "their trip must not be listed"
+        assert rows[0]["readiness"] == {"arranged": 1, "tracked": 1}, (
+            "their two items must not be counted into our row"
+        )
 
     def test_the_aggregate_attributes_each_trip_its_own_items(
         self, signed_in_client: TestClient

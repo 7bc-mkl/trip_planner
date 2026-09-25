@@ -219,7 +219,10 @@ def list_trips(db: DbSession, owner: CurrentOwner) -> list[TripSummary]:
     )
     counters = readiness_by_trip(db, [trip.id for trip in trips])
 
-    return [summary(trip, counters.get(trip.id, Readiness(0, 0))) for trip in trips]
+    return [
+        summary(trip, counters.get(trip.id, Readiness(arranged=0, tracked=0)))
+        for trip in trips
+    ]
 
 
 @router.post("", response_model=TripDetail, status_code=status.HTTP_201_CREATED)
