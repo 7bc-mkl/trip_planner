@@ -35,12 +35,14 @@
 		-Server
 	}
 
-	# Attachments are up to 10 MB plus the multipart envelope; the ceiling here is
-	# generous enough not to mask the API's own `attachment_too_large`, which is
-	# the error the user is meant to see.
-	request_body {
-		max_size 12MB
-	}
+	# Deliberately no `request_body max_size`. The API already bounds the upload
+	# in both directions — it refuses on `Content-Length` before reading a byte
+	# and counts the bytes while streaming, because a chunked request can lie
+	# about its length (see `read_body` in api/attachments.py). A second, coarser
+	# cap here could only fire *above* that one, and when it did the caller would
+	# get Caddy's HTML 413 instead of the documented
+	# `{"error":{"code":"attachment_too_large"}}` body — a response shape
+	# BACKWARD_COMPATIBILITY.md §1 protects. One limit, one error.
 
 	reverse_proxy app:8000 {
 		# uvicorn runs with --proxy-headers --forwarded-allow-ips '*', so it reads

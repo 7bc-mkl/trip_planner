@@ -68,6 +68,20 @@ services:
     command: ["serve"]
     environment: *app_environment
     # No `ports`: the only way in is through the proxy.
+    healthcheck:
+      # What the proxy waits for. Without it Caddy starts the moment this
+      # container does and answers 502 for the seconds the app spends booting.
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health')",
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 10s
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -91,7 +105,8 @@ services:
       - caddy-data:/data
       - caddy-config:/config
     depends_on:
-      - app
+      app:
+        condition: service_healthy
     networks:
       - edge
 

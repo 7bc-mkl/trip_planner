@@ -156,5 +156,9 @@ ssh root@HOST 'cd /srv/trip-planner/app && \
 - **`migrate-and-serve` is single-instance only.** It exists for platforms with
   no release hook. This compose file has one, so it is not used — and the day a
   second replica appears, every replica would otherwise race to migrate.
+- **Reclaiming disk.** Each release builds a new image and leaves the previous
+  one dangling; nothing prunes them, so a long-lived host eventually fails a
+  build with no space left. `docker image prune -f` removes the dangling ones
+  (it is left manual because pruning is destructive and this host has 75 GB).
 - **One instance, one host.** No failover. A host that dies takes the URL with
   it; restoring is provisioning a new host and replaying this page.

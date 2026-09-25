@@ -252,12 +252,38 @@ class TestProductionDeploymentShape:
         for service in ("db", "app", "caddy"):
             assert compose["services"][service]["restart"] == "unless-stopped"
 
+    def test_the_proxy_waits_for_the_app_to_be_healthy(self, compose: dict) -> None:
+        """Otherwise the proxy answers 502 for the seconds the app spends booting."""
+        assert compose["services"]["caddy"]["depends_on"]["app"] == {
+            "condition": "service_healthy"
+        }
+        assert "healthcheck" in compose["services"]["app"], "…which needs something to wait on"
+
     def test_the_proxy_sends_hsts(self, deploy_dir: Path) -> None:
         """The session cookie is Secure; a downgrade to http logs the user out."""
         caddyfile = (deploy_dir / "Caddyfile").read_text()
 
         assert "Strict-Transport-Security" in caddyfile
         assert "reverse_proxy app:8000" in caddyfile
+
+    def test_the_proxy_does_not_cap_the_request_body(self, deploy_dir: Path) -> None:
+        """The upload limit belongs to the API, which answers in the API's shape.
+
+        `read_body` already refuses on `Content-Length` before a byte is read and
+        counts the bytes while streaming. A cap in the proxy could only fire
+        above that one, and when it did the caller would get Caddy's HTML 413
+        instead of `{"error":{"code":"attachment_too_large"}}` — the response
+        shape BACKWARD_COMPATIBILITY.md §1 protects.
+        """
+        directives = [
+            line.strip()
+            for line in (deploy_dir / "Caddyfile").read_text().splitlines()
+            if not line.strip().startswith("#")
+        ]
+
+        assert not [line for line in directives if "max_size" in line], (
+            "a proxy-level body cap would answer oversize uploads outside the API's error shape"
+        )
 
     def test_the_release_script_refuses_without_the_env_file(self, deploy_dir: Path) -> None:
         """Secrets are written on the host by a human, never by this repository."""
