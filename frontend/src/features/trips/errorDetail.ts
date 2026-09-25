@@ -26,6 +26,12 @@ import { formatDate } from './format'
  * Anything unparseable — a missing `field`, a token that is not an ISO date —
  * falls back to the code's existing generic message. A vague sentence is a poor
  * message; a confident sentence naming the wrong day is a worse one.
+ *
+ * The detailed copy lives under its own `errorDetail.` namespace rather than
+ * beside the generic messages. `error.` is the **error dictionary**: one key per
+ * `ErrorCode` and nothing else, an invariant `tests/test_errors.py` asserts in
+ * both directions. A `days_have_items_detail` key in there is not a code, and
+ * loosening that test to let one in would cost more than a second namespace.
  */
 
 /** Translate a key with optional ICU arguments — the `t` from `useTranslation`. */
@@ -88,7 +94,7 @@ export function detailedErrorMessage(
   const code = error.code as ErrorCode
 
   if (PLACE_DETAIL_CODES.includes(code)) {
-    return translate(`error.${code}_detail`, { places: raw })
+    return translate(`errorDetail.${code}`, { places: raw })
   }
 
   if (!DATE_DETAIL_CODES.includes(code)) {
@@ -101,7 +107,7 @@ export function detailedErrorMessage(
     return generic
   }
 
-  return translate(`error.${code}_detail`, { dates: formatDateList(tokens, locale) })
+  return translate(`errorDetail.${code}`, { dates: formatDateList(tokens, locale) })
 }
 
 /**

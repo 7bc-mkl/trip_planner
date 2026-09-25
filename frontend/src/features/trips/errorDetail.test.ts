@@ -18,14 +18,15 @@ import { detailedErrorMessage, refusalAnchor } from './errorDetail'
 
 type Locale = 'en' | 'pl'
 
-const MESSAGES: Record<Locale, Record<string, string>> = {
-  en: en.error as Record<string, string>,
-  pl: pl.error as Record<string, string>,
+const MESSAGES: Record<Locale, Record<string, Record<string, string>>> = {
+  en: { error: en.error, errorDetail: en.errorDetail },
+  pl: { error: pl.error, errorDetail: pl.errorDetail },
 }
 
 function translatorFor(locale: Locale) {
   return (key: string, options?: Record<string, unknown>): string => {
-    const message = MESSAGES[locale][key.replace(/^error\./u, '')]
+    const [namespace = '', name = ''] = key.split('.')
+    const message = MESSAGES[locale][namespace]?.[name]
     if (message === undefined) {
       throw new Error(`missing ${locale} key: ${key}`)
     }
@@ -164,15 +165,15 @@ describe('refusalAnchor', () => {
 describe('the locale files', () => {
   it('carry every detail key this module can produce, in both languages', () => {
     const keys = [
-      'days_have_items_detail',
-      'days_have_attachments_detail',
-      'items_outside_new_range_detail',
-      'stages_outside_new_range_detail',
+      'days_have_items',
+      'days_have_attachments',
+      'items_outside_new_range',
+      'stages_outside_new_range',
     ]
 
     for (const key of keys) {
-      expect(MESSAGES.en[key], `en.${key}`).toBeTruthy()
-      expect(MESSAGES.pl[key], `pl.${key}`).toBeTruthy()
+      expect(MESSAGES.en.errorDetail?.[key], `en.errorDetail.${key}`).toBeTruthy()
+      expect(MESSAGES.pl.errorDetail?.[key], `pl.errorDetail.${key}`).toBeTruthy()
     }
   })
 })

@@ -182,6 +182,12 @@
     "outstanding": "Only outstanding",
     "kindCount": "{kind} ({count, number})"
   },
+  "errorDetail": {
+    "days_have_items": "These days already have items on them: {dates}. Move or delete those items first, then shorten the trip.",
+    "days_have_attachments": "These days already have attachments on them: {dates}. Move or remove those files first, then shorten the trip.",
+    "items_outside_new_range": "Items starting on {dates} run past the new end date. Shorten or delete them first, then shorten the trip.",
+    "stages_outside_new_range": "These destinations fall outside the new dates: {places}. Adjust them first, then shorten the trip."
+  },
   "error": {
     "invalid_credentials": "We could not sign you in. Check your e-mail and password.",
     "not_authenticated": "You need to sign in to see this.",
@@ -207,10 +213,6 @@
     "invalid_cost": "Check the cost: it needs both an amount and a currency, cannot be negative, allows at most two decimals, and cannot be larger than 9,999,999,999.99.",
     "invalid_reservation_field": "That confirmation number is too long. Shorten it to 500 characters or fewer.",
     "days_have_attachments": "Those days already have attachments on them. Remove the attachments first, then shorten the trip.",
-    "days_have_items_detail": "These days already have items on them: {dates}. Move or delete those items first, then shorten the trip.",
-    "days_have_attachments_detail": "These days already have attachments on them: {dates}. Move or remove those files first, then shorten the trip.",
-    "items_outside_new_range_detail": "Items starting on {dates} run past the new end date. Shorten or delete them first, then shorten the trip.",
-    "stages_outside_new_range_detail": "These destinations fall outside the new dates: {places}. Adjust them first, then shorten the trip.",
     "unknown": "Something went wrong. Please try again."
   }
 }
