@@ -11,7 +11,9 @@ from __future__ import annotations
 import uuid
 
 import pytest
+import sqlalchemy as sa
 from fastapi.testclient import TestClient
+from sqlalchemy.orm import Session
 
 from tests.test_trips_api import TRIPS, create, error_code
 from trip_planner.domain.readiness import readiness
@@ -423,6 +425,14 @@ class TestReadinessOnThePayloads:
         for index, status_value in enumerate(statuses):
             add_item(client, trip, title=f"item {index}", status=status_value)
 
+    def list_row(self, client: TestClient, trip: dict) -> dict:
+        """The trip's row in `GET /trips` — the payload served by the aggregate."""
+        return next(
+            candidate
+            for candidate in client.get(TRIPS).json()
+            if candidate["id"] == trip["id"]
+        )
+
     def test_a_trip_with_no_items_is_zero_of_zero(
         self, signed_in_client: TestClient, trip: dict
     ) -> None:
@@ -462,13 +472,105 @@ class TestReadinessOnThePayloads:
     ) -> None:
         self.statuses(signed_in_client, trip, "done", "to_book")
 
-        row = next(
-            candidate
-            for candidate in signed_in_client.get(TRIPS).json()
-            if candidate["id"] == trip["id"]
-        )
+        assert self.list_row(signed_in_client, trip)["readiness"] == {
+            "arranged": 1,
+            "tracked": 2,
+        }
 
-        assert row["readiness"] == {"arranged": 1, "tracked": 2}
+    def test_the_list_row_figure_matches_the_domain_function(
+        self, signed_in_client: TestClient, trip: dict
+    ) -> None:
+        """The list row's counter comes from a SQL aggregate, the timeline's from
+        `domain.readiness`. This is the assertion that catches those two drifting
+        apart — the same guarantee `test_the_served_figure_matches_the_domain_function`
+        gives the timeline, on the payload that no longer loads the items."""
+        self.statuses(signed_in_client, trip, "done", "done", "to_book", "to_plan")
+
+        row = self.list_row(signed_in_client, trip)
+        detail = signed_in_client.get(f"{TRIPS}/{trip['id']}").json()
+
+        every_item = [item for day in detail["days"] for item in day["items"]]
+        arranged, tracked = readiness(_WithStatus(item["status"]) for item in every_item)
+
+        assert row["readiness"] == {"arranged": arranged, "tracked": tracked} == {
+            "arranged": 2,
+            "tracked": 3,
+        }
+
+    def test_the_list_row_of_a_trip_all_to_plan_is_zero_of_zero(
+        self, signed_in_client: TestClient, trip: dict
+    ) -> None:
+        """The `(0, 0)` path through the aggregate. A trip whose items are all
+        `to_plan` matches neither `FILTER`, so the group row is a genuine pair of
+        zeroes rather than the absent-row default — the case that would break if
+        the aggregate ever counted rows instead of statuses."""
+        self.statuses(signed_in_client, trip, "to_plan", "to_plan", "to_plan")
+
+        assert self.list_row(signed_in_client, trip)["readiness"] == {
+            "arranged": 0,
+            "tracked": 0,
+        }
+
+    def test_the_list_row_of_a_trip_with_no_items_is_zero_of_zero(
+        self, signed_in_client: TestClient, trip: dict
+    ) -> None:
+        """The absent-row path: a trip with no items produces no group row at all,
+        so the counter comes from the caller's default."""
+        assert self.list_row(signed_in_client, trip)["readiness"] == {
+            "arranged": 0,
+            "tracked": 0,
+        }
+
+    def test_the_list_reads_the_counter_without_loading_the_days(
+        self, signed_in_client: TestClient, trip: dict, db_session: Session
+    ) -> None:
+        """The point of the aggregate (#7): serving the list must not materialise
+        `trip_day` and `item` rows. Before the counter moved into SQL this issued a
+        third statement selecting every day of every trip and a fourth selecting
+        their items — 366 rows per year-long trip to produce two integers."""
+        self.statuses(signed_in_client, trip, "done", "to_book", "to_plan")
+
+        statements: list[str] = []
+        connection = db_session.connection()
+
+        def record(conn, cursor, statement, parameters, context, executemany) -> None:  # noqa: ANN001
+            statements.append(" ".join(statement.split()).lower())
+
+        sa.event.listen(connection, "before_cursor_execute", record)
+        try:
+            assert signed_in_client.get(TRIPS).status_code == 200
+        finally:
+            sa.event.remove(connection, "before_cursor_execute", record)
+
+        touching_items = [
+            statement
+            for statement in statements
+            if " item" in statement or "trip_day" in statement
+        ]
+        assert len(touching_items) == 1, statements
+        assert "count(" in touching_items[0]
+        assert "group by" in touching_items[0]
+
+    def test_the_aggregate_attributes_each_trip_its_own_items(
+        self, signed_in_client: TestClient
+    ) -> None:
+        """One `GROUP BY` serves the whole list, so a mis-grouped join would pool
+        every owner's items into every row. Two trips, different counters."""
+        malaysia = create(signed_in_client)
+        norway = create(
+            signed_in_client,
+            title="Norwegia, lipiec 2027",
+            start_date="2027-07-01",
+            end_date="2027-07-05",
+            stages=[{"place": "Bergen", "start_date": "2027-07-01", "end_date": "2027-07-05"}],
+        )
+        self.statuses(signed_in_client, malaysia, "done", "to_book")
+        add_item(signed_in_client, norway, day="2027-07-02", status="done")
+
+        rows = {row["id"]: row["readiness"] for row in signed_in_client.get(TRIPS).json()}
+
+        assert rows[malaysia["id"]] == {"arranged": 1, "tracked": 2}
+        assert rows[norway["id"]] == {"arranged": 1, "tracked": 1}
 
     def test_a_spanning_item_is_counted_once(
         self, signed_in_client: TestClient, trip: dict

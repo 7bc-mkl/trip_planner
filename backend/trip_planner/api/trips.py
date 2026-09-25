@@ -11,12 +11,13 @@ no caller.
 
 from __future__ import annotations
 
+import uuid
+from collections.abc import Sequence
 from datetime import date
 
 import sqlalchemy as sa
 from fastapi import APIRouter, Response, status
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy.orm import selectinload
 
 from trip_planner.api.deps import CurrentOwner, DbSession, OwnedTrip
 from trip_planner.api.items import attachment_counts, item_read
@@ -30,7 +31,12 @@ from trip_planner.api.schemas import (
 from trip_planner.db.models import Attachment, Item, Trip, TripDay, TripStage
 from trip_planner.domain.days import generate_days
 from trip_planner.domain.items import sorted_items
-from trip_planner.domain.readiness import readiness
+from trip_planner.domain.readiness import (
+    ARRANGED_STATUSES,
+    TRACKED_STATUSES,
+    Readiness,
+    readiness,
+)
 from trip_planner.domain.stages import stages_for_day, validate_stage_range
 from trip_planner.errors import ApiError, ErrorCode
 
@@ -92,9 +98,56 @@ def all_items(trip: Trip) -> list[Item]:
     return [item for day in trip.days for item in day.items]
 
 
-def summary(trip: Trip) -> TripSummary:
-    """A list row, with its counter."""
-    arranged, tracked = readiness(all_items(trip))
+def readiness_by_trip(
+    db: DbSession, trip_ids: Sequence[uuid.UUID]
+) -> dict[uuid.UUID, Readiness]:
+    """The counter for each of `trip_ids` — one `GROUP BY`, no days loaded.
+
+    The list row needs two integers per trip, and loading every `trip_day` and
+    every `item` to add them up in Python costs up to 366 day rows per trip for a
+    number the database produces in one statement. The timeline is the other way
+    round: it renders the items anyway, so it keeps counting them in
+    `domain.readiness` rather than paying for a second query.
+
+    The two spellings of the arithmetic are held together by
+    `ARRANGED_STATUSES`/`TRACKED_STATUSES` — this `FILTER` and the domain loop
+    read the same tuples, so neither can be taught a new status without the
+    other. `tests/test_items_api.py::TestReadinessOnThePayloads` asserts the
+    served figures agree on both payloads, which is what would catch it if they
+    ever did drift.
+
+    A trip with no items produces no group row and is simply absent; callers
+    default to `(0, 0)`, the same convention `attachment_counts` uses.
+    """
+    if not trip_ids:
+        return {}
+
+    rows = db.execute(
+        sa.select(
+            TripDay.trip_id,
+            sa.func.count().filter(Item.status.in_(ARRANGED_STATUSES)),
+            sa.func.count().filter(Item.status.in_(TRACKED_STATUSES)),
+        )
+        .join(Item, Item.trip_day_id == TripDay.id)
+        .where(TripDay.trip_id.in_(trip_ids))
+        .group_by(TripDay.trip_id)
+    ).all()
+
+    return {
+        trip_id: Readiness(arranged=arranged, tracked=tracked)
+        for trip_id, arranged, tracked in rows
+    }
+
+
+def summary(trip: Trip, counter: Readiness) -> TripSummary:
+    """A list row, with its counter.
+
+    The counter arrives as an argument rather than being derived here, because
+    the two payloads obtain it differently: the timeline counts the items it has
+    already loaded, the list reads a SQL aggregate. Computing it inside would
+    force the list to load the items it exists to avoid.
+    """
+    arranged, tracked = counter
 
     return TripSummary(
         id=trip.id,
@@ -124,7 +177,7 @@ def timeline(db: DbSession, trip: Trip) -> TripDetail:
     counts = attachment_counts(db, [item.id for item in all_items(trip)])
 
     return TripDetail(
-        **summary(trip).model_dump(),
+        **summary(trip, readiness(all_items(trip))).model_dump(),
         stages=[StageRead.model_validate(stage) for stage in stages],
         days=[
             DayRead(
@@ -149,19 +202,24 @@ def list_trips(db: DbSession, owner: CurrentOwner) -> list[TripSummary]:
     coming up", and creation order is an implementation detail of when the owner
     happened to type them in.
 
-    Days and their items are eager-loaded because each row carries a readiness
-    counter, which is computed from the trip's items. Lazily loaded, a list of ten
-    trips would issue one query per trip and then one per day of each — the
-    classic N+1, on the screen the owner opens first.
+    Each row carries a readiness counter, and the counter is the only reason this
+    endpoint would ever touch days or items. It is fetched for **every trip in one
+    `GROUP BY`** by `readiness_by_trip` rather than by eager-loading the days: a
+    year-long trip is up to 366 `trip_day` rows plus their items, materialised to
+    produce two integers, on the screen the owner opens first. Two statements
+    total, whatever the number of trips — no relationship is left to load lazily,
+    so there is no N+1 hiding behind this.
     """
-    trips = db.execute(
-        sa.select(Trip)
-        .where(Trip.owner_id == owner.id)
-        .options(selectinload(Trip.days).selectinload(TripDay.items))
-        .order_by(Trip.start_date, Trip.created_at)
-    ).scalars()
+    trips = list(
+        db.execute(
+            sa.select(Trip)
+            .where(Trip.owner_id == owner.id)
+            .order_by(Trip.start_date, Trip.created_at)
+        ).scalars()
+    )
+    counters = readiness_by_trip(db, [trip.id for trip in trips])
 
-    return [summary(trip) for trip in trips]
+    return [summary(trip, counters.get(trip.id, Readiness(0, 0))) for trip in trips]
 
 
 @router.post("", response_model=TripDetail, status_code=status.HTTP_201_CREATED)

@@ -24,7 +24,16 @@ from __future__ import annotations
 from collections.abc import Iterable
 from typing import NamedTuple, Protocol
 
-__all__ = ["Readiness", "readiness"]
+__all__ = ["ARRANGED_STATUSES", "TRACKED_STATUSES", "Readiness", "readiness"]
+
+#: Which statuses each half of the counter counts. These exist as names because
+#: `list_trips` computes the same two numbers as a SQL aggregate rather than by
+#: loading every item, and a `WHERE status IN (…)` spelled out at the query site
+#: would be a second opinion about the arithmetic — exactly the drift this
+#: module's "computed here and nowhere else" rule exists to prevent. The loop
+#: below reads them too, so there is one list of statuses, not two that agree.
+ARRANGED_STATUSES = ("done",)
+TRACKED_STATUSES = ("to_book", "done")
 
 
 class HasStatus(Protocol):
@@ -50,10 +59,9 @@ def readiness(items: Iterable[HasStatus]) -> Readiness:
     tracked = 0
 
     for item in items:
-        if item.status == "done":
+        if item.status in ARRANGED_STATUSES:
             arranged += 1
-            tracked += 1
-        elif item.status == "to_book":
+        if item.status in TRACKED_STATUSES:
             tracked += 1
 
     return Readiness(arranged=arranged, tracked=tracked)
