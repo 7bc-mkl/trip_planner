@@ -62,18 +62,20 @@ directions of the in-flight lock.
 
 ## Progress
 
+PR: #15
+
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
 ### Phase 1: Edit the trip's own fields
 
-- [ ] 1.1 errorDetail.ts — field-aware refusal messages
-- [ ] 1.2 Locale keys for the four detail messages
-- [ ] 1.3 TripEditPage — load, prefill, validate, dock summary
-- [ ] 1.4 The /trips/:id/edit route
-- [ ] 1.5 The "Edit trip" action on TimelinePage
-- [ ] 1.6 Save wired to updateTrip
-- [ ] 1.7 Refusals rendered and anchored
-- [ ] 1.8 Headline scenario test and the full gate
+- [x] 1.1 errorDetail.ts — field-aware refusal messages — 05e9307
+- [x] 1.2 Locale keys for the four detail messages — 05e9307
+- [x] 1.3 TripEditPage — load, prefill, validate, dock summary — c0ce5e5
+- [x] 1.4 The /trips/:id/edit route — c0ce5e5
+- [x] 1.5 The "Edit trip" action on TimelinePage — c0ce5e5
+- [x] 1.6 Save wired to updateTrip — c0ce5e5
+- [x] 1.7 Refusals rendered and anchored — c0ce5e5
+- [x] 1.8 Headline scenario test and the full gate — 8fee17f
 
 ### Phase 2: Manage the trip's stages
 
