@@ -26,6 +26,15 @@ change, migration, endpoint or response-shape change.
 
 ## Risks
 
+- **Suite flakiness is environmental, not in the code.** The frontend suite is
+  green and stable at `--maxWorkers=2` (3/3 runs); at vitest's default worker
+  count it failed 2 of 6 runs on this machine, in *pre-existing* tests as often
+  as new ones, while four stray `while :; do :; done` processes held the load
+  average at ~14 on 8 cores. Two genuine races found along the way were fixed
+  (`clear`-then-`type` on a controlled input; reading a card that the refetch
+  has not rendered yet), and `asyncUtilTimeout` was raised from 1s to 5s so a
+  busy machine cannot masquerade as a broken assertion.
+
 - The refusal copy is the part that is not mechanical: a message naming the
   wrong dates is worse than the generic one it replaces. Mitigated by a test per
   code against a fixture `error.field`, in both locales, and by keeping the
@@ -79,8 +88,8 @@ PR: #15
 
 ### Phase 2: Manage the trip's stages
 
-- [ ] 2.1 api/stages.ts
-- [ ] 2.2 Editable stage cards with per-card save and the in-flight lock
-- [ ] 2.3 Add destination
-- [ ] 2.4 Remove destination behind a confirmation
-- [ ] 2.5 Stage walkthrough test and the full gate
+- [x] 2.1 api/stages.ts — 6d6e820
+- [x] 2.2 Editable stage cards with per-card save and the in-flight lock — 6d6e820
+- [x] 2.3 Add destination — 6d6e820
+- [x] 2.4 Remove destination behind a confirmation — 6d6e820
+- [x] 2.5 Stage walkthrough test and the full gate — 6d6e820
