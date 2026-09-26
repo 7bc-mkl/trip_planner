@@ -2,7 +2,7 @@
 <html lang="pl">
 <head>
 <meta charset="utf-8">
-<title>Mockup 03 — stany skrzynki: przypisanie ręczne, pusto, nieskonfigurowana, błąd pobrania</title>
+<title>Mockup 03 — stany skrzynki: przypisanie ręczne, pusto, nieskonfigurowana, błąd przetwarzania</title>
 <link rel="stylesheet" href="../design-system-adoption/_mockup.css">
 <style>
   body { background: var(--surface-sunken, #f8fafc); }
@@ -96,9 +96,9 @@
     <section>
       <p class="panel-label">C · Skrzynka nieskonfigurowana (nie jest to błąd)</p>
       <div class="empty">
-        <h3 class="headline-sm">Skrzynka nie jest skonfigurowana</h3>
+        <h3 class="headline-sm">Odbiór poczty nie jest skonfigurowany</h3>
         <p class="hint" style="max-width:26rem">
-          Ta instalacja nie ma podłączonej skrzynki pocztowej, więc przekazywanie potwierdzeń jest wyłączone.
+          Ta instalacja nie ma skonfigurowanego odbioru przez AWS SES, więc przekazywanie potwierdzeń jest wyłączone.
           Wszystko inne działa normalnie: dokumenty nadal dodasz ręcznie w widoku dnia.
         </p>
         <span class="body-sm subtle">W menu nie ma wtedy odznaki z licznikiem.</span>
@@ -106,17 +106,17 @@
     </section>
 
     <section>
-      <p class="panel-label">D · Ostatnie pobranie nie powiodło się</p>
+      <p class="panel-label">D · Przetwarzanie wiadomości nie powiodło się</p>
       <div class="stack stack--sm">
         <div class="warn">
           <span class="dot-bad"></span>
           <span>
-            <b>Nie udało się sprawdzić skrzynki</b><br>
-            Ostatnia udana próba: wczoraj 22:10. Wiadomości nie giną — zostaną pobrane, gdy połączenie wróci.
+            <b>Nie udało się przetworzyć wiadomości z SES</b><br>
+            Ostatnia otrzymana: wczoraj 22:10. Wiadomość czeka na ponowną próbę; sprawdź też kolejkę błędów dostarczenia.
           </span>
         </div>
         <div class="row" style="justify-content:flex-end">
-          <button class="btn btn--ghost btn--sm">Sprawdź teraz</button>
+          <button class="btn btn--ghost btn--sm">Ponów przetwarzanie</button>
         </div>
         <p class="hint">
           Model czyta wiadomości osobno: kiedy jest niedostępny, wiadomość i tak zostaje zapisana,

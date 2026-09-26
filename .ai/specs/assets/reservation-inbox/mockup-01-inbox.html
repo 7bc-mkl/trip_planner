@@ -75,7 +75,7 @@
       <p class="eyebrow">Skrzynka rezerwacji</p>
       <h1 class="headline-xl" style="margin:var(--space-2xs) 0 var(--space-xs)">Przekazane potwierdzenia</h1>
       <p class="hint">Przekaż potwierdzenie na <span class="addr">rezerwacje@planer.example.com</span> — nic nie trafi do planu, dopóki tego nie zatwierdzisz.</p>
-      <p class="freshness" style="margin-top:var(--space-sm)"><span class="dot-ok"></span> Sprawdzono 2 minuty temu · <button class="btn btn--ghost btn--sm">Sprawdź teraz</button></p>
+      <p class="freshness" style="margin-top:var(--space-sm)"><span class="dot-ok"></span> Ostatnia wiadomość przez SES: 2 minuty temu · <button class="btn btn--ghost btn--sm">Ponów przetwarzanie</button></p>
     </div>
 
     <section>
@@ -158,7 +158,7 @@
       <div class="quiet-panel">
         <div class="row" style="justify-content:space-between; gap:var(--space-md)">
           <span>
-            3 wiadomości od nieznanych nadawców lub z nieudaną weryfikacją. Zapisano wyłącznie nagłówki — bez treści i bez załączników.
+            3 wiadomości od nieznanych nadawców lub z nieudaną weryfikacją. W aplikacji zapisano tylko nagłówki; kopia w AWS S3 wygasa po 30 dniach.
             Zostaną usunięte po 30 dniach.
           </span>
           <button class="btn btn--ghost btn--sm" style="flex:none">Pokaż</button>

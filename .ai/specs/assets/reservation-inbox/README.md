@@ -4,8 +4,8 @@ Referenced from `.ai/specs/2026-09-26-reservation-inbox.md` and attached to its 
 
 ## Proposed — illustrative mockups
 
-Self-contained static HTML with no application code behind it, rendered to PNG by the configured
-browser provider (`agent-browser` v0.34.0). They communicate layout, hierarchy and copy — not
+Self-contained static HTML with no application code behind it, rendered to PNG in headless Chrome.
+They communicate layout, hierarchy and copy — not
 pixel-perfect design, and not a promise about markup.
 
 They deliberately **share `../design-system-adoption/_mockup.css`** rather than carrying a stylesheet
@@ -17,9 +17,9 @@ directory, with that sibling present.
 
 | File | Shows |
 |---|---|
-| `mockup-01-inbox.*` | `/inbox` — the three regions in the order attention should go: **Do zatwierdzenia** (an `update_item` proposal targeted at an existing hotel item, and a `create_item` proposal for a flight with no matching item), **Nieprzypisane** with the router's reason in plain language, and **Kwarantanna** as a count with *Pokaż* revealing sender and subject only — never a body or an attachment — and *Zwolnij tę wiadomość* beside a DMARC-failing auto-forward, which is the policy's one predictable false positive. The nav badge, the forwarding address, and the honest "last checked" line. Polish |
+| `mockup-01-inbox.*` | `/inbox` — the three regions in the order attention should go: **Do zatwierdzenia** (an `update_item` proposal targeted at an existing hotel item, and a `create_item` proposal for a flight with no matching item), **Nieprzypisane** with the router's reason in plain language, and **Kwarantanna** as a count with *Pokaż* revealing sender and subject only — never a body or an attachment in the app — and *Zwolnij tę wiadomość* beside a DMARC-failing auto-forward. The nav badge, forwarding address, and last SES notification status. Polish |
 | `mockup-02-action-item-sheet.*` | The action-item review sheet — the feature's whole argument in one screen. The two-column diff (*now in your plan* / *in the message*) with per-field ticks: empty fields ticked, **the non-empty `Cost` unticked by default with both values shown**, the un-proposed `Notes` untouched, the forward status move ticked, the document its own row. The source message beside it as plain text, with the extracted values marked. English |
-| `mockup-03-states.*` | Four states: **A** trip classification from the unrouted queue, with the document retained in the inbox until approval, **B** the normal empty state naming the address, **C** the inbox not configured (an explanation, not an error), **D** a failed poll with the honest "messages are not lost" line. Polish |
+| `mockup-03-states.*` | Four states: **A** trip classification from the unrouted queue, with the document retained in the inbox until approval, **B** the normal empty state naming the address, **C** SES receiving not configured (an explanation, not an error), **D** a failed ingestion with a retry action and delivery-error notice. Polish |
 
 Two locales across the set, for the reason R01 gives: both are first-class, and a spec that only ever
 pictures one is not showing the product it describes.
