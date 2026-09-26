@@ -51,6 +51,7 @@ from trip_planner.db.models import (
 from trip_planner.domain.inbound import decide_stored_sender, select_content
 from trip_planner.inbound.ses import ObjectGone, S3Fetcher
 from trip_planner.inbound.storage import store_inbound_attachment
+from trip_planner.security.quota import QuotaRejection, get_inbox_quota
 
 logger = logging.getLogger(__name__)
 
@@ -166,6 +167,20 @@ def ingest_message(
         message.routing_reason = reason
         return IngestOutcome(state="quarantined", reason=reason)
 
+    quota = get_inbox_quota()
+
+    # Before the GET, exactly like the upload path's `check_rate`: a limiter that
+    # runs after the object has been downloaded refuses to *store* a flood but
+    # not to *absorb* it.
+    if quota.check_window(db, owner_id=owner.id, now=moment) is not None:
+        return _defer(message, "inbox_rate_limited")
+
+    # Already at the ceiling, decided before a byte is fetched. Checked again
+    # below against the real document sizes, because this one only rules out the
+    # case where there was no room for anything at all.
+    if quota.check_storage(db, incoming_bytes=0) is not None:
+        return _defer(message, "inbox_storage_full")
+
     key = message.s3_object_key
     if not key:
         return _to_queue(message, "inbox_object_unavailable")
@@ -181,6 +196,16 @@ def ingest_message(
         return _defer_after_failure(db, message, owner, moment)
 
     selected = select_content(raw_mime)
+
+    incoming = sum(len(document.data) for document in selected.documents)
+    full = quota.check_storage(db, incoming_bytes=incoming)
+    if full is QuotaRejection.TRIP_STORAGE_QUOTA_EXCEEDED:
+        # Nothing is stored and the S3 object is **not** deleted, so the message
+        # is retried whole once the owner frees space. Storing the text and
+        # dropping the documents would be the version that loses a voucher to a
+        # ceiling the owner can clear in one click.
+        return _defer(message, "inbox_storage_full")
+
     message.text_body = selected.text
     for document in selected.documents:
         store_inbound_attachment(db, message=message, document=document)
@@ -195,6 +220,20 @@ def ingest_message(
         documents_dropped=selected.dropped_documents,
         fetched_from_s3=True,
     )
+
+
+def _defer(message: InboundMessage, reason: str) -> IngestOutcome:
+    """An exhausted window or a full inbox: retried later, **never** quarantined.
+
+    The distinction is the spec's and it matters to the owner: quarantine is the
+    sender policy's answer and means *we will not take this*, while `deferred`
+    means *not right now*. The row keeps its S3 locator, the worker picks it up
+    again when capacity returns, and the bucket's lifecycle must outlast the
+    deferral window — which is what the stale-object alarm watches for.
+    """
+    message.state = "deferred"
+    message.last_error = reason
+    return IngestOutcome(state="deferred", reason=reason)
 
 
 def _to_queue(message: InboundMessage, reason: str) -> IngestOutcome:

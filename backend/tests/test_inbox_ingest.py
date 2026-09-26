@@ -459,3 +459,74 @@ def test_claimed_messages_come_oldest_first(
     db_session.flush()
 
     assert [one.id for one in claim_pending(db_session)] == [older.id, message.id]
+
+
+# --------------------------------------------------------------------------- #
+# The inbox's own budget, and the shipped one it must not touch
+# --------------------------------------------------------------------------- #
+
+
+def test_an_exhausted_inbound_window_defers_without_reading_from_s3(
+    db_session: OrmSession, owner: Owner, message: InboundMessage
+) -> None:
+    """Deferred, **not** quarantined — and the distinction matters to the owner.
+
+    Quarantine is the sender policy's answer and means *we will not take this*.
+    A full window means *not right now*: the row keeps its S3 locator and the
+    worker picks it up again when capacity returns.
+    """
+    from trip_planner.security.quota import InboxQuota, set_inbox_quota
+
+    s3 = StubS3({f"{PREFIX}ses-1": mime()})
+    set_inbox_quota(InboxQuota(max_messages_per_window=1))
+    try:
+        outcome = run(db_session, message, owner, s3)
+    finally:
+        set_inbox_quota(InboxQuota())
+
+    assert outcome.state == "deferred"
+    assert outcome.reason == "inbox_rate_limited"
+    assert s3.fetched == []
+    assert message.s3_object_key == f"{PREFIX}ses-1"
+
+
+def test_a_deferred_message_is_ingested_once_capacity_returns(
+    db_session: OrmSession, owner: Owner, message: InboundMessage
+) -> None:
+    """The retry the deferral promises, exercised rather than assumed."""
+    from trip_planner.security.quota import InboxQuota, set_inbox_quota
+
+    s3 = StubS3({f"{PREFIX}ses-1": mime(text="PNR: SX-9912L")})
+    set_inbox_quota(InboxQuota(max_messages_per_window=1))
+    try:
+        assert run(db_session, message, owner, s3).state == "deferred"
+    finally:
+        set_inbox_quota(InboxQuota())
+
+    assert [one.id for one in claim_pending(db_session)] == [message.id]
+    assert run(db_session, message, owner, s3).state == "received"
+    assert message.text_body == "PNR: SX-9912L"
+
+
+def test_a_full_inbox_defers_the_whole_message_rather_than_dropping_its_documents(
+    db_session: OrmSession, owner: Owner, message: InboundMessage
+) -> None:
+    """Storing the text and dropping the voucher would lose a document to a
+    ceiling the owner can clear in one click. Nothing is stored instead."""
+    from trip_planner.security.quota import InboxQuota, set_inbox_quota
+
+    s3 = StubS3(
+        {f"{PREFIX}ses-1": mime(documents=[("voucher.pdf", make_pdf(), "application/pdf")])}
+    )
+    set_inbox_quota(InboxQuota(max_inbox_bytes=1))
+    try:
+        outcome = run(db_session, message, owner, s3)
+    finally:
+        set_inbox_quota(InboxQuota())
+
+    assert outcome.state == "deferred"
+    assert outcome.reason == "inbox_storage_full"
+    assert message.text_body == ""
+    assert message.attachments == []
+    # Not deleted, so the retry has something to fetch.
+    assert s3.deleted == []

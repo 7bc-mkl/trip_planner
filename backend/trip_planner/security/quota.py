@@ -17,6 +17,15 @@ whole point**:
   `pg_advisory_xact_lock` before summing; see `check_byte_quotas` for why a
   transaction alone is not enough.
 
+`InboxQuota` at the bottom is a **third** group, and its separateness is the
+point rather than an accident of layout. The reservation inbox accepts bytes
+from a sender who is not the owner, so its limits must not share a budget with
+his own uploads: an inbound flood that could exhaust the installation ceiling
+would refuse *his* next upload because of mail he never asked for. The two
+partition the `attachment` table between them — `_installation_bytes` counts
+rows with no inbound parent, `_inbox_bytes` counts exactly the rest — so nothing
+is double-counted and neither can starve the other.
+
 Every limit value is a named constant with the reasoning for its value beside it
 (spec assumption **A4**): the *shape* is what matters, not the number, and each
 is changeable by a one-line PR.
@@ -37,20 +46,29 @@ from enum import StrEnum
 import sqlalchemy as sa
 from sqlalchemy.orm import Session as OrmSession
 
-from trip_planner.db.models import Attachment, Item, TripDay, UploadEvent
+from trip_planner.db.models import Attachment, InboundMessage, Item, TripDay, UploadEvent
 
 __all__ = [
+    "INBOUND_RATE_WINDOW",
+    "INBOUND_VOLUME_WINDOW",
+    "INBOX_LOCK_KEY",
     "INSTALLATION_LOCK_KEY",
     "MAX_ATTACHMENTS_PER_PARENT",
+    "MAX_INBOUND_BYTES_PER_WINDOW",
+    "MAX_INBOUND_MESSAGES_PER_WINDOW",
+    "MAX_INBOX_BYTES",
     "MAX_INSTALLATION_BYTES",
     "MAX_TRIP_BYTES",
     "MAX_UPLOADS_PER_RATE_WINDOW",
     "MAX_VOLUME_BYTES_PER_WINDOW",
     "RATE_WINDOW",
     "VOLUME_WINDOW",
+    "InboxQuota",
     "QuotaRejection",
     "UploadQuota",
+    "get_inbox_quota",
     "get_upload_quota",
+    "set_inbox_quota",
     "set_upload_quota",
 ]
 
@@ -313,11 +331,28 @@ class UploadQuota:
         )
 
     def _installation_bytes(self, db: OrmSession) -> int:
+        """The bytes stored by **the owner's own uploads**, and deliberately not all of them.
+
+        The `inbound_message_id IS NULL` filter is the fix for a real defect the
+        reservation-inbox spec found rather than a tidy-up. Without it this sum
+        covers every attachment row, so the moment inbox documents exist a
+        stranger flooding the forwarding address consumes the same 2 GB ceiling
+        the owner's own uploads are measured against — and his next upload is
+        refused because of mail he never asked for.
+
+        Two budgets, neither able to exhaust the other: this one counts what he
+        uploaded, `_inbox_bytes` counts what arrived by mail, and
+        `tests/test_quota.py` fills one to prove the other still works.
+
+        Its sibling `_trip_bytes` needs no such filter and is safe by
+        construction: it inner-joins through `TripDay`, which an inbox row —
+        having no day and no item — simply does not survive.
+        """
         return int(
             db.execute(
-                sa.select(sa.func.coalesce(sa.func.sum(Attachment.byte_size), 0)).select_from(
-                    Attachment
-                )
+                sa.select(sa.func.coalesce(sa.func.sum(Attachment.byte_size), 0))
+                .select_from(Attachment)
+                .where(Attachment.inbound_message_id.is_(None))
             ).scalar_one()
         )
 
@@ -360,3 +395,149 @@ def set_upload_quota(quota: UploadQuota) -> None:
     """Override the quota. Tests use this to shrink a limit; nothing in production calls it."""
     global _upload_quota
     _upload_quota = quota
+
+
+# --------------------------------------------------------------------------- #
+# The inbox's own limits — separate from the owner's, deliberately
+# --------------------------------------------------------------------------- #
+
+#: How long an inbound message counts against the *count* window.
+INBOUND_RATE_WINDOW = timedelta(hours=1)
+
+#: Messages accepted per hour. A person forwarding confirmations by hand sends a
+#: handful a day; sixty an hour is where a flood becomes visible and where he
+#: never will be. The window's purpose is not to refuse mail — an exhausted
+#: window **defers**, it does not quarantine or discard — it is to bound how
+#: fast a stranger can make this deployment do work.
+MAX_INBOUND_MESSAGES_PER_WINDOW = 60
+
+#: How long inbound bytes count against the *volume* window. Longer, because the
+#: two windows catch different shapes — the same reasoning as `VOLUME_WINDOW`.
+INBOUND_VOLUME_WINDOW = timedelta(hours=6)
+
+#: Inbound bytes accepted inside `INBOUND_VOLUME_WINDOW`.
+MAX_INBOUND_BYTES_PER_WINDOW = 200 * 1024 * 1024
+
+#: Bytes the inbox may hold in total, across every message.
+#:
+#: A quarter of `MAX_INSTALLATION_BYTES`, and the number matters less than the
+#: fact that it is a **second, separate** ceiling: documents waiting in the inbox
+#: can fill this one completely without the owner's own uploads noticing, which
+#: is the whole point of the split. Approving a document moves it onto an item,
+#: where it starts counting against the trip and installation caps instead.
+MAX_INBOX_BYTES = 500 * 1024 * 1024
+
+#: The advisory key the inbox-wide cap serialises on. Its own key, far from
+#: `INSTALLATION_LOCK_KEY`, so an inbox write and an owner upload do not wait
+#: behind each other for a ceiling neither shares.
+INBOX_LOCK_KEY = 0x7A11_0C0D_E002
+
+
+@dataclass(frozen=True, slots=True)
+class InboxQuota:
+    """The inbound limits, as data, so a test can shrink one without touching code."""
+
+    rate_window: timedelta = INBOUND_RATE_WINDOW
+    max_messages_per_window: int = MAX_INBOUND_MESSAGES_PER_WINDOW
+    volume_window: timedelta = INBOUND_VOLUME_WINDOW
+    max_bytes_per_window: int = MAX_INBOUND_BYTES_PER_WINDOW
+    max_inbox_bytes: int = MAX_INBOX_BYTES
+
+    def _now(self, now: datetime | None) -> datetime:
+        return now or datetime.now(UTC)
+
+    def check_window(
+        self, db: OrmSession, *, owner_id: uuid.UUID, now: datetime | None = None
+    ) -> QuotaRejection | None:
+        """Whether this owner's inbound windows have room. **Call before the S3 GET.**
+
+        The same shape as `check_rate` and for the same reason: a limiter that
+        runs after the object has been downloaded refuses to *store* a flood but
+        not to *absorb* it. Here it runs before a byte leaves S3.
+
+        The windows are counted over the rows themselves — `inbound_message` for
+        the count, its ingested attachments for the volume — rather than over a
+        parallel event table. There is no `upload_event` equivalent to keep in
+        step, and the message *is* the event.
+        """
+        moment = self._now(now)
+
+        messages = int(
+            db.execute(
+                sa.select(sa.func.count())
+                .select_from(InboundMessage)
+                .where(
+                    InboundMessage.owner_id == owner_id,
+                    InboundMessage.received_at >= moment - self.rate_window,
+                    # A discarded message still happened, so it still counts;
+                    # otherwise deleting mail would refill the window and the
+                    # limit would be a suggestion.
+                )
+            ).scalar_one()
+        )
+        if messages >= self.max_messages_per_window:
+            return QuotaRejection.RATE_LIMITED
+
+        volume = int(
+            db.execute(
+                sa.select(sa.func.coalesce(sa.func.sum(Attachment.byte_size), 0))
+                .select_from(Attachment)
+                .join(InboundMessage, InboundMessage.id == Attachment.inbound_message_id)
+                .where(
+                    InboundMessage.owner_id == owner_id,
+                    Attachment.created_at >= moment - self.volume_window,
+                )
+            ).scalar_one()
+        )
+        if volume >= self.max_bytes_per_window:
+            return QuotaRejection.RATE_LIMITED
+
+        return None
+
+    def check_storage(
+        self, db: OrmSession, *, incoming_bytes: int
+    ) -> QuotaRejection | None:
+        """Whether `incoming_bytes` fit inside the inbox's own ceiling.
+
+        Takes its own advisory lock before summing, for exactly the reason
+        `check_byte_quotas` documents: under `READ COMMITTED` two concurrent
+        writers each sum over committed rows, neither sees the other's insert,
+        and both pass a quota only one of them fits in. Atomicity is not mutual
+        exclusion.
+
+        **Must be called inside the ingestion transaction.** An advisory *xact*
+        lock taken in an autocommitted statement is released immediately, which
+        would leave the sum exactly as racy as it was without one.
+        """
+        db.execute(
+            sa.select(sa.func.pg_advisory_xact_lock(sa.literal(INBOX_LOCK_KEY)))
+        ).scalar_one()
+
+        if self._inbox_bytes(db) + incoming_bytes > self.max_inbox_bytes:
+            return QuotaRejection.TRIP_STORAGE_QUOTA_EXCEEDED
+        return None
+
+    def _inbox_bytes(self, db: OrmSession) -> int:
+        """The bytes held by documents still in the inbox — exactly the rows
+        `_installation_bytes` excludes, so the two partition the table between
+        them and nothing is counted twice or missed."""
+        return int(
+            db.execute(
+                sa.select(sa.func.coalesce(sa.func.sum(Attachment.byte_size), 0))
+                .select_from(Attachment)
+                .where(Attachment.inbound_message_id.isnot(None))
+            ).scalar_one()
+        )
+
+
+_inbox_quota = InboxQuota()
+
+
+def get_inbox_quota() -> InboxQuota:
+    return _inbox_quota
+
+
+def set_inbox_quota(quota: InboxQuota) -> None:
+    """Override the inbox quota. Tests shrink a limit; nothing in production calls it."""
+    global _inbox_quota
+    _inbox_quota = quota

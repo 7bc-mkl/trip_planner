@@ -429,3 +429,143 @@ class TestTwoConcurrentTransactions:
         with Session(engine) as reader:
             stored = quota._trip_bytes(reader, trip_id=trip_id)
         assert stored == self.ALREADY_STORED + self.UPLOAD <= self.CAP
+
+
+# --------------------------------------------------------------------------- #
+# The inbox's budget and the owner's, which must not be able to exhaust each other
+# --------------------------------------------------------------------------- #
+
+
+def test_inbox_documents_do_not_count_against_the_installation_cap(
+    db_session: OrmSession, owner: Owner
+) -> None:
+    """The defect this filter exists to fix, stated as a test.
+
+    Without it, `_installation_bytes` sums every attachment row — so the moment
+    inbox documents exist, a stranger flooding the forwarding address consumes
+    the same 2 GB ceiling the owner's own uploads are measured against, and his
+    next upload is refused because of mail he never asked for.
+    """
+    from trip_planner.security.quota import UploadQuota
+
+    message = _inbox_message(db_session, owner)
+    _inbox_attachment(db_session, message, byte_size=5_000_000)
+
+    assert UploadQuota()._installation_bytes(db_session) == 0
+
+
+def test_the_inbox_cap_counts_exactly_the_rows_the_installation_cap_excludes(
+    db_session: OrmSession, owner: Owner
+) -> None:
+    """The two partition the table, so nothing is double-counted and nothing is missed."""
+    from trip_planner.security.quota import InboxQuota
+
+    message = _inbox_message(db_session, owner)
+    _inbox_attachment(db_session, message, byte_size=5_000_000)
+
+    assert InboxQuota()._inbox_bytes(db_session) == 5_000_000
+
+
+def test_a_full_inbox_still_leaves_the_owner_s_own_uploads_working(
+    db_session: OrmSession, owner: Owner
+) -> None:
+    """Fill one budget; prove the other still works. The whole point of the split."""
+    from trip_planner.security.quota import InboxQuota, QuotaRejection, UploadQuota
+
+    message = _inbox_message(db_session, owner)
+    _inbox_attachment(db_session, message, byte_size=1_000_000)
+
+    inbox = InboxQuota(max_inbox_bytes=1_000_000)
+    assert inbox.check_storage(db_session, incoming_bytes=1) is (
+        QuotaRejection.TRIP_STORAGE_QUOTA_EXCEEDED
+    )
+
+    trip = make_trip(owner)
+    db_session.add(trip)
+    db_session.flush()
+    # The owner's own upload is unaffected by an inbox that is completely full.
+    assert UploadQuota().check_byte_quotas(db_session, trip_id=trip.id, incoming_bytes=1) is None
+
+
+def test_the_inbox_cap_refuses_only_past_its_own_ceiling(
+    db_session: OrmSession, owner: Owner
+) -> None:
+    from trip_planner.security.quota import InboxQuota
+
+    message = _inbox_message(db_session, owner)
+    _inbox_attachment(db_session, message, byte_size=100)
+    inbox = InboxQuota(max_inbox_bytes=200)
+
+    assert inbox.check_storage(db_session, incoming_bytes=100) is None
+    assert inbox.check_storage(db_session, incoming_bytes=101) is not None
+
+
+def test_a_full_inbound_window_never_blocks_a_browser_upload(
+    db_session: OrmSession, owner: Owner
+) -> None:
+    """Separate windows, so an inbound burst and a sitting of uploads do not collide."""
+    from trip_planner.security.quota import InboxQuota, QuotaRejection, UploadQuota
+
+    for _ in range(3):
+        _inbox_message(db_session, owner)
+
+    assert InboxQuota(max_messages_per_window=1).check_window(
+        db_session, owner_id=owner.id
+    ) is QuotaRejection.RATE_LIMITED
+    assert UploadQuota().check_rate(db_session, owner_id=owner.id) is None
+
+
+def test_an_inbound_message_outside_the_window_no_longer_counts(
+    db_session: OrmSession, owner: Owner
+) -> None:
+    from datetime import timedelta
+
+    from trip_planner.security.quota import InboxQuota
+
+    _inbox_message(db_session, owner, received_at=datetime(2026, 10, 1, 9, 0, tzinfo=UTC))
+    quota = InboxQuota(max_messages_per_window=1)
+
+    inside = datetime(2026, 10, 1, 9, 30, tzinfo=UTC)
+    outside = inside + timedelta(hours=2)
+
+    assert quota.check_window(db_session, owner_id=owner.id, now=inside) is not None
+    assert quota.check_window(db_session, owner_id=owner.id, now=outside) is None
+
+
+def _inbox_message(db: OrmSession, owner: Owner, **overrides: object):
+    import uuid as _uuid
+
+    from trip_planner.db.models import InboundMessage
+
+    fields: dict[str, object] = {
+        "owner_id": owner.id,
+        "ses_message_id": f"ses-{_uuid.uuid4().hex}",
+        "ses_sender_verdict": "PASS",
+        "ses_scan_verdict": "PASS",
+        "received_at": datetime.now(UTC),
+        "from_address": owner.email,
+        "subject": "Potwierdzenie",
+        "state": "received",
+    }
+    fields.update(overrides)
+    record = InboundMessage(**fields)
+    db.add(record)
+    db.flush()
+    return record
+
+
+def _inbox_attachment(db: OrmSession, message: object, *, byte_size: int):
+    from trip_planner.db.models import Attachment, AttachmentBlob
+
+    attachment = Attachment(
+        inbound_message_id=message.id,
+        filename="voucher.pdf",
+        content_type="application/pdf",
+        byte_size=byte_size,
+        sha256="d" * 64,
+    )
+    db.add(attachment)
+    db.flush()
+    db.add(AttachmentBlob(attachment_id=attachment.id, data=b"x"))
+    db.flush()
+    return attachment
