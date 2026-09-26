@@ -14,6 +14,7 @@ touching AWS.
 
 from __future__ import annotations
 
+import json
 import uuid
 from collections.abc import Iterator
 from datetime import UTC, datetime
@@ -795,3 +796,54 @@ def test_every_inbox_route_answers_not_configured_without_settings(
 
     assert response.status_code == 409, url
     assert response.json()["error"]["code"] == "inbox_not_configured"
+
+
+def test_the_quarantine_list_serves_headers_only(
+    owner_client: TestClient, db_session: OrmSession, owner: Owner
+) -> None:
+    """A list route beside the singular one, because *Show* has to render a list.
+
+    Separate from `GET /inbox/messages` rather than a filter on it, and the
+    separation is the control: showing quarantined mail is a distinct,
+    explicit act, so it is a distinct, explicit route.
+    """
+    quarantined(db_session, owner, subject="Potwierdzenie z linii lotniczej")
+
+    body = owner_client.get(f"{INBOX}/quarantine").json()
+
+    assert len(body) == 1
+    assert body[0]["from_address"] == "rezerwacje@airline.example"
+    assert "text_body" not in body[0]
+    assert "attachments" not in body[0]
+
+
+def test_the_quarantine_list_holds_nothing_that_is_not_quarantined(
+    owner_client: TestClient, db_session: OrmSession, owner: Owner
+) -> None:
+    make_message(db_session, owner, state="received")
+    make_message(db_session, owner, state="unrouted")
+
+    assert owner_client.get(f"{INBOX}/quarantine").json() == []
+
+
+def test_the_quarantine_list_is_owner_scoped(
+    owner_client: TestClient, db_session: OrmSession, other_owner: Owner
+) -> None:
+    quarantined(db_session, other_owner)
+
+    assert owner_client.get(f"{INBOX}/quarantine").json() == []
+
+
+def test_the_summary_carries_no_sender_addresses(
+    owner_client: TestClient, db_session: OrmSession, owner: Owner
+) -> None:
+    """It is the badge's cheap poll, and every page load makes it.
+
+    Putting strangers' headers in it would mean fetching them whether or not
+    anyone asked to see them — which is the opposite of what *Show* is for.
+    """
+    quarantined(db_session, owner)
+
+    body = owner_client.get(f"{INBOX}/summary").json()
+
+    assert "rezerwacje@airline.example" not in json.dumps(body)

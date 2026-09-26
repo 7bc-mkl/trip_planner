@@ -773,12 +773,51 @@ def _find_quarantined(
     return message
 
 
+@owner_router.get("/quarantine", response_model=list[QuarantineRead])
+def list_quarantined(
+    db: DbSession, owner: CurrentOwner, inbox: ConfiguredInbox
+) -> list[QuarantineRead]:
+    """The quarantined messages, **headers only**, behind the screen's *Show*.
+
+    A list route beside the singular one, because the screen's *Show* action has
+    to be able to render the list at all and the summary deliberately carries
+    only a count — it is the badge's cheap poll, and putting sender addresses in
+    it would mean every page load fetched strangers' headers whether or not
+    anyone asked to see them.
+
+    Separate from `GET /inbox/messages` rather than a filter on it, and that
+    separation is the control: showing quarantined mail is a distinct, explicit
+    act, so it is a distinct, explicit route. This one cannot serve a body or an
+    attachment, because `QuarantineRead` has no field for either.
+    """
+    messages = list(
+        db.execute(
+            sa.select(InboundMessage)
+            .where(
+                InboundMessage.owner_id == owner.id,
+                InboundMessage.state == "quarantined",
+            )
+            .order_by(InboundMessage.received_at.desc())
+            .limit(PAGE_SIZE)
+        ).scalars()
+    )
+
+    return [_quarantine_read(db, message, owner, inbox) for message in messages]
+
+
 @owner_router.get("/quarantine/{message_id}", response_model=QuarantineRead)
 def get_quarantined(
     message_id: uuid.UUID, db: DbSession, owner: CurrentOwner, inbox: ConfiguredInbox
 ) -> QuarantineRead:
     """Sender, subject and date. **Never a body, an attachment or a preview.**"""
-    message = _find_quarantined(db, owner, message_id)
+    return _quarantine_read(
+        db, _find_quarantined(db, owner, message_id), owner, inbox
+    )
+
+
+def _quarantine_read(
+    db: OrmSession, message: InboundMessage, owner: Owner, inbox: InboxSettings
+) -> QuarantineRead:
     decision = _quarantine_decision(db, message, owner, inbox)
 
     return QuarantineRead(

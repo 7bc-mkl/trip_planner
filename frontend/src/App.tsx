@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 
 import { LoginPage } from './features/auth/LoginPage'
+import { InboxPage } from './features/inbox/InboxPage'
 import { RequireSession } from './features/auth/RequireSession'
 import { DayDetailPage } from './features/trips/DayDetailPage'
 import { TimelinePage } from './features/trips/TimelinePage'
@@ -10,6 +11,9 @@ import { TripListPage } from './features/trips/TripListPage'
 
 /**
  * The routes of the milestone.
+ *
+ * `/inbox` is account-scoped rather than trip-scoped — one address for the
+ * account (D20) — so it sits beside `/trips` rather than under it.
  *
  * `/trips/new` is declared before `/trips/:tripId` so "new" is never read as a
  * trip id. React Router 7 ranks static segments above dynamic ones regardless of
@@ -21,6 +25,7 @@ export default function App() {
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route element={<RequireSession />}>
+        <Route path="/inbox" element={<InboxPage />} />
         <Route path="/trips" element={<TripListPage />} />
         <Route path="/trips/new" element={<TripCreatePage />} />
         <Route path="/trips/:tripId" element={<TimelinePage />} />

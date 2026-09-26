@@ -20,7 +20,8 @@
   },
   "nav": {
     "signOut": "Sign out",
-    "breadcrumb": "Breadcrumb"
+    "breadcrumb": "Breadcrumb",
+    "inbox": "Inbox"
   },
   "trip": {
     "stageCount": "{count, plural, one {# stage} other {# stages}}",
@@ -222,5 +223,44 @@
     "message_not_routable": "That trip is not one of yours, so the message cannot be placed on it.",
     "inbox_rate_limited": "The inbox has taken a lot of mail recently. This message is queued and will be processed shortly.",
     "inbox_object_unavailable": "The original message is no longer stored, so it cannot be recovered. It expires 30 days after it arrives."
+  },
+  "inbox": {
+    "title": "Inbox",
+    "mailTitle": "Your mail",
+    "unroutedTitle": "Not placed yet",
+    "quarantineTitle": "Held back",
+    "emptyTitle": "Nothing has arrived yet",
+    "emptyBody": "Forward a booking confirmation to this address and it will show up here:",
+    "disabledTitle": "The inbox is not set up",
+    "disabledBody": "This installation has no forwarding address configured, so no mail can arrive. Everything else works as usual.",
+    "open": "Open",
+    "hide": "Hide",
+    "noText": "This message had no text — only documents.",
+    "documentCount": "{count, plural, one {# document} other {# documents}}",
+    "waitingCount": "{count, plural, one {# waiting} other {# waiting}}",
+    "quarantineCount": "{count, plural, one {# message from an unknown sender or one that failed authentication. Deleted after 30 days.} other {# messages from unknown senders or ones that failed authentication. Deleted after 30 days.}}",
+    "quarantineShow": "Show senders",
+    "quarantineExpired": "The original message is no longer stored, so this one cannot be recovered.",
+    "trustSender": "Trust this sender",
+    "releaseMessage": "Release this message",
+    "place": "Place",
+    "placing": "Placing…",
+    "placeLabel": "Which trip is this about?",
+    "placeChoose": "Choose a trip",
+    "placeHint": "This only records which trip the message belongs to. Nothing is added to the plan.",
+    "placeNoTrips": "Create a trip first — a message never creates one on its own.",
+    "neverReceived": "No mail has arrived yet.",
+    "lastReceived": "Last delivery: {when}.",
+    "lastError": "Last failure: {when} ({reason}).",
+    "reason": {
+      "placed_by_hand": "You placed this on a trip.",
+      "unknown_sender": "The sender is not on your list.",
+      "failed_authentication": "The sender could not be verified.",
+      "failed_scan": "The message failed a spam or virus check.",
+      "ingest_failed": "The message could not be fetched.",
+      "inbox_object_unavailable": "The original message is no longer stored.",
+      "inbox_rate_limited": "A lot of mail arrived at once — this one is queued.",
+      "inbox_storage_full": "The inbox is full — this one is queued."
+    }
   }
 }

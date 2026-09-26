@@ -20,7 +20,8 @@
   },
   "nav": {
     "signOut": "Wyloguj się",
-    "breadcrumb": "Ścieżka nawigacji"
+    "breadcrumb": "Ścieżka nawigacji",
+    "inbox": "Skrzynka"
   },
   "trip": {
     "stageCount": "{count, plural, one {# etap} few {# etapy} many {# etapów} other {# etapu}}",
@@ -222,5 +223,44 @@
     "message_not_routable": "To nie jest Twoja podróż, więc nie można do niej przypisać tej wiadomości.",
     "inbox_rate_limited": "Skrzynka odebrała ostatnio dużo poczty. Ta wiadomość czeka w kolejce i zostanie przetworzona wkrótce.",
     "inbox_object_unavailable": "Oryginalna wiadomość nie jest już przechowywana, więc nie da się jej odzyskać. Wygasa 30 dni po otrzymaniu."
+  },
+  "inbox": {
+    "title": "Skrzynka",
+    "mailTitle": "Twoja poczta",
+    "unroutedTitle": "Jeszcze nieprzypisane",
+    "quarantineTitle": "Wstrzymane",
+    "emptyTitle": "Nic jeszcze nie dotarło",
+    "emptyBody": "Prześlij potwierdzenie rezerwacji na ten adres, a pojawi się tutaj:",
+    "disabledTitle": "Skrzynka nie jest skonfigurowana",
+    "disabledBody": "Ta instalacja nie ma ustawionego adresu do przesyłania, więc poczta nie może dotrzeć. Reszta działa normalnie.",
+    "open": "Otwórz",
+    "hide": "Ukryj",
+    "noText": "Ta wiadomość nie miała treści — tylko dokumenty.",
+    "documentCount": "{count, plural, one {# dokument} few {# dokumenty} many {# dokumentów} other {# dokumentu}}",
+    "waitingCount": "{count, plural, one {# oczekuje} few {# oczekują} many {# oczekuje} other {# oczekuje}}",
+    "quarantineCount": "{count, plural, one {# wiadomość od nieznanego nadawcy lub taka, której nie udało się zweryfikować. Usuwana po 30 dniach.} few {# wiadomości od nieznanych nadawców lub takich, których nie udało się zweryfikować. Usuwane po 30 dniach.} many {# wiadomości od nieznanych nadawców lub takich, których nie udało się zweryfikować. Usuwane po 30 dniach.} other {# wiadomości od nieznanych nadawców lub takich, których nie udało się zweryfikować. Usuwane po 30 dniach.}}",
+    "quarantineShow": "Pokaż nadawców",
+    "quarantineExpired": "Oryginalna wiadomość nie jest już przechowywana, więc nie da się jej odzyskać.",
+    "trustSender": "Zaufaj temu nadawcy",
+    "releaseMessage": "Zwolnij tę wiadomość",
+    "place": "Przypisz",
+    "placing": "Przypisywanie…",
+    "placeLabel": "Której podróży dotyczy?",
+    "placeChoose": "Wybierz podróż",
+    "placeHint": "To tylko zapisuje, do której podróży należy wiadomość. Nic nie trafia do planu.",
+    "placeNoTrips": "Najpierw utwórz podróż — wiadomość nigdy nie tworzy jej sama.",
+    "neverReceived": "Żadna poczta jeszcze nie dotarła.",
+    "lastReceived": "Ostatnia dostawa: {when}.",
+    "lastError": "Ostatni błąd: {when} ({reason}).",
+    "reason": {
+      "placed_by_hand": "Przypisano do podróży ręcznie.",
+      "unknown_sender": "Nadawcy nie ma na Twojej liście.",
+      "failed_authentication": "Nie udało się zweryfikować nadawcy.",
+      "failed_scan": "Wiadomość nie przeszła kontroli antyspamowej lub antywirusowej.",
+      "ingest_failed": "Nie udało się pobrać wiadomości.",
+      "inbox_object_unavailable": "Oryginalna wiadomość nie jest już przechowywana.",
+      "inbox_rate_limited": "Naraz dotarło dużo poczty — ta czeka w kolejce.",
+      "inbox_storage_full": "Skrzynka jest pełna — ta wiadomość czeka w kolejce."
+    }
   }
 }
