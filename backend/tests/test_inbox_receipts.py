@@ -492,38 +492,78 @@ def confirmation(key: rsa.RSAPrivateKey, subscribe_url: str) -> dict[str, Any]:
     )
 
 
+@pytest.mark.parametrize(
+    "subscribe_url",
+    [
+        "https://evil.example/confirm",
+        "https://sns.eu-central-1.amazonaws.com.evil.example/confirm",
+        "http://sns.eu-central-1.amazonaws.com/confirm",
+        "https://sns.eu-central-1.amazonaws.com@evil.example/confirm",
+    ],
+)
 def test_a_subscribe_url_pointing_anywhere_but_aws_is_refused(
-    sns: TestClient, signing_key: rsa.RSAPrivateKey, monkeypatch: pytest.MonkeyPatch
+    sns: TestClient, signing_key: rsa.RSAPrivateKey, monkeypatch: pytest.MonkeyPatch,
+    subscribe_url: str,
 ) -> None:
     """Otherwise this endpoint is a request-forgery primitive aimed at any URL.
 
     The `SubscribeURL` arrives in the request body, so following whatever it
     names — even after a valid signature — would let anyone who can post here
-    make the server issue a GET on their behalf.
+    make the server issue a GET on their behalf. The same four shapes the
+    certificate URL is tested against, because it is the same check.
     """
-    import urllib.request
+    from trip_planner.api import inbox as inbox_module
 
     def refuse(*args: object, **kwargs: object) -> None:
         raise AssertionError("the endpoint fetched a SubscribeURL it should have refused")
 
-    monkeypatch.setattr(urllib.request, "urlopen", refuse)
+    monkeypatch.setattr(inbox_module, "open_without_redirects", refuse)
 
-    response = sns.post(RECEIPTS, json=confirmation(signing_key, "https://evil.example/confirm"))
+    response = sns.post(RECEIPTS, json=confirmation(signing_key, subscribe_url))
 
     assert response.status_code == 403
 
 
-def test_a_genuine_confirmation_is_confirmed_and_records_no_message(
-    sns: TestClient, db_session: OrmSession, signing_key: rsa.RSAPrivateKey,
+def test_both_body_supplied_urls_go_through_the_same_redirect_free_fetch() -> None:
+    """The certificate and the subscription confirmation share one opener.
+
+    Both URLs arrive in an attacker-influenced request body and both are
+    admitted by the same host check, so both need the same three defences —
+    no redirects, a timeout, a byte cap. Two fetches with two openers is how one
+    of them quietly ends up with only two of the three, which is exactly the
+    asymmetry this test exists to prevent from coming back.
+    """
+    from trip_planner.api import inbox as inbox_module
+    from trip_planner.inbound import ses
+
+    assert inbox_module.open_without_redirects is ses.open_without_redirects
+
+
+def test_the_shared_fetch_refuses_to_follow_a_redirect() -> None:
+    """An allow-listed host answering 302 is an attacker-chosen destination.
+
+    Asserted against the handler itself rather than through a live request:
+    what matters is that `redirect_request` raises instead of returning a new
+    request, which is the one line standing between the host check and a hop
+    around it.
+    """
+    from trip_planner.inbound.ses import _NoRedirects
+
+    with pytest.raises(ValueError, match="refusing to follow"):
+        _NoRedirects().redirect_request(None, None, 302, "Found", {}, "https://evil.example/")
+
+
+def test_the_shared_fetch_refuses_an_implausibly_large_response(
     monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """The cap is on the read, so an enormous response costs the cap and no more."""
     import urllib.request
 
-    fetched: list[str] = []
+    from trip_planner.inbound.ses import open_without_redirects
 
     class _Response:
-        def read(self, _size: int = 0) -> bytes:
-            return b"<ConfirmSubscriptionResponse/>"
+        def read(self, size: int) -> bytes:
+            return b"x" * size
 
         def __enter__(self) -> _Response:
             return self
@@ -531,11 +571,29 @@ def test_a_genuine_confirmation_is_confirmed_and_records_no_message(
         def __exit__(self, *args: object) -> None:
             return None
 
-    def capture(url: str, *args: object, **kwargs: object) -> _Response:
-        fetched.append(url)
-        return _Response()
+    class _Opener:
+        def open(self, url: str, timeout: float) -> _Response:
+            return _Response()
 
-    monkeypatch.setattr(urllib.request, "urlopen", capture)
+    monkeypatch.setattr(urllib.request, "build_opener", lambda *handlers: _Opener())
+
+    with pytest.raises(ValueError, match="implausibly large"):
+        open_without_redirects("https://sns.eu-central-1.amazonaws.com/x", timeout=1, max_bytes=10)
+
+
+def test_a_genuine_confirmation_is_confirmed_and_records_no_message(
+    sns: TestClient, db_session: OrmSession, signing_key: rsa.RSAPrivateKey,
+    monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from trip_planner.api import inbox as inbox_module
+
+    fetched: list[str] = []
+
+    def capture(url: str, **kwargs: object) -> bytes:
+        fetched.append(url)
+        return b"<ConfirmSubscriptionResponse/>"
+
+    monkeypatch.setattr(inbox_module, "open_without_redirects", capture)
 
     url = "https://sns.eu-central-1.amazonaws.com/?Action=ConfirmSubscription&Token=aaa"
     response = sns.post(RECEIPTS, json=confirmation(signing_key, url))

@@ -847,3 +847,58 @@ def test_the_summary_carries_no_sender_addresses(
     body = owner_client.get(f"{INBOX}/summary").json()
 
     assert "rezerwacje@airline.example" not in json.dumps(body)
+
+
+def test_a_transient_failure_during_recovery_reports_failure_and_restores_quarantine(
+    owner_client: TestClient, db_session: OrmSession, owner: Owner, s3: StubS3
+) -> None:
+    """Two things must not happen, and they would have happened together.
+
+    `ingest_message` leaves a transiently-failed message `pending_ingest` to be
+    retried, which is right for the worker and wrong here twice over: the owner
+    would be told his action worked, and the row would drop out of quarantine
+    for the worker to re-apply the sender policy to — losing a release's
+    one-shot bypass and quarantining it again in front of him.
+    """
+    message = quarantined(db_session, owner)
+    s3.objects[f"{PREFIX}ses-1"] = mime(sender="rezerwacje@airline.example")
+    s3.fail_with = TimeoutError("s3 timed out")
+
+    response = owner_client.post(f"{INBOX}/quarantine/{message.id}/trust-sender")
+
+    assert response.status_code == 503
+    assert response.json()["error"]["code"] == "service_unavailable"
+
+    db_session.expire_all()
+    stored = db_session.get(InboundMessage, message.id)
+    assert stored is not None
+    # Exactly where it was, so the next attempt is his and the screen is honest.
+    assert stored.state == "quarantined"
+    assert stored.text_body == ""
+
+
+def test_a_release_that_fails_transiently_keeps_the_message_releasable(
+    owner_client: TestClient, db_session: OrmSession, owner: Owner, s3: StubS3
+) -> None:
+    """The bypass is one-shot, so a failed release must leave it available again.
+
+    If the row had been left `pending_ingest`, the worker would have re-applied
+    the sender policy without the override and the owner's only way back would
+    have been to press the same button on a message that had silently moved.
+    """
+    message = quarantined(
+        db_session, owner, ses_sender_verdict="FAIL", routing_reason="failed_authentication"
+    )
+    s3.objects[f"{PREFIX}ses-1"] = mime(sender="rezerwacje@airline.example")
+    s3.fail_with = TimeoutError("s3 timed out")
+
+    assert owner_client.post(f"{INBOX}/quarantine/{message.id}/release").status_code == 503
+
+    # Still offered, and still offered the *right* action.
+    body = owner_client.get(f"{INBOX}/quarantine/{message.id}").json()
+    assert body["may_release_message"] is True
+
+    s3.fail_with = None
+    second = owner_client.post(f"{INBOX}/quarantine/{message.id}/release")
+    assert second.status_code == 200
+    assert second.json()["state"] == "received"

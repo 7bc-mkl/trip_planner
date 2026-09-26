@@ -67,7 +67,12 @@ from trip_planner.inbound.ingest import (
     delete_ingested_object,
     ingest_message,
 )
-from trip_planner.inbound.ses import S3Fetcher, SignatureVerifier, verify_event
+from trip_planner.inbound.ses import (
+    S3Fetcher,
+    SignatureVerifier,
+    open_without_redirects,
+    verify_event,
+)
 from trip_planner.inbound.transport import (
     MAX_SNS_BODY_BYTES,
     DeliveryNotice,
@@ -401,6 +406,13 @@ def _refused(reason: str) -> Response:
     return Response(status_code=status.HTTP_403_FORBIDDEN, content=reason.encode("ascii"))
 
 
+#: The confirmation response is a short XML acknowledgement. Bounded like every
+#: other fetch this feature makes, and for the same reason: the URL came out of
+#: a request body.
+MAX_CONFIRMATION_BYTES = 8 * 1024
+CONFIRMATION_TIMEOUT_SECONDS = 5.0
+
+
 def _confirm_subscription(subscription: SubscriptionRequest) -> None:
     """Confirm, by fetching the URL SNS supplied — after it has been verified.
 
@@ -409,14 +421,21 @@ def _confirm_subscription(subscription: SubscriptionRequest) -> None:
     second, this call is a request-forgery primitive pointed at anything a
     stranger names in a request body.
 
+    **Through the same redirect-free opener the certificate fetch uses**, and
+    that symmetry is the point: both URLs arrive in an attacker-influenced body
+    and both are admitted by the same host check, so an allow-listed host that
+    answers `302` must not be followed from either. Two fetches with two
+    different openers is how one of them quietly ends up weaker than the other.
+
     A failure is swallowed deliberately. SNS retries the confirmation, and an
     exception here would answer `5xx` to an envelope that was perfectly valid.
     """
-    import urllib.request
-
     try:
-        with urllib.request.urlopen(subscription.subscribe_url, timeout=5.0) as response:
-            response.read(1024)
+        open_without_redirects(
+            subscription.subscribe_url,
+            timeout=CONFIRMATION_TIMEOUT_SECONDS,
+            max_bytes=MAX_CONFIRMATION_BYTES,
+        )
     except Exception:
         logger.warning("inbox: subscription confirmation could not be completed")
 
@@ -933,9 +952,25 @@ def _recover(
     if outcome.state == "deferred":
         # The owner asked for this one now, and the window said not yet. A 429
         # rather than a silent deferral, because he is standing there waiting.
+        message.state = "quarantined"
         raise ApiError(ErrorCode.INBOX_RATE_LIMITED, field="message_id")
     if outcome.reason == "inbox_object_unavailable":
+        message.state = "quarantined"
         raise ApiError(ErrorCode.INBOX_OBJECT_UNAVAILABLE, field="message_id")
+    if outcome.state != "received":
+        # A transient failure — S3 timed out, the network blinked. `ingest_message`
+        # leaves such a message `pending_ingest` to be retried, which is right for
+        # the worker and wrong here twice over: the owner would be told his action
+        # worked, and the row would drop out of quarantine for the worker to
+        # re-apply the sender policy to — losing a release's one-shot bypass and
+        # quarantining it again in front of him.
+        #
+        # So the row goes back exactly where it was and he is told the truth. A
+        # 503, like every other transient failure in this API; SNS is not
+        # involved, and the next attempt is his.
+        message.state = "quarantined"
+        message.last_error = outcome.reason
+        raise ApiError(ErrorCode.SERVICE_UNAVAILABLE, field="message_id")
 
     key = message.s3_object_key
     db.flush()

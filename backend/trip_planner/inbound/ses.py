@@ -63,13 +63,63 @@ __all__ = [
     "ObjectGone",
     "S3Fetcher",
     "SignatureVerifier",
+    "host_is_aws_sns",
+    "open_without_redirects",
     "verify_event",
 ]
 
 #: `sns.<region>.amazonaws.com`, and the China partition's own suffix. Anchored
 #: at both ends: `sns.eu-central-1.amazonaws.com.evil.example` matches an
 #: unanchored pattern and is not AWS.
-_CERTIFICATE_HOST = re.compile(r"^sns\.[a-z0-9\-]+\.amazonaws\.com(\.cn)?$")
+_SNS_HOST = re.compile(r"^sns\.[a-z0-9\-]+\.amazonaws\.com(\.cn)?$")
+
+
+def host_is_aws_sns(url: str) -> bool:
+    """HTTPS, and a host that is genuinely an SNS endpoint.
+
+    The single most load-bearing check in this module. Without it an attacker
+    names their own certificate URL, signs their own event with their own key,
+    and every subsequent check passes.
+
+    A module-level function rather than a method because **two** URLs out of the
+    request body are checked against it — the signing certificate and the
+    subscription confirmation — and a check that lived on the verifier invited
+    the second caller to reach for a private attribute or, worse, to skip it.
+    """
+    parts = urlsplit(url)
+    return parts.scheme == "https" and _SNS_HOST.match(parts.hostname or "") is not None
+
+
+class _NoRedirects(urllib.request.HTTPRedirectHandler):
+    """Turns any redirect into an error instead of following it.
+
+    `urllib`'s default opener follows redirects happily, which would defeat
+    `host_is_aws_sns` with one extra hop: an allow-listed host that answers 302
+    is an attacker-chosen destination reached through a check that passed.
+    """
+
+    def redirect_request(self, *args: object, **kwargs: object) -> None:
+        raise ValueError("an AWS SNS URL redirected; refusing to follow it")
+
+
+def open_without_redirects(url: str, *, timeout: float, max_bytes: int) -> bytes:
+    """Fetch a **verified** AWS SNS URL, bounded in time and in size.
+
+    Shared by the certificate fetch and the subscription confirmation, which is
+    the point: both take a URL out of an attacker-influenced request body, so
+    both need the same three defences, and two implementations is how one of
+    them ends up with only two of the three.
+
+    `read(n + 1)` rather than `read(n)`: reading exactly the cap cannot
+    distinguish "fits" from "was truncated at the cap".
+    """
+    opener = urllib.request.build_opener(_NoRedirects)
+    with opener.open(url, timeout=timeout) as response:
+        body = response.read(max_bytes + 1)
+
+    if len(body) > max_bytes:
+        raise ValueError("an AWS SNS response was implausibly large; refusing it")
+    return body
 
 #: A certificate is a couple of kilobytes. The cap exists because the URL is
 #: attacker-influenced up to the host check, and an allow-listed host serving a
@@ -137,7 +187,7 @@ class SignatureVerifier:
     def verify(self, payload: dict[str, Any], envelope_type: EnvelopeType) -> Rejection | None:
         """`None` when the envelope is genuine, or the reason it is not."""
         certificate_url = payload.get("SigningCertURL") or payload.get("SigningCertUrl")
-        if not isinstance(certificate_url, str) or not self._host_is_aws(certificate_url):
+        if not isinstance(certificate_url, str) or not host_is_aws_sns(certificate_url):
             return Rejection.UNTRUSTED_CERTIFICATE_URL
 
         raw_signature = payload.get("Signature")
@@ -174,17 +224,6 @@ class SignatureVerifier:
         return None
 
     @staticmethod
-    def _host_is_aws(url: str) -> bool:
-        """HTTPS, and a host that is genuinely an SNS endpoint.
-
-        The single most load-bearing line in this module. Without it an attacker
-        names their own certificate URL, signs their own event with their own
-        key, and every subsequent check passes.
-        """
-        parts = urlsplit(url)
-        return parts.scheme == "https" and _CERTIFICATE_HOST.match(parts.hostname or "") is not None
-
-    @staticmethod
     def _canonical_string(payload: dict[str, Any], envelope_type: EnvelopeType) -> str | None:
         """`key\\nvalue\\n` for each signed field, in AWS's fixed order."""
         chunks: list[str] = []
@@ -216,26 +255,10 @@ class SignatureVerifier:
 
     @staticmethod
     def _fetch_certificate(url: str) -> bytes:
-        """Bounded, timed, and **redirect-free**.
-
-        `urllib`'s default opener follows redirects, so an allow-listed host that
-        302s to an attacker's would defeat the host check with one extra hop.
-        The handler below turns any redirect into an error instead.
-        """
-
-        class _NoRedirects(urllib.request.HTTPRedirectHandler):
-            def redirect_request(self, *args: object, **kwargs: object) -> None:
-                raise ValueError("the SNS signing certificate URL redirected; refusing to follow")
-
-        opener = urllib.request.build_opener(_NoRedirects)
-        with opener.open(url, timeout=CERTIFICATE_TIMEOUT_SECONDS) as response:
-            # `read(n + 1)` rather than `read(n)`: reading exactly the cap cannot
-            # distinguish "fits" from "was truncated at the cap".
-            body = response.read(MAX_CERTIFICATE_BYTES + 1)
-
-        if len(body) > MAX_CERTIFICATE_BYTES:
-            raise ValueError("the SNS signing certificate is implausibly large; refusing")
-        return body
+        """The signing certificate, through the shared bounded, redirect-free fetch."""
+        return open_without_redirects(
+            url, timeout=CERTIFICATE_TIMEOUT_SECONDS, max_bytes=MAX_CERTIFICATE_BYTES
+        )
 
 
 def verify_event(
@@ -273,7 +296,7 @@ def verify_event(
         # The URL is verified to be AWS's own before anything follows it. It
         # arrived in the request body, so confirming whatever it names would make
         # this endpoint a request-forgery primitive aimed at anything AWS-shaped.
-        if not SignatureVerifier._host_is_aws(subscribe_url):
+        if not host_is_aws_sns(subscribe_url):
             return RejectedEvent(Rejection.UNTRUSTED_CERTIFICATE_URL)
         return VerifiedEvent(
             subscription=SubscriptionRequest(
