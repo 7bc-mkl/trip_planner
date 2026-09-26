@@ -25,6 +25,7 @@
   "trip": {
     "stageCount": "{count, plural, one {# stage} other {# stages}}",
     "nightCount": "{count, plural, one {# night} other {# nights}}",
+    "edit": "Edit trip",
     "delete": "Delete trip",
     "deleteTitle": "Delete this trip?",
     "deleteMessage": "“{title}” and everything planned in it — every destination, every day and every item — will be deleted. This cannot be undone.",
@@ -42,6 +43,17 @@
     "new": "New trip",
     "emptyTitle": "No trips yet",
     "emptyBody": "Create your first trip and its empty timeline, then fill it in day by day."
+  },
+  "tripEdit": {
+    "title": "Edit trip",
+    "subtitle": "Change the name, the dates, the route and the destinations. Nothing you have planned is thrown away: if the new dates clash with the plan, the save is refused and says exactly what is in the way.",
+    "save": "Save changes",
+    "saving": "Saving…",
+    "cancel": "Cancel",
+    "saveStage": "Save destination",
+    "stagesHint": "Each destination is saved on its own, as soon as you save it — the button at the foot of the page saves the trip's own details.",
+    "removeStageTitle": "Remove this destination?",
+    "removeStageMessage": "“{place}” will be removed from the trip. The days stay where they are; only the destination they are labelled with changes. This cannot be undone."
   },
   "tripCreate": {
     "eyebrow": "Trip planning",
@@ -173,6 +185,12 @@
     "all": "All",
     "outstanding": "Only outstanding",
     "kindCount": "{kind} ({count, number})"
+  },
+  "errorDetail": {
+    "days_have_items": "These days already have items on them: {dates}. Move or delete those items first, then shorten the trip.",
+    "days_have_attachments": "These days already have attachments on them: {dates}. Move or remove those files first, then shorten the trip.",
+    "items_outside_new_range": "Items starting on {dates} run past the new end date. Shorten or delete them first, then shorten the trip.",
+    "stages_outside_new_range": "These destinations fall outside the new dates: {places}. Adjust them first, then shorten the trip."
   },
   "error": {
     "invalid_credentials": "We could not sign you in. Check your e-mail and password.",

@@ -291,6 +291,16 @@ textarea:disabled {
   background: var(--surface-sunken);
 }
 
+/* The recipe on a link. Until the trip editor there was no `<a class=
+   "button-quiet">` in the app, so nothing had to undo the global link
+   underline — and an underlined word inside a bordered 40px box reads as a
+   link that has been drawn wrong rather than as a button. `<a>` is the right
+   element where the action is a destination (Cancel returns to the trip,
+   "Edit trip" opens a route), so the recipe learns to cover both. */
+a.button-quiet {
+  text-decoration: none;
+}
+
 .button-quiet:disabled {
   opacity: 0.5;
   cursor: not-allowed;

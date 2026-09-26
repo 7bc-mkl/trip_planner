@@ -115,13 +115,24 @@ export function TimelinePage() {
         </nav>
       }
       actions={
-        <button
-          type="button"
-          className="button-danger"
-          onClick={() => setConfirmingDelete(true)}
-        >
-          {t('trip.delete')}
-        </button>
+        <>
+          {/* A `Link` rather than a button: the edit screen is a real
+              destination, so it should be middle-clickable and reachable from
+              browser history like every other route. It sits before the
+              destructive action, since correcting a trip is the thing the owner
+              reaches for first and deleting one is the last resort it used to
+              be the only substitute for. */}
+          <Link className="button-quiet" to={`/trips/${trip.id}/edit`}>
+            {t('trip.edit')}
+          </Link>
+          <button
+            type="button"
+            className="button-danger"
+            onClick={() => setConfirmingDelete(true)}
+          >
+            {t('trip.delete')}
+          </button>
+        </>
       }
       /*
        * The dock (Q9): trip metadata promoted out of the main column. Every

@@ -25,6 +25,7 @@
   "trip": {
     "stageCount": "{count, plural, one {# etap} few {# etapy} many {# etapów} other {# etapu}}",
     "nightCount": "{count, plural, one {# noc} few {# noce} many {# nocy} other {# nocy}}",
+    "edit": "Edytuj podróż",
     "delete": "Usuń podróż",
     "deleteTitle": "Usunąć tę podróż?",
     "deleteMessage": "„{title}” i wszystko, co w niej zaplanowano — każdy cel, każdy dzień i każdy element — zostanie usunięte. Tej operacji nie można cofnąć.",
@@ -42,6 +43,17 @@
     "new": "Nowa podróż",
     "emptyTitle": "Nie masz jeszcze żadnej podróży",
     "emptyBody": "Utwórz pierwszą podróż i jej pustą oś czasu, a potem wypełniaj ją dzień po dniu."
+  },
+  "tripEdit": {
+    "title": "Edytuj podróż",
+    "subtitle": "Zmień nazwę, daty, trasę i cele. Nic z tego, co zaplanowane, nie przepada: jeśli nowe daty kolidują z planem, zapis zostanie odrzucony i powie dokładnie, co stoi na przeszkodzie.",
+    "save": "Zapisz zmiany",
+    "saving": "Zapisywanie…",
+    "cancel": "Anuluj",
+    "saveStage": "Zapisz cel",
+    "stagesHint": "Każdy cel zapisuje się osobno, w chwili gdy go zapiszesz — przycisk na dole strony zapisuje same dane podróży.",
+    "removeStageTitle": "Usunąć ten cel?",
+    "removeStageMessage": "„{place}” zostanie usunięty z podróży. Dni zostają bez zmian; zmienia się tylko cel, którym są opisane. Tej operacji nie można cofnąć."
   },
   "tripCreate": {
     "eyebrow": "Planowanie podróży",
@@ -173,6 +185,12 @@
     "all": "Wszystko",
     "outstanding": "Tylko do zrobienia",
     "kindCount": "{kind} ({count, number})"
+  },
+  "errorDetail": {
+    "days_have_items": "Te dni mają już zaplanowane pozycje: {dates}. Najpierw przenieś je lub usuń, potem skróć podróż.",
+    "days_have_attachments": "Te dni mają już załączniki: {dates}. Najpierw przenieś je lub usuń, potem skróć podróż.",
+    "items_outside_new_range": "Pozycje zaczynające się {dates} wykraczają poza nową datę zakończenia. Najpierw je skróć lub usuń, potem skróć podróż.",
+    "stages_outside_new_range": "Te cele wykraczają poza nowe daty: {places}. Najpierw je popraw, potem skróć podróż."
   },
   "error": {
     "invalid_credentials": "Nie udało się zalogować. Sprawdź e-mail i hasło.",

@@ -101,6 +101,23 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
   const response = await fetch(`${API_BASE}${path}`, {
     method,
     headers,
+    /*
+     * **Never from the HTTP cache.**
+     *
+     * The API sends no `Cache-Control`, which leaves a plain `GET` open to the
+     * browser's heuristic caching — and every one of these responses is
+     * owner-private, mutable state that the app re-reads precisely *because*
+     * it has just changed it. Caught in QA on the trip editor: removing a
+     * destination succeeded on the server, and the refetch that followed came
+     * back from the cache still carrying it, so the base stayed on the screen
+     * and in the dock. The same hazard sits under every write-then-reread path
+     * in the app; this is the one place to close it.
+     *
+     * `no-store` rather than `no-cache`: the responses are a signed-in owner's
+     * trip data, which has no business being written to disk by the browser at
+     * all, and none of them is large enough for revalidation to be worth it.
+     */
+    cache: 'no-store',
     // The session cookie is HttpOnly, so it only travels when credentials are included.
     credentials: 'same-origin',
     body: options.body === undefined ? undefined : JSON.stringify(options.body),

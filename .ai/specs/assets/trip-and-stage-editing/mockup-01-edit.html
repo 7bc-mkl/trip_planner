@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<title>Mockup — /trips/:id/edit</title>
+<style>
+  /* Illustrative mockup. Static HTML, no app code, no build step, no external
+     requests. Colours are read off the running app's tokens.css so the layout
+     reads as this product; it is not a pixel-spec. */
+  :root {
+    --primary: #0f3f6d; --primary-deep: #00294d; --on-primary: #fff;
+    --canvas: #f8fafc; --surface: #fff; --surface-sunken: #f1f5f9;
+    --hairline: #e2e8f0; --hairline-strong: #cbd5e1; --field-border: #84919f;
+    --text: #0f172a; --text-muted: #334155; --text-subtle: #64748b;
+    --danger: #ba1a1a;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--canvas); color: var(--text);
+         font: 400 15px/24px ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }
+  .topbar { display:flex; justify-content:space-between; align-items:center;
+            padding:14px 28px; background:var(--surface); border-bottom:1px solid var(--hairline); }
+  .brand { font-weight:700; font-size:17px; }
+  .topbar-right { color: var(--text-subtle); font-size: 14px; }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 24px 28px 48px; display: grid;
+          grid-template-columns: 1fr 300px; gap: 28px; align-items: start; }
+  .crumb { color: var(--primary); font-size: 14px; text-decoration: underline; }
+  h1 { font: 600 32px/40px inherit; letter-spacing:-0.02em; margin: 10px 0 2px; }
+  .sub { color: var(--text-muted); margin: 0 0 22px; }
+  .card { background: var(--surface); border: 1px solid var(--hairline);
+          border-radius: 14px; padding: 18px 20px; margin-bottom: 16px; }
+  .card > h2 { font: 600 15px/22px inherit; letter-spacing: .02em; text-transform: uppercase;
+               color: var(--text-subtle); margin: 0 0 14px; }
+  label { display:block; font-size:13px; font-weight:600; color: var(--text-muted); margin-bottom:5px; }
+  .field { margin-bottom: 14px; }
+  .input { width:100%; padding:9px 11px; border:1px solid var(--field-border);
+           border-radius:9px; background:#fff; font: inherit; color: var(--text); }
+  .row { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  .row3 { display:grid; grid-template-columns:1.6fr 1fr 1fr; gap:12px; }
+  .modes { display:flex; gap:8px; margin-bottom:16px; }
+  .mode { flex:1; text-align:center; padding:9px 8px; border:1px solid var(--hairline-strong);
+          border-radius:9px; font-size:13px; color: var(--text-muted); background:#fff; }
+  .mode.on { background: var(--primary-deep); border-color: var(--primary-deep); color: var(--on-primary); font-weight:600; }
+  .hint { color: var(--text-subtle); font-size:13px; margin:-6px 0 14px; }
+  .stage { border:1px solid var(--hairline); border-radius:12px; padding:14px;
+           margin-bottom:12px; background: var(--surface); }
+  .stage-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+  .num { width:24px; height:24px; border-radius:50%; background:var(--surface-sunken);
+         color:var(--text-muted); font-size:13px; font-weight:700; display:grid; place-items:center; }
+  .stage-actions { display:flex; gap:8px; }
+  .btn-quiet { background:#fff; border:1px solid var(--hairline-strong); border-radius:9px;
+               padding:6px 12px; font-size:13px; color: var(--primary); cursor:pointer; }
+  .btn-quiet[disabled] { color: var(--text-subtle); border-color: var(--hairline); background: var(--surface-sunken); }
+  .btn-add { width:100%; padding:10px; border:1px dashed var(--hairline-strong); border-radius:10px;
+             background:#fff; color: var(--primary); font-size:14px; cursor:pointer; }
+  .actions { display:flex; gap:12px; align-items:center; margin-top:20px; }
+  .btn-primary { flex:1; background: var(--primary-deep); color: var(--on-primary); border:0;
+                 border-radius:11px; padding:13px; font-size:15px; font-weight:600; cursor:pointer; }
+  .dock { background: var(--surface); border:1px solid var(--hairline); border-radius:14px; padding:18px 20px; }
+  .dock h2 { font: 600 13px/20px inherit; letter-spacing:.04em; text-transform:uppercase;
+             color: var(--text-subtle); margin:0 0 10px; }
+  .dock p { margin:0 0 16px; font-size:15px; }
+  .dock dt { font-weight:600; font-size:14px; }
+  .dock dd { margin:0 0 10px; color: var(--text-subtle); font-size:13px; }
+  .note { margin-top: 10px; font-size: 12px; color: var(--text-subtle); }
+</style>
+</head>
+<body>
+  <div class="topbar"><span class="brand">Smart Trip Planner</span>
+    <span class="topbar-right">Język: Polski &nbsp;·&nbsp; Wyloguj się</span></div>
+
+  <div class="wrap">
+    <div>
+      <span class="crumb">Malezja, październik 2026</span>
+      <h1>Edytuj podróż</h1>
+      <p class="sub">Zmień nazwę, daty, trasę i bazy. Nic zaplanowanego nie zniknie — jeśli nowe daty
+        kolidują z planem, zapis zostanie odrzucony i powie dokładnie z czym.</p>
+
+      <section class="card">
+        <div class="field">
+          <label>Nazwa podróży</label>
+          <input class="input" value="Malezja, październik 2026">
+        </div>
+        <div class="row">
+          <div class="field"><label>Data początkowa</label><input class="input" value="10.10.2026"></div>
+          <div class="field"><label>Data końcowa</label><input class="input" value="24.10.2026"></div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Trasa</h2>
+        <div class="modes">
+          <span class="mode on">W obie strony</span>
+          <span class="mode">Inne miasto powrotu</span>
+          <span class="mode">W jedną stronę</span>
+        </div>
+        <div class="field"><label>Wyjazd z</label><input class="input" value="Warszawa"></div>
+      </section>
+
+      <section class="card">
+        <h2>Cele</h2>
+        <p class="hint">Bazy podróży, w kolejności. Daty są opcjonalne. Każda baza zapisuje się osobno.</p>
+
+        <div class="stage">
+          <div class="stage-head"><span class="num">1</span>
+            <span class="stage-actions"><button class="btn-quiet" disabled>Zapisz bazę</button>
+              <button class="btn-quiet">Usuń</button></span></div>
+          <div class="row3">
+            <div><label>Cel 1</label><input class="input" value="Kuala Lumpur"></div>
+            <div><label>Od</label><input class="input" value="10.10.2026"></div>
+            <div><label>Do</label><input class="input" value="14.10.2026"></div>
+          </div>
+        </div>
+
+        <div class="stage">
+          <div class="stage-head"><span class="num">2</span>
+            <span class="stage-actions"><button class="btn-quiet" disabled>Zapisz bazę</button>
+              <button class="btn-quiet">Usuń</button></span></div>
+          <div class="row3">
+            <div><label>Cel 2</label><input class="input" value="Penang"></div>
+            <div><label>Od</label><input class="input" value="14.10.2026"></div>
+            <div><label>Do</label><input class="input" value="19.10.2026"></div>
+          </div>
+        </div>
+
+        <div class="stage">
+          <div class="stage-head"><span class="num">3</span>
+            <span class="stage-actions"><button class="btn-quiet" disabled>Zapisz bazę</button>
+              <button class="btn-quiet">Usuń</button></span></div>
+          <div class="row3">
+            <div><label>Cel 3</label><input class="input" value="Langkawi"></div>
+            <div><label>Od</label><input class="input" value="19.10.2026"></div>
+            <div><label>Do</label><input class="input" value="24.10.2026"></div>
+          </div>
+        </div>
+
+        <button class="btn-add">+ Dodaj cel</button>
+      </section>
+
+      <div class="actions">
+        <button class="btn-primary">Zapisz zmiany</button>
+        <button class="btn-quiet">Anuluj</button>
+      </div>
+      <p class="note">Mockup — ilustracja układu, nie specyfikacja pikseli.</p>
+    </div>
+
+    <aside class="dock">
+      <h2>Podróż w skrócie</h2>
+      <p><strong>15 dni / 14 nocy · 3 bazy</strong></p>
+      <h2>Cele</h2>
+      <dl>
+        <dt>Kuala Lumpur</dt><dd>10–14 paź 2026</dd>
+        <dt>Penang</dt><dd>14–19 paź 2026</dd>
+        <dt>Langkawi</dt><dd>19–24 paź 2026</dd>
+      </dl>
+    </aside>
+  </div>
+</body>
+</html>

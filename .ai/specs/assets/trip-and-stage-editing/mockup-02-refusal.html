@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<title>Mockup — /trips/:id/edit, odmowa 409</title>
+<style>
+  /* Illustrative mockup of the state this spec exists for: the server refuses a
+     date edit and the screen names the exact days. Static HTML, no app code. */
+  :root {
+    --primary: #0f3f6d; --primary-deep: #00294d; --on-primary: #fff;
+    --canvas: #f8fafc; --surface: #fff; --surface-sunken: #f1f5f9;
+    --hairline: #e2e8f0; --hairline-strong: #cbd5e1; --field-border: #84919f;
+    --text: #0f172a; --text-muted: #334155; --text-subtle: #64748b;
+    --danger: #ba1a1a; --danger-surface: #ffdad6; --on-danger-surface: #93000a;
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background: var(--canvas); color: var(--text);
+         font: 400 15px/24px ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }
+  .topbar { display:flex; justify-content:space-between; align-items:center;
+            padding:14px 28px; background:var(--surface); border-bottom:1px solid var(--hairline); }
+  .brand { font-weight:700; font-size:17px; }
+  .topbar-right { color: var(--text-subtle); font-size:14px; }
+  .wrap { max-width: 820px; margin: 0 auto; padding: 24px 28px 48px; }
+  .crumb { color: var(--primary); font-size:14px; text-decoration: underline; }
+  h1 { font: 600 32px/40px inherit; letter-spacing:-0.02em; margin: 10px 0 20px; }
+  .card { background: var(--surface); border:1px solid var(--hairline);
+          border-radius:14px; padding:18px 20px; margin-bottom:16px; }
+  .card.bad { border-color: var(--danger); box-shadow: 0 0 0 1px var(--danger); }
+  .card > h2 { font: 600 15px/22px inherit; letter-spacing:.02em; text-transform:uppercase;
+               color: var(--text-subtle); margin:0 0 14px; }
+  label { display:block; font-size:13px; font-weight:600; color: var(--text-muted); margin-bottom:5px; }
+  .field { margin-bottom:14px; }
+  .input { width:100%; padding:9px 11px; border:1px solid var(--field-border);
+           border-radius:9px; background:#fff; font: inherit; color: var(--text); }
+  .input.bad { border-color: var(--danger); border-width:2px; }
+  .row { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  .alert { background: var(--danger-surface); color: var(--on-danger-surface);
+           border:1px solid var(--danger); border-radius:12px; padding:14px 16px; margin-bottom:16px; }
+  .alert strong { display:block; margin-bottom:4px; }
+  .alert .dates { font-weight:700; }
+  .alert-field { color: var(--danger); font-size:13px; margin:-6px 0 6px; font-weight:600; }
+  .actions { display:flex; gap:12px; align-items:center; margin-top:20px; }
+  .btn-primary { flex:1; background: var(--primary-deep); color: var(--on-primary); border:0;
+                 border-radius:11px; padding:13px; font-size:15px; font-weight:600; cursor:pointer; }
+  .btn-quiet { background:#fff; border:1px solid var(--hairline-strong); border-radius:9px;
+               padding:10px 14px; font-size:14px; color: var(--primary); cursor:pointer; }
+  .caption { color: var(--text-subtle); font-size:13px; }
+  .note { margin-top:14px; font-size:12px; color: var(--text-subtle); }
+  .variants { margin-top:26px; }
+  .variants h3 { font: 600 13px/20px inherit; letter-spacing:.04em; text-transform:uppercase;
+                 color: var(--text-subtle); margin: 0 0 10px; }
+  .variant { border-left:3px solid var(--hairline-strong); padding:6px 0 6px 12px;
+             margin-bottom:10px; font-size:14px; color: var(--text-muted); }
+  .variant code { background: var(--surface-sunken); border-radius:5px; padding:1px 5px; font-size:12px; }
+</style>
+</head>
+<body>
+  <div class="topbar"><span class="brand">Smart Trip Planner</span>
+    <span class="topbar-right">Język: Polski &nbsp;·&nbsp; Wyloguj się</span></div>
+
+  <div class="wrap">
+    <span class="crumb">Malezja, październik 2026</span>
+    <h1>Edytuj podróż</h1>
+
+    <div class="alert" role="alert">
+      <strong>Nie skróciliśmy podróży — nic nie zostało zmienione.</strong>
+      Te dni mają już zaplanowane pozycje: <span class="dates">24 paź 2026</span>.
+      Przenieś lub usuń te pozycje, a potem skróć podróż.
+    </div>
+
+    <section class="card bad">
+      <div class="field">
+        <label>Nazwa podróży</label>
+        <input class="input" value="Malezja, październik 2026">
+      </div>
+      <div class="row">
+        <div class="field"><label>Data początkowa</label><input class="input" value="10.10.2026"></div>
+        <div class="field">
+          <label>Data końcowa</label>
+          <input class="input bad" value="21.10.2026">
+        </div>
+      </div>
+      <p class="alert-field">Konflikt z planem na 24 paź 2026.</p>
+      <p class="caption">Wpisane wartości zostają — poprawiasz je, nie wpisujesz od nowa.</p>
+    </section>
+
+    <div class="actions">
+      <button class="btn-primary">Zapisz zmiany</button>
+      <button class="btn-quiet">Anuluj</button>
+    </div>
+
+    <div class="variants">
+      <h3>Pozostałe trzy odmowy, w tym samym miejscu</h3>
+      <div class="variant"><code>days_have_attachments</code> — „Te dni mają już załączniki:
+        <strong>24 paź 2026</strong>. Przenieś lub usuń te pliki, a potem skróć podróż.”</div>
+      <div class="variant"><code>items_outside_new_range</code> — „Pozycje zaczynające się
+        <strong>10 paź 2026</strong> wychodzą poza nową datę końcową…”</div>
+      <div class="variant"><code>stages_outside_new_range</code> — „Te cele wypadają poza nowe daty:
+        <strong>Langkawi</strong>. Popraw je najpierw…” — zakotwiczone przy liście celów, nie przy datach.</div>
+    </div>
+
+    <p class="note">Mockup — ilustracja układu i treści komunikatów, nie specyfikacja pikseli.
+      Daty formatowane przez locale; nazwy miejsc to tekst wpisany przez właściciela.</p>
+  </div>
+</body>
+</html>
