@@ -62,6 +62,7 @@ BACKWARD_COMPATIBILITY.md  Protected contract surfaces
 | External APIs (maps, places, weather, booking, LLM providers) | TODO — integration module not yet created | Never commit API keys. Credentials come from environment variables; document each new one in the README and in `.ai/qa/test-env.env` (gitignored) for QA. Every external call needs a timeout and a defined failure mode — a dead third party must not take down a page. |
 | CI | `.github/workflows/validation-gate.yml` | Runs the same eight commands as the validation gate below, in the same order. When the gate changes, change the workflow in the same PR. |
 | The agent pipeline itself (labels, review flow, QA gate) | `SDLC.md`, `.ai/agentic.config.json` | Change the config and `SDLC.md` together. Per-skill repo overrides go in `.ai/skills/<skill-name>/SKILL.md`. |
+| <!-- discovery:routing-start -->Product discovery, a product brief, or the backlog | `.ai/specs/product-brief.md`, `.ai/specs/research/`, `.ai/specs/backlog.md`, then the *Definition of Ready* and *Product decisions as a protected contract* sections of `SDLC.md` | The brief's non-goals, business rules, and decisions are a protected contract: a change that contradicts one needs a superseding entry in the same PR, approved by that entry's owner. Personas and findings from `om-synthetic-users` are hypotheses tagged synthetic, never evidence. <!-- discovery:routing-end --> |
 
 ## Multilingual (PL + EN)
 
