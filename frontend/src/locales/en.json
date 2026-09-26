@@ -217,6 +217,10 @@
     "invalid_cost": "Check the cost: it needs both an amount and a currency, cannot be negative, allows at most two decimals, and cannot be larger than 9,999,999,999.99.",
     "invalid_reservation_field": "That confirmation number is too long. Shorten it to 500 characters or fewer.",
     "days_have_attachments": "Those days already have attachments on them. Remove the attachments first, then shorten the trip.",
-    "unknown": "Something went wrong. Please try again."
+    "unknown": "Something went wrong. Please try again.",
+    "inbox_not_configured": "The reservation inbox is not set up on this installation yet.",
+    "message_not_routable": "That trip is not one of yours, so the message cannot be placed on it.",
+    "inbox_rate_limited": "The inbox has taken a lot of mail recently. This message is queued and will be processed shortly.",
+    "inbox_object_unavailable": "The original message is no longer stored, so it cannot be recovered. It expires 30 days after it arrives."
   }
 }

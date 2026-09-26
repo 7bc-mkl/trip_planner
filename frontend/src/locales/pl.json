@@ -217,6 +217,10 @@
     "invalid_cost": "Sprawdź koszt: musi mieć kwotę i walutę, nie może być ujemny, może mieć co najwyżej dwa miejsca po przecinku i nie może przekraczać 9 999 999 999,99.",
     "invalid_reservation_field": "Numer potwierdzenia jest za długi. Skróć go do 500 znaków lub mniej.",
     "days_have_attachments": "Te dni mają już załączniki. Najpierw je usuń, potem skróć podróż.",
-    "unknown": "Coś poszło nie tak. Spróbuj ponownie."
+    "unknown": "Coś poszło nie tak. Spróbuj ponownie.",
+    "inbox_not_configured": "Skrzynka rezerwacji nie jest jeszcze skonfigurowana w tej instalacji.",
+    "message_not_routable": "To nie jest Twoja podróż, więc nie można do niej przypisać tej wiadomości.",
+    "inbox_rate_limited": "Skrzynka odebrała ostatnio dużo poczty. Ta wiadomość czeka w kolejce i zostanie przetworzona wkrótce.",
+    "inbox_object_unavailable": "Oryginalna wiadomość nie jest już przechowywana, więc nie da się jej odzyskać. Wygasa 30 dni po otrzymaniu."
   }
 }
