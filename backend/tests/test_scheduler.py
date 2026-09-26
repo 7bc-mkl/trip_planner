@@ -28,7 +28,7 @@ from tests.conftest import TEST_ENVIRONMENT
 from tests.test_inbox_ingest import PREFIX, StubS3, mime
 from trip_planner.config import Settings, require_settings
 from trip_planner.db.models import InboundMessage, Owner
-from trip_planner.scheduler import InboxWorker, start_inbox_worker
+from trip_planner.scheduler import INBOX_WORKER_LOCK_KEY, InboxWorker, start_inbox_worker
 
 INBOX_ENV = {
     "INBOX_RECIPIENT": "inbox@mail.planner.example.com",
@@ -338,3 +338,82 @@ def test_a_hung_s3_call_does_not_hold_up_the_rest_of_the_application(
     finally:
         released.set()
         worker.stop(timeout=15)
+
+
+def test_a_pass_that_commits_still_releases_its_lock(
+    inbox_settings: Settings,
+    worker_sessions: sessionmaker[OrmSession],
+    committed_owner: Owner,
+    engine: sa.Engine,
+) -> None:
+    """The regression test for a silent, permanent outage.
+
+    A session-level advisory lock belongs to the connection that took it, and
+    SQLAlchemy returns a `Session`'s connection to the pool on every `commit()`.
+    A pass commits several times — once per message, once for the cleanup — so a
+    lock taken and released through the working session could be released on a
+    *different* connection, leave the real one held, and make every later pass
+    find the lock taken. The inbox would stop ingesting with no error anywhere.
+
+    Asserted against `pg_locks` rather than by running a second pass, so the test
+    names the actual condition instead of a symptom.
+    """
+    add_message(worker_sessions, committed_owner)
+    s3 = StubS3({f"{PREFIX}ses-1": mime(sender=committed_owner.email)})
+
+    assert make_worker(inbox_settings, worker_sessions, s3).run_once() == 1
+
+    with engine.connect() as connection:
+        held = connection.execute(
+            sa.text(
+                "SELECT count(*) FROM pg_locks WHERE locktype = 'advisory' "
+                "AND objid = :key"
+            ),
+            {"key": INBOX_WORKER_LOCK_KEY & 0xFFFFFFFF},
+        ).scalar_one()
+
+    assert held == 0, "the ingestion loop leaked its advisory lock"
+
+
+def test_repeated_passes_keep_working(
+    inbox_settings: Settings,
+    worker_sessions: sessionmaker[OrmSession],
+    committed_owner: Owner,
+) -> None:
+    """The symptom the leak would have produced, covered from the other side."""
+    s3 = StubS3()
+    worker = make_worker(inbox_settings, worker_sessions, s3)
+
+    for _ in range(3):
+        add_message(worker_sessions, committed_owner)
+        s3.objects[f"{PREFIX}ses-1"] = mime(sender=committed_owner.email)
+        assert worker.run_once() == 1
+
+
+def test_a_pass_runs_the_cleanup(
+    inbox_settings: Settings,
+    worker_sessions: sessionmaker[OrmSession],
+    committed_owner: Owner,
+) -> None:
+    """Ingestion and tidying share a pass, in that order and in separate transactions.
+
+    Separate so a cleanup failure cannot roll back messages that were
+    successfully ingested a moment earlier.
+    """
+    from datetime import timedelta
+
+    from trip_planner.inbound.cleanup import QUARANTINE_RETENTION
+
+    expired = add_message(
+        worker_sessions,
+        committed_owner,
+        state="quarantined",
+        received_at=datetime.now(UTC) - QUARANTINE_RETENTION - timedelta(days=1),
+    )
+    s3 = StubS3({f"{PREFIX}ses-1": mime(sender=committed_owner.email)})
+
+    make_worker(inbox_settings, worker_sessions, s3).run_once()
+
+    with worker_sessions() as db:
+        assert db.get(InboundMessage, expired) is None
+    assert s3.deleted == [f"{PREFIX}ses-1"]

@@ -40,6 +40,7 @@ from sqlalchemy.orm import Session as OrmSession
 
 from trip_planner.config import Settings
 from trip_planner.db.models import Owner
+from trip_planner.inbound.cleanup import CleanupReport, run_cleanup
 from trip_planner.inbound.ingest import claim_pending, delete_ingested_object, ingest_message
 from trip_planner.inbound.ses import S3Fetcher
 
@@ -131,16 +132,34 @@ class InboxWorker:
     # ------------------------------------------------------------- one pass
 
     def run_once(self) -> int:
-        """Ingest up to `BATCH_SIZE` messages. Returns how many were processed."""
-        with self._session_factory() as db:
-            if not self._take_lock(db):
+        """Ingest up to `BATCH_SIZE` messages. Returns how many were processed.
+
+        **The lock is held on a session of its own, and that is not tidiness.**
+        A session-level advisory lock belongs to the *connection* that took it,
+        and SQLAlchemy returns a `Session`'s connection to the pool on every
+        `commit()`. This pass commits several times — once per message, and once
+        for the cleanup — so a lock taken and released through the working
+        session can easily be released on a **different** connection than the one
+        holding it. `pg_advisory_unlock` then answers false, the lock stays held
+        for the life of that pooled connection, and every later pass finds it
+        taken: the inbox silently stops ingesting until the process restarts.
+        That is a permanent, silent outage, so the lock gets a session that never
+        commits and therefore never lets go of its connection.
+
+        The cost is one connection sitting idle in a transaction for the length
+        of the pass. It is bounded by `BATCH_SIZE` and by `S3Fetcher`'s read
+        timeout, it holds no row locks, and it is the cheap half of the trade.
+        """
+        with self._session_factory() as lock_session:
+            if not self._take_lock(lock_session):
                 # Another worker owns this pass. Doing nothing is the correct
                 # outcome, not a failure.
                 return 0
             try:
-                return self._drain(db)
+                with self._session_factory() as db:
+                    return self._drain(db)
             finally:
-                self._release_lock(db)
+                self._release_lock(lock_session)
 
     def _take_lock(self, db: OrmSession) -> bool:
         return bool(
@@ -180,6 +199,19 @@ class InboxWorker:
             if outcome.state == "received" and key and delete_ingested_object(self._fetcher, key):
                 message.s3_object_key = None
                 db.commit()
+
+        # After the ingestion, and in the same pass: the quarantine timer, the
+        # deletes the owner asked for, the objects a failed delete left behind,
+        # and the alarm. Its own transaction, so a cleanup failure cannot roll
+        # back messages that were successfully ingested a moment ago.
+        try:
+            report = run_cleanup(db, self._fetcher)
+            db.commit()
+            if report != CleanupReport():
+                logger.info("inbox: cleanup %s", report)
+        except Exception:
+            db.rollback()
+            logger.exception("inbox: the cleanup pass failed; it will run again")
 
         return processed
 
