@@ -16,7 +16,6 @@ saying mail arrived, with no body, no attachment, no S3 read and no plan write.
 from __future__ import annotations
 
 import base64
-import datetime as dt
 import json
 import uuid
 from collections.abc import Iterator
@@ -24,10 +23,8 @@ from typing import Any
 
 import pytest
 import sqlalchemy as sa
-from cryptography import x509
-from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import padding, rsa
-from cryptography.x509.oid import NameOID
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session as OrmSession
@@ -57,29 +54,6 @@ INBOX_ENV = {
 # --------------------------------------------------------------------------- #
 # A real key, a real certificate, real signatures
 # --------------------------------------------------------------------------- #
-
-
-@pytest.fixture(scope="session")
-def signing_key() -> rsa.RSAPrivateKey:
-    return rsa.generate_private_key(public_exponent=65537, key_size=2048)
-
-
-@pytest.fixture(scope="session")
-def signing_certificate(signing_key: rsa.RSAPrivateKey) -> bytes:
-    """A self-signed certificate carrying the test key, in the PEM a fetch would return."""
-    name = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, "sns.eu-central-1.amazonaws.com")])
-    now = dt.datetime.now(dt.UTC)
-    certificate = (
-        x509.CertificateBuilder()
-        .subject_name(name)
-        .issuer_name(name)
-        .public_key(signing_key.public_key())
-        .serial_number(x509.random_serial_number())
-        .not_valid_before(now - dt.timedelta(days=1))
-        .not_valid_after(now + dt.timedelta(days=1))
-        .sign(signing_key, hashes.SHA256())
-    )
-    return certificate.public_bytes(serialization.Encoding.PEM)
 
 
 class _OfflineVerifier(SignatureVerifier):

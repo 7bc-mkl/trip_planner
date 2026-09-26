@@ -275,3 +275,51 @@ def instant_clock() -> Iterator[None]:
     rate_limit.set_clock(NoSleepClock())
     yield
     rate_limit.set_clock(previous)
+
+
+# --------------------------------------------------------------------------- #
+# SNS signing material
+# --------------------------------------------------------------------------- #
+#
+# Here rather than in one test module because two of them now sign envelopes —
+# the receipt tests and the boundary tests — and a pytest fixture is only
+# visible where it is defined or in a `conftest.py`. Session-scoped: generating
+# a 2048-bit key per test would dominate the run time of both files.
+
+
+@pytest.fixture(scope="session")
+def signing_key():
+    """A throwaway RSA key standing in for the one AWS signs SNS envelopes with."""
+    from cryptography.hazmat.primitives.asymmetric import rsa
+
+    return rsa.generate_private_key(public_exponent=65537, key_size=2048)
+
+
+@pytest.fixture(scope="session")
+def signing_certificate(signing_key) -> bytes:
+    """A self-signed certificate carrying that key, in the PEM a fetch would return.
+
+    Real signatures against a real certificate are what make the verifier's own
+    rules — the canonical string's field order, the `Subject`-only-when-present
+    case, the two signature versions — actually exercised. Only the *fetch* is
+    stubbed, so no suite run reaches the network.
+    """
+    import datetime as dt
+
+    from cryptography import x509
+    from cryptography.hazmat.primitives import hashes, serialization
+    from cryptography.x509.oid import NameOID
+
+    name = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, "sns.eu-central-1.amazonaws.com")])
+    now = dt.datetime.now(dt.UTC)
+    certificate = (
+        x509.CertificateBuilder()
+        .subject_name(name)
+        .issuer_name(name)
+        .public_key(signing_key.public_key())
+        .serial_number(x509.random_serial_number())
+        .not_valid_before(now - dt.timedelta(days=1))
+        .not_valid_after(now + dt.timedelta(days=1))
+        .sign(signing_key, hashes.SHA256())
+    )
+    return certificate.public_bytes(serialization.Encoding.PEM)
