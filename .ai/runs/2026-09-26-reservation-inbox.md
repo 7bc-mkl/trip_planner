@@ -185,4 +185,4 @@ PR: #19
 
 ### Phase 4: The `/inbox` screen
 
-- [ ] 4.1 The `/inbox` screen, its three regions and the `AppShell` badge
+- [x] 4.1 The `/inbox` screen, its three regions and the `AppShell` badge — edb9b7e
