@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<title>Mockup 03 — stany skrzynki: przypisanie ręczne, pusto, nieskonfigurowana, błąd pobrania</title>
+<link rel="stylesheet" href="../design-system-adoption/_mockup.css">
+<style>
+  body { background: var(--surface-sunken, #f8fafc); }
+  .grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: var(--gutter); }
+  .panel-label {
+    margin: 0 0 var(--space-xs);
+    font-size: 11px; font-weight: 700; letter-spacing: .025em; text-transform: uppercase;
+    color: var(--text-subtle);
+  }
+  .empty {
+    display: grid; gap: var(--space-sm); justify-items: center; text-align: center;
+    padding: var(--space-xl) var(--space-lg);
+    border: 1px dashed var(--hairline-strong);
+    border-radius: var(--radius-lg);
+    background: var(--surface);
+  }
+  .addr {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 13px; padding: var(--space-2xs) var(--space-xs);
+    border-radius: var(--radius); background: var(--draft-bg); color: var(--draft-text);
+  }
+  .choices { display: grid; gap: var(--space-2xs); }
+  .choice {
+    display: grid; grid-template-columns: 18px minmax(0,1fr) auto; gap: var(--space-sm); align-items: center;
+    padding: var(--space-xs) var(--space-sm);
+    border: 1px solid var(--hairline); border-radius: var(--radius);
+  }
+  .choice[data-selected] { border-color: var(--primary); box-shadow: inset 0 0 0 1px var(--primary); }
+  .radio { width: 16px; height: 16px; border-radius: 9999px; border: 2px solid var(--hairline-strong); }
+  .choice[data-selected] .radio { border-color: var(--primary); border-width: 5px; }
+  .warn {
+    display: flex; gap: var(--space-sm); align-items: flex-start;
+    padding: var(--space-md);
+    border: 1px solid var(--warning-border); border-radius: var(--radius-lg);
+    background: var(--warning-bg); color: var(--warning-text);
+    font-size: 13px; line-height: 19px;
+  }
+  .dot-bad { width: 7px; height: 7px; border-radius: 9999px; background: var(--warning-text); margin-top: 6px; flex: none; }
+  .doc { display: inline-flex; align-items: center; gap: var(--space-2xs); font-size: 12px; color: var(--text-subtle); }
+</style>
+</head>
+<body>
+<p class="mockup-note">Illustrative mockup — Smart Trip Planner · stany skrzynki rezerwacji · not application code</p>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <symbol id="i-doc" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Zm0 0v5h5"/></symbol>
+  <symbol id="i-mail" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Zm0 .5 9 6 9-6"/></symbol>
+</defs></svg>
+
+<div class="page page--single" style="width:min(72rem,100%)">
+  <div class="grid">
+
+    <section>
+      <p class="panel-label">A · Przypisanie ręczne (kolejka nieprzypisanych)</p>
+      <article class="card stack stack--sm">
+        <div>
+          <p class="eyebrow">Wiadomość · dziś 09:14 · michal@example.com</p>
+          <h3 class="headline-sm" style="margin:var(--space-2xs) 0">Potwierdzenie rezerwacji — Sixt</h3>
+          <p class="hint">Nie udało się ustalić podróży: żadna podróż nie obejmuje dat 4–11 listopada 2026.</p>
+          <p class="doc" style="margin-top:var(--space-2xs)"><svg width="14" height="14"><use href="#i-doc"/></svg> voucher-sixt.pdf · 96 kB</p>
+        </div>
+        <div class="field">
+          <label>Do której podróży to należy?</label>
+          <div class="choices">
+            <div class="choice" data-selected><span class="radio"></span><span>Malezja: KL, Penang, Langkawi</span><span class="body-sm subtle">10–24 paź 2026</span></div>
+            <div class="choice"><span class="radio"></span><span>Lizbona, długi weekend</span><span class="body-sm subtle">1–4 maj 2027</span></div>
+          </div>
+        </div>
+        <p class="hint">Po przypisaniu dokument czeka na dniu podróży — nic nie zmieni się w planie, dopóki nie zatwierdzisz propozycji.</p>
+        <div class="row" style="justify-content:flex-end">
+          <button class="btn btn--ghost btn--sm">Anuluj</button>
+          <button class="btn btn--primary btn--sm">Przypisz</button>
+        </div>
+      </article>
+    </section>
+
+    <section>
+      <p class="panel-label">B · Skrzynka pusta (stan normalny)</p>
+      <div class="empty">
+        <svg width="28" height="28" style="color:var(--text-subtle)"><use href="#i-mail"/></svg>
+        <h3 class="headline-sm">Nic nie czeka</h3>
+        <p class="hint" style="max-width:26rem">
+          Przekaż potwierdzenie rezerwacji na poniższy adres. Wiadomość pojawi się tutaj jako propozycja,
+          którą zatwierdzasz — nic nie trafi do planu automatycznie.
+        </p>
+        <span class="addr">rezerwacje@planer.example.com</span>
+        <button class="btn btn--ghost btn--sm">Kopiuj adres</button>
+      </div>
+    </section>
+
+    <section>
+      <p class="panel-label">C · Skrzynka nieskonfigurowana (nie jest to błąd)</p>
+      <div class="empty">
+        <h3 class="headline-sm">Skrzynka nie jest skonfigurowana</h3>
+        <p class="hint" style="max-width:26rem">
+          Ta instalacja nie ma podłączonej skrzynki pocztowej, więc przekazywanie potwierdzeń jest wyłączone.
+          Wszystko inne działa normalnie: dokumenty nadal dodasz ręcznie w widoku dnia.
+        </p>
+        <span class="body-sm subtle">W menu nie ma wtedy odznaki z licznikiem.</span>
+      </div>
+    </section>
+
+    <section>
+      <p class="panel-label">D · Ostatnie pobranie nie powiodło się</p>
+      <div class="stack stack--sm">
+        <div class="warn">
+          <span class="dot-bad"></span>
+          <span>
+            <b>Nie udało się sprawdzić skrzynki</b><br>
+            Ostatnia udana próba: wczoraj 22:10. Wiadomości nie giną — zostaną pobrane, gdy połączenie wróci.
+          </span>
+        </div>
+        <div class="row" style="justify-content:flex-end">
+          <button class="btn btn--ghost btn--sm">Sprawdź teraz</button>
+        </div>
+        <p class="hint">
+          Model czyta wiadomości osobno: kiedy jest niedostępny, wiadomość i tak zostaje zapisana,
+          a po kilku próbach trafia do kolejki nieprzypisanych z podanym powodem.
+        </p>
+      </div>
+    </section>
+
+  </div>
+</div>
+</body>
+</html>
