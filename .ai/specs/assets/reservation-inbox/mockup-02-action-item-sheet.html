@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Mockup 02 — action-item review sheet (English)</title>
+<link rel="stylesheet" href="../design-system-adoption/_mockup.css">
+<style>
+  body { background: var(--surface-sunken, #f8fafc); }
+  .stage-wrap { position: relative; padding: 0 4% 4%; }
+  .scrim { position: absolute; inset: 0; z-index: 20; background: rgba(15,23,42,.22); }
+  .sheet {
+    position: relative; z-index: 22; margin-top: 2.5rem;
+    padding: var(--space-lg);
+    border-radius: var(--radius-xl);
+    background: var(--surface);
+    box-shadow: var(--elevation-3);
+  }
+  .sheet-head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-lg); }
+  .sheet-body { display: grid; grid-template-columns: minmax(0,1.35fr) minmax(0,1fr); gap: var(--gutter); margin-top: var(--space-lg); }
+  .diff { border: 1px solid var(--hairline); border-radius: var(--radius-lg); overflow: hidden; }
+  .diff__head, .diff__row {
+    display: grid; grid-template-columns: 28px minmax(0,7.5rem) minmax(0,1fr) minmax(0,1fr);
+    gap: var(--space-sm); align-items: center;
+    padding: var(--space-xs) var(--space-sm);
+  }
+  .diff__head {
+    background: var(--draft-bg); color: var(--draft-text);
+    font-size: 11px; font-weight: 700; letter-spacing: .025em; text-transform: uppercase;
+  }
+  .diff__row { border-top: 1px solid var(--hairline); min-height: 52px; }
+  .diff__row[data-conflict] { background: #fffbeb; }
+  .fieldname { font-size: 13px; font-weight: 600; }
+  .val { font-size: 14px; }
+  .val--empty { color: var(--text-subtle); font-style: italic; }
+  .val--new { font-weight: 600; }
+  .val--keep { color: var(--text-muted); text-decoration: none; }
+  .warnline { grid-column: 2 / -1; margin: 0; font-size: 12px; color: #92400e; }
+  .box {
+    width: 18px; height: 18px; border-radius: 5px;
+    border: 2px solid var(--hairline-strong); background: var(--surface);
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .box[data-checked] { background: var(--primary); border-color: var(--primary); color: #fff; font-size: 12px; font-weight: 800; }
+  .source {
+    border: 1px solid var(--hairline); border-radius: var(--radius-lg);
+    background: var(--surface-sunken, #f8fafc);
+    padding: var(--space-md);
+    font-size: 12.5px; line-height: 19px; color: var(--text-muted);
+    white-space: pre-wrap;
+    max-height: 21rem; overflow: hidden;
+  }
+  .source mark { background: #fef08a; color: inherit; padding: 0 2px; border-radius: 3px; }
+  .sheet-foot {
+    display: flex; align-items: center; justify-content: space-between; gap: var(--space-md);
+    margin-top: var(--space-lg); padding-top: var(--space-md); border-top: 1px solid var(--hairline);
+  }
+  .retarget { display: flex; align-items: center; gap: var(--space-xs); font-size: 13px; color: var(--text-subtle); }
+</style>
+</head>
+<body>
+<p class="mockup-note">Illustrative mockup — Smart Trip Planner · action-item review · not application code</p>
+
+<div class="stage-wrap">
+  <header class="chrome" style="position:static">
+    <span class="wordmark">Smart Trip Planner</span>
+    <span class="chrome__context"><b>Malaysia: Kuala Lumpur, Penang and Langkawi</b>10–24 Oct 2026</span>
+    <span class="chrome__right">
+      <span class="body-sm subtle">Language</span>
+      <span class="segmented"><span>PL</span><span data-selected>EN</span></span>
+      <button class="btn btn--ghost btn--sm">Sign out</button>
+    </span>
+  </header>
+
+  <div class="scrim"></div>
+
+  <section class="sheet" role="dialog" aria-label="Review proposal">
+    <div class="sheet-head">
+      <div>
+        <p class="eyebrow">From your inbox · 10 Oct, 08:41 · michal@example.com</p>
+        <h2 class="headline-lg" style="margin:var(--space-2xs) 0 var(--space-2xs)">Hotel Stripes Kuala Lumpur</h2>
+        <p class="hint">Sat 10 Oct · accommodation · <span class="chip" data-status="to_book"><span class="chip__dot"></span>to book</span> today</p>
+      </div>
+      <div class="retarget">
+        Wrong item?
+        <button class="btn btn--ghost btn--sm">Attach to another item</button>
+      </div>
+    </div>
+
+    <div class="sheet-body">
+      <div>
+        <div class="diff">
+          <div class="diff__head">
+            <span></span><span>Field</span><span>Now in your plan</span><span>In the message</span>
+          </div>
+
+          <div class="diff__row">
+            <span class="box" data-checked>✓</span>
+            <span class="fieldname">Confirmation no.</span>
+            <span class="val val--empty">empty</span>
+            <span class="val val--new">HS-4471203</span>
+          </div>
+
+          <div class="diff__row" data-conflict>
+            <span class="box"></span>
+            <span class="fieldname">Cost</span>
+            <span class="val">1 180,00 zł</span>
+            <span class="val val--new">1 240,00 zł</span>
+            <p class="warnline">You already entered a cost. Unticked by default — tick it only if the confirmation should win.</p>
+          </div>
+
+          <div class="diff__row">
+            <span class="box" data-checked>✓</span>
+            <span class="fieldname">Check-out</span>
+            <span class="val val--empty">empty</span>
+            <span class="val val--new">14 Oct, 12:00</span>
+          </div>
+
+          <div class="diff__row">
+            <span class="box"></span>
+            <span class="fieldname">Notes</span>
+            <span class="val val--keep">Balcony room, late arrival agreed</span>
+            <span class="val val--empty">not proposed</span>
+          </div>
+
+          <div class="diff__row">
+            <span class="box" data-checked>✓</span>
+            <span class="fieldname">Status</span>
+            <span class="val"><span class="chip" data-status="to_book"><span class="chip__dot"></span>to book</span></span>
+            <span class="val"><span class="chip" data-status="done"><span class="chip__dot"></span>done</span></span>
+          </div>
+
+          <div class="diff__row">
+            <span class="box" data-checked>✓</span>
+            <span class="fieldname">Document</span>
+            <span class="val val--empty">no files</span>
+            <span class="val val--new">potwierdzenie-stripes.pdf · 412 kB</span>
+          </div>
+        </div>
+
+        <p class="hint" style="margin-top:var(--space-sm)">
+          Only ticked rows are written. Approving moves the readiness counter from 7 of 11 to 8 of 11.
+        </p>
+      </div>
+
+      <div>
+        <p class="eyebrow" style="margin-bottom:var(--space-xs)">The message this came from</p>
+        <div class="source">Subject: Your booking is confirmed — Hotel Stripes Kuala Lumpur
+
+Dear Michal Klosinski,
+
+Your reservation is confirmed.
+
+Booking reference: <mark>HS-4471203</mark>
+Check-in:  Saturday, <mark>10 October 2026</mark>, from 15:00
+Check-out: Wednesday, <mark>14 October 2026</mark>, by 12:00
+Room:      Deluxe King, 1 room, 2 guests
+Total:     <mark>PLN 1,240.00</mark>, prepaid
+
+Jalan Kamunting 25, 50300 Kuala Lumpur
+…</div>
+        <p class="hint" style="margin-top:var(--space-xs)">Shown as plain text. Nothing in a forwarded message is rendered as HTML.</p>
+      </div>
+    </div>
+
+    <div class="sheet-foot">
+      <button class="btn btn--ghost">Reject</button>
+      <div class="row">
+        <span class="body-sm subtle">4 of 6 rows selected</span>
+        <button class="btn btn--primary">Approve selected</button>
+      </div>
+    </div>
+  </section>
+</div>
+</body>
+</html>

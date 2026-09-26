@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<title>Mockup 01 — skrzynka rezerwacji (/inbox)</title>
+<!-- The adopted design system's own mockup stylesheet, shared with the
+     design-system-adoption spec rather than copied: one vocabulary, one file.
+     Its @font-face rules resolve fonts/ relative to it, so Plus Jakarta Sans
+     renders here with no network request. -->
+<link rel="stylesheet" href="../design-system-adoption/_mockup.css">
+<style>
+  body { background: var(--surface-sunken, #f8fafc); }
+  .section-head { display: flex; align-items: baseline; gap: var(--space-sm); margin-bottom: var(--space-sm); }
+  .msg-card { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: var(--space-md); align-items: start; }
+  .claims { display: flex; flex-wrap: wrap; gap: var(--space-2xs); margin-top: var(--space-xs); }
+  .claim {
+    display: inline-flex; align-items: center; gap: var(--space-2xs);
+    height: 24px; padding: 0 var(--space-xs); border-radius: var(--radius);
+    background: var(--draft-bg); color: var(--draft-text);
+    font-size: 12px; font-weight: 600;
+  }
+  .claim b { font-weight: 700; }
+  .doc {
+    display: inline-flex; align-items: center; gap: var(--space-2xs);
+    font-size: 12px; color: var(--text-subtle);
+  }
+  .target { display: flex; align-items: center; gap: var(--space-2xs); font-size: 13px; color: var(--text-muted); }
+  .target .arrow { color: var(--text-subtle); }
+  .reason { margin: var(--space-2xs) 0 0; font-size: 13px; line-height: 18px; color: var(--text-subtle); }
+  .quiet-panel {
+    padding: var(--space-md) var(--space-lg);
+    border: 1px dashed var(--hairline-strong);
+    border-radius: var(--radius-lg);
+    color: var(--text-subtle);
+    font-size: 13px; line-height: 20px;
+  }
+  .freshness { display: flex; align-items: center; gap: var(--space-xs); font-size: 12px; color: var(--text-subtle); }
+  .dot-ok { width: 7px; height: 7px; border-radius: 9999px; background: var(--success-text); }
+  .addr { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+  .nav-badge {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 20px; height: 20px; padding: 0 5px; margin-left: 4px;
+    border-radius: 9999px; background: var(--secondary); color: var(--on-primary);
+    font-size: 11px; font-weight: 700;
+  }
+  .navlink { font-size: 14px; font-weight: 600; color: var(--primary); }
+  .navlink[data-current] { color: var(--primary-deep); text-decoration: underline; text-underline-offset: 6px; }
+</style>
+</head>
+<body>
+<p class="mockup-note">Illustrative mockup — Smart Trip Planner · skrzynka rezerwacji · not application code</p>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <symbol id="i-doc" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Zm0 0v5h5"/></symbol>
+  <symbol id="i-mail" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Zm0 .5 9 6 9-6"/></symbol>
+</defs></svg>
+
+<header class="chrome">
+  <span class="wordmark">Smart Trip Planner</span>
+  <nav class="row" style="gap:var(--space-md); padding-left:var(--space-md); border-left:1px solid var(--hairline)">
+    <span class="navlink">Podróże</span>
+    <span class="navlink" data-current>Skrzynka<span class="nav-badge">2</span></span>
+  </nav>
+  <span class="chrome__right">
+    <span class="body-sm subtle">Język</span>
+    <span class="segmented"><span data-selected>PL</span><span>EN</span></span>
+    <button class="btn btn--ghost btn--sm">Wyloguj się</button>
+  </span>
+</header>
+
+<div class="page page--single">
+  <div class="stack">
+
+    <div>
+      <p class="eyebrow">Skrzynka rezerwacji</p>
+      <h1 class="headline-xl" style="margin:var(--space-2xs) 0 var(--space-xs)">Przekazane potwierdzenia</h1>
+      <p class="hint">Przekaż potwierdzenie na <span class="addr">rezerwacje@planer.example.com</span> — nic nie trafi do planu, dopóki tego nie zatwierdzisz.</p>
+      <p class="freshness" style="margin-top:var(--space-sm)"><span class="dot-ok"></span> Ostatnia wiadomość przez SES: 2 minuty temu · <button class="btn btn--ghost btn--sm">Ponów przetwarzanie</button></p>
+    </div>
+
+    <section>
+      <div class="section-head">
+        <h2 class="headline-md">Do zatwierdzenia</h2>
+        <span class="count-chip">2 propozycje</span>
+      </div>
+
+      <div class="stack stack--sm">
+        <article class="card msg-card">
+          <div>
+            <div class="target">
+              <span class="chip" data-status="to_book"><span class="chip__dot"></span>do zarezerwowania</span>
+              <span class="arrow">→</span>
+              <b>Hotel Stripes Kuala Lumpur</b>
+              <span class="subtle">· Malezja · sob. 10 paź</span>
+            </div>
+            <p class="reason">Dopasowano do istniejącej pozycji: nocleg 10–14 paź, ta sama nazwa obiektu.</p>
+            <div class="claims">
+              <span class="claim">Numer rezerwacji: <b>HS-4471203</b></span>
+              <span class="claim">Koszt: <b>1 240,00 zł</b></span>
+              <span class="claim">Status: <b>gotowe</b></span>
+            </div>
+            <p class="doc" style="margin-top:var(--space-xs)"><svg width="14" height="14"><use href="#i-doc"/></svg> potwierdzenie-stripes.pdf · 412 kB</p>
+          </div>
+          <div class="stack stack--sm" style="justify-items:end">
+            <button class="btn btn--primary btn--sm">Przejrzyj</button>
+            <button class="btn btn--ghost btn--sm">Odrzuć</button>
+          </div>
+        </article>
+
+        <article class="card msg-card">
+          <div>
+            <div class="target">
+              <span class="chip"><span class="chip__dot"></span>nowa pozycja</span>
+              <span class="arrow">→</span>
+              <b>Malezja</b>
+              <span class="subtle">· pt. 16 paź · brak pasującej pozycji</span>
+            </div>
+            <p class="reason">Nie znaleziono pozycji na ten dzień — propozycja utworzenia nowej: transport, Penang → Langkawi.</p>
+            <div class="claims">
+              <span class="claim">Numer rezerwacji: <b>MH-1425/PNR</b></span>
+              <span class="claim">Godziny: <b>11:05 – 12:00</b></span>
+              <span class="claim">Koszt: <b>289,00 zł</b></span>
+            </div>
+            <p class="doc" style="margin-top:var(--space-xs)"><svg width="14" height="14"><use href="#i-doc"/></svg> bilet-mh1425.pdf · 208 kB</p>
+          </div>
+          <div class="stack stack--sm" style="justify-items:end">
+            <button class="btn btn--primary btn--sm">Przejrzyj</button>
+            <button class="btn btn--ghost btn--sm">Odrzuć</button>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section>
+      <div class="section-head">
+        <h2 class="headline-md">Nieprzypisane</h2>
+        <span class="count-chip">1 wiadomość</span>
+      </div>
+      <article class="card msg-card">
+        <div>
+          <div class="target">
+            <svg width="15" height="15" style="color:var(--text-subtle)"><use href="#i-mail"/></svg>
+            <b>Potwierdzenie rezerwacji — Sixt</b>
+            <span class="subtle">· od michal@example.com · dziś 09:14</span>
+          </div>
+          <p class="reason">Nie udało się ustalić podróży: żadna podróż nie obejmuje dat 4–11 listopada 2026.</p>
+          <p class="doc" style="margin-top:var(--space-xs)"><svg width="14" height="14"><use href="#i-doc"/></svg> voucher-sixt.pdf · 96 kB</p>
+        </div>
+        <div class="stack stack--sm" style="justify-items:end">
+          <button class="btn btn--ghost btn--sm">Przypisz ręcznie</button>
+          <button class="btn btn--danger btn--sm">Usuń</button>
+        </div>
+      </article>
+    </section>
+
+    <section>
+      <div class="section-head"><h2 class="headline-md">Kwarantanna</h2></div>
+      <div class="quiet-panel">
+        <div class="row" style="justify-content:space-between; gap:var(--space-md)">
+          <span>
+            3 wiadomości od nieznanych nadawców lub z nieudaną weryfikacją. W aplikacji zapisano tylko nagłówki; kopia w AWS S3 wygasa po 30 dniach.
+            Zostaną usunięte po 30 dniach.
+          </span>
+          <button class="btn btn--ghost btn--sm" style="flex:none">Pokaż</button>
+        </div>
+        <div class="row" style="justify-content:space-between; gap:var(--space-md); margin-top:var(--space-sm); padding-top:var(--space-sm); border-top:1px solid var(--hairline)">
+          <span style="color:var(--text-muted)"><b>noreply@airasia.com</b> · „Your booking is confirmed — AK6142” · dziś 07:02</span>
+          <button class="btn btn--ghost btn--sm" style="flex:none">Zwolnij tę wiadomość</button>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</div>
+</body>
+</html>
