@@ -206,7 +206,18 @@ describe("the brief's arranging-one-item flow, end to end", () => {
     expect(panel().open).toBe(false)
   }
 
-  it('walks open a day → set details → attach a voucher → save cost → gotowe → the counter changes', async () => {
+  /**
+   * 20s rather than the 5s default, and not because the test got slower.
+   *
+   * This is one `userEvent` walk through five screens' worth of interaction —
+   * open a day, fill a dialog, upload a file, save a cost, flip a status — and
+   * `userEvent` advances real timers between every keystroke. Run alone it
+   * takes about two seconds; run as one worker among all the others on a busy
+   * machine it has crossed 5s, failing a gate that has nothing wrong with it.
+   * A wall-clock budget is not what this test is asserting, so it gets one
+   * generous enough that only a genuine hang trips it.
+   */
+  it('walks open a day → set details → attach a voucher → save cost → gotowe → the counter changes', { timeout: 20_000 }, async () => {
     const user = userEvent.setup()
     renderApp(DAY_PATH)
 
