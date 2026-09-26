@@ -163,6 +163,7 @@ def create_app(
     app.include_router(items.router, prefix=API_PREFIX, dependencies=AUTHENTICATED)
     app.include_router(stages.router, prefix=API_PREFIX, dependencies=AUTHENTICATED)
     app.include_router(attachments.router, prefix=API_PREFIX, dependencies=AUTHENTICATED)
+    app.include_router(inbox.owner_router, prefix=API_PREFIX, dependencies=AUTHENTICATED)
 
     # The built SPA, when present. Absent in development and in the test suite,
     # where the Vite dev server serves it instead.
