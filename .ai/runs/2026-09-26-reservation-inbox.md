@@ -169,8 +169,8 @@ PR: #19
 
 ### Phase 2: Domain, transport and ingestion
 
-- [ ] 2.1 `domain/inbound.py` — the pure MIME, text and sender-policy rules
-- [ ] 2.2 The AWS SDK, `inbound/transport.py`, `inbound/ses.py` and the SNS endpoint
+- [x] 2.1 `domain/inbound.py` — the pure MIME, text and sender-policy rules — 78e387d
+- [x] 2.2 The AWS SDK, `inbound/transport.py`, `inbound/ses.py` and the SNS endpoint — 80bcae4
 - [ ] 2.3 Background S3 ingestion and `store_inbound_attachment`
 - [ ] 2.4 Inbound windows and the separated installation byte cap
 - [ ] 2.5 `scheduler.py` — the ingestion and retry loop
