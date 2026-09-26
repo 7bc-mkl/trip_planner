@@ -65,6 +65,19 @@ class ErrorCode(StrEnum):
     INVALID_RESERVATION_FIELD = "invalid_reservation_field"
     DAYS_HAVE_ATTACHMENTS = "days_have_attachments"
 
+    # The reservation inbox, Phase 1.
+    #
+    # **Four of the spec's seven, deliberately.** `action_item_conflict`,
+    # `action_item_already_decided` and `invalid_action_selection` all name
+    # conditions on the approval path, which Phase 1 does not build — and this
+    # module's own rule is that members arrive alongside the endpoints that raise
+    # them, because a code nothing can produce is a locale entry in two languages
+    # for a message no user will ever see. They ship with Phase 3.
+    INBOX_NOT_CONFIGURED = "inbox_not_configured"
+    MESSAGE_NOT_ROUTABLE = "message_not_routable"
+    INBOX_RATE_LIMITED = "inbox_rate_limited"
+    INBOX_OBJECT_UNAVAILABLE = "inbox_object_unavailable"
+
 
 #: The status each code is served with. Kept beside the enum so a code cannot be
 #: introduced without deciding its status, and so the pairing is assertable.
@@ -103,6 +116,17 @@ STATUS_FOR_CODE: dict[ErrorCode, int] = {
     # 409, not 422: the request is well-formed and the rule is about the state of
     # the trip, which the caller can resolve by moving or deleting the items.
     ErrorCode.DAYS_HAVE_ATTACHMENTS: status.HTTP_409_CONFLICT,
+    # 409, not 404: the routes exist and the request is well-formed; what is
+    # missing is deployment configuration, which the caller cannot fix by
+    # changing the request. A 404 would also be a lie the screen would have to
+    # translate into "the inbox is not set up" anyway.
+    ErrorCode.INBOX_NOT_CONFIGURED: status.HTTP_409_CONFLICT,
+    ErrorCode.MESSAGE_NOT_ROUTABLE: status.HTTP_422_UNPROCESSABLE_CONTENT,
+    ErrorCode.INBOX_RATE_LIMITED: status.HTTP_429_TOO_MANY_REQUESTS,
+    # 409, not 410: the owner can still see the message's headers, so the
+    # resource has not gone — only the raw object recovery needs. "Gone" would
+    # suggest the message itself is unrecoverable, which it is not.
+    ErrorCode.INBOX_OBJECT_UNAVAILABLE: status.HTTP_409_CONFLICT,
 }
 
 

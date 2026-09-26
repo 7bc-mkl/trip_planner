@@ -10,6 +10,7 @@ from __future__ import annotations
 import uuid
 from datetime import date
 
+import pytest
 import sqlalchemy as sa
 from alembic import command
 from alembic.config import Config
@@ -101,6 +102,157 @@ def test_models_and_migrations_do_not_drift(alembic_config: Config, engine: sa.E
         "The models and the migrations disagree. Generate a revision for this diff:\n"
         + "\n".join(repr(entry) for entry in diff)
     )
+
+
+def test_the_inbox_revision_round_trips_over_a_database_with_both_shipped_parents(
+    alembic_config: Config, engine: sa.Engine
+) -> None:
+    """`0007_inbound_message` must unwind on a database that is **not** empty.
+
+    The `CHECK` it replaces is the only changed constraint on a shipped table, and
+    the claim being tested is that the change is a *widening*: a database already
+    holding an attachment on an item **and** an attachment on a day steps up to
+    the three-parent constraint with no backfill, and steps back down again with
+    both rows and both tables intact.
+
+    The whole-chain test would not catch a mistake here, because a chain walked to
+    base drops `attachment` anyway and takes the question with it.
+    """
+    head = _current_revision(engine)
+    owner_id = uuid.uuid4()
+    item_attachment, day_attachment = uuid.uuid4(), uuid.uuid4()
+
+    try:
+        with engine.begin() as connection:
+            day_id, item_id = _seed_plan(connection, owner_id)
+            connection.execute(
+                sa.text(
+                    "INSERT INTO attachment (id, item_id, filename, content_type, byte_size, "
+                    "sha256) VALUES (:id, :item_id, 'voucher.pdf', 'application/pdf', 2048, :sha)"
+                ),
+                {"id": item_attachment, "item_id": item_id, "sha": "a" * 64},
+            )
+            connection.execute(
+                sa.text(
+                    "INSERT INTO attachment (id, trip_day_id, filename, content_type, byte_size, "
+                    "sha256) VALUES (:id, :day_id, 'mapa.png', 'image/png', 1024, :sha)"
+                ),
+                {"id": day_attachment, "day_id": day_id, "sha": "b" * 64},
+            )
+
+        command.downgrade(alembic_config, "0006_item_reservation")
+        assert _current_revision(engine) == "0006_item_reservation"
+
+        inspector = sa.inspect(engine)
+        assert {"inbound_message", "inbound_delivery_status", "inbound_trusted_sender"} & set(
+            inspector.get_table_names()
+        ) == set()
+        columns = {column["name"] for column in inspector.get_columns("attachment")}
+        assert columns & {"inbound_message_id", "sent_externally_at"} == set()
+
+        with engine.connect() as connection:
+            assert connection.execute(
+                sa.text("SELECT count(*) FROM attachment WHERE id IN (:a, :b)"),
+                {"a": item_attachment, "b": day_attachment},
+            ).scalar() == 2
+
+        command.upgrade(alembic_config, "head")
+        assert _current_revision(engine) == head
+
+        with engine.connect() as connection:
+            # Both pre-existing rows satisfy the widened constraint untouched —
+            # which is what "no backfill" means, stated as an assertion.
+            assert connection.execute(
+                sa.text(
+                    "SELECT count(*) FROM attachment "
+                    "WHERE id IN (:a, :b) AND inbound_message_id IS NULL"
+                ),
+                {"a": item_attachment, "b": day_attachment},
+            ).scalar() == 2
+    finally:
+        with engine.begin() as connection:
+            connection.execute(sa.text("DELETE FROM owner WHERE id = :id"), {"id": owner_id})
+
+
+def test_the_inbox_downgrade_refuses_while_a_document_is_still_in_the_inbox(
+    alembic_config: Config, engine: sa.Engine
+) -> None:
+    """The refusal is a behaviour of the revision, not a nicety.
+
+    Narrowing the parent `CHECK` back to two columns makes every inbox document a
+    row the constraint rejects, and the only automatic resolution is to delete
+    those documents — a voucher destroyed by a rollback nobody thought was
+    destructive. So the migration stops instead, and the database is left exactly
+    where it was.
+    """
+    head = _current_revision(engine)
+    owner_id, message_id, attachment_id = uuid.uuid4(), uuid.uuid4(), uuid.uuid4()
+
+    try:
+        with engine.begin() as connection:
+            _seed_plan(connection, owner_id)
+            connection.execute(
+                sa.text(
+                    "INSERT INTO inbound_message (id, owner_id, ses_message_id, "
+                    "ses_sender_verdict, ses_scan_verdict, received_at, from_address, subject, "
+                    "state) VALUES (:id, :owner_id, :ses, 'PASS', 'PASS', now(), "
+                    "'owner@example.com', 'Potwierdzenie', 'received')"
+                ),
+                {"id": message_id, "owner_id": owner_id, "ses": f"ses-{message_id.hex}"},
+            )
+            connection.execute(
+                sa.text(
+                    "INSERT INTO attachment (id, inbound_message_id, filename, content_type, "
+                    "byte_size, sha256) VALUES (:id, :message_id, 'bilet.pdf', "
+                    "'application/pdf', 4096, :sha)"
+                ),
+                {"id": attachment_id, "message_id": message_id, "sha": "c" * 64},
+            )
+
+        with pytest.raises(Exception, match="Refusing to downgrade"):
+            command.downgrade(alembic_config, "0006_item_reservation")
+
+        # Nothing moved: the revision is still applied and the document is intact.
+        assert _current_revision(engine) == head
+        with engine.connect() as connection:
+            assert connection.execute(
+                sa.text("SELECT count(*) FROM attachment WHERE id = :id"), {"id": attachment_id}
+            ).scalar() == 1
+    finally:
+        with engine.begin() as connection:
+            connection.execute(sa.text("DELETE FROM owner WHERE id = :id"), {"id": owner_id})
+        # The chain may have been left mid-flight by a failed downgrade on a
+        # different PostgreSQL version; put it back before the next test runs.
+        command.upgrade(alembic_config, "head")
+
+
+def _seed_plan(connection: sa.Connection, owner_id: uuid.UUID) -> tuple[uuid.UUID, uuid.UUID]:
+    """An owner with one trip, one day and one item — the minimum a real row needs."""
+    trip_id, day_id, item_id = uuid.uuid4(), uuid.uuid4(), uuid.uuid4()
+    connection.execute(
+        sa.text("INSERT INTO owner (id, email, password_hash) VALUES (:id, :email, 'x')"),
+        {"id": owner_id, "email": f"inbox-{owner_id.hex}@example.com"},
+    )
+    connection.execute(
+        sa.text(
+            "INSERT INTO trip (id, owner_id, title, start_date, end_date, departure_place, "
+            "return_place) VALUES (:id, :owner_id, 'Malezja', '2026-10-10', '2026-10-24', "
+            "'Warszawa', 'Warszawa')"
+        ),
+        {"id": trip_id, "owner_id": owner_id},
+    )
+    connection.execute(
+        sa.text("INSERT INTO trip_day (id, trip_id, date) VALUES (:id, :trip_id, :date)"),
+        {"id": day_id, "trip_id": trip_id, "date": date(2026, 10, 10)},
+    )
+    connection.execute(
+        sa.text(
+            "INSERT INTO item (id, trip_day_id, position, kind, status, title) "
+            "VALUES (:id, :day_id, 0, 'accommodation', 'to_book', 'Memmo Alfama')"
+        ),
+        {"id": item_id, "day_id": day_id},
+    )
+    return day_id, item_id
 
 
 def test_the_reservation_revision_round_trips_over_existing_rows(

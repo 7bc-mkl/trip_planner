@@ -131,6 +131,10 @@ def test_the_public_allow_list_stays_small(application: FastAPI) -> None:
             f"{API_PREFIX}/health",
             f"{API_PREFIX}/auth/login",
             f"{API_PREFIX}/auth/logout",
+            # R10's single permission, spent on the SNS receipt endpoint. It is
+            # the only inbox route that is public; every other one takes
+            # `get_current_owner`, which is asserted separately.
+            f"{API_PREFIX}/inbox/receipts/sns",
         }
     ) == PUBLIC_PATHS
 
