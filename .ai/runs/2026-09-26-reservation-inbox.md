@@ -158,12 +158,14 @@ release from S3, both locales, the ICU plural's Polish `few`/`many` forms, and
 
 ## Progress
 
+PR: #19
+
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
 ### Phase 1: Schema and configuration
 
-- [ ] 1.1 The Alembic revision and the five new/extended models
-- [ ] 1.2 Optional inbox configuration, its documentation and the AGENTS.md row
+- [x] 1.1 The Alembic revision and the five new/extended models — 1222c8c
+- [x] 1.2 Optional inbox configuration, its documentation and the AGENTS.md row — 8fa619e
 
 ### Phase 2: Domain, transport and ingestion
 
