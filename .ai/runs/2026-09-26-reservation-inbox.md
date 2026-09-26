@@ -173,7 +173,7 @@ PR: #19
 - [x] 2.2 The AWS SDK, `inbound/transport.py`, `inbound/ses.py` and the SNS endpoint — 80bcae4
 - [x] 2.3 Background S3 ingestion and `store_inbound_attachment` — 6b8a713
 - [x] 2.4 Inbound windows and the separated installation byte cap — ba31b37
-- [ ] 2.5 `scheduler.py` — the ingestion and retry loop
+- [x] 2.5 `scheduler.py` — the ingestion and retry loop — 7b2b896
 
 ### Phase 3: The API, the gates and the boundary
 
