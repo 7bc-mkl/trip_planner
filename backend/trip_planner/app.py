@@ -13,6 +13,8 @@ unauthenticated, which is exactly what R08 forbids.
 
 from __future__ import annotations
 
+from contextlib import asynccontextmanager
+
 from fastapi import Depends, FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
@@ -21,7 +23,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from trip_planner.api import attachments, auth, health, inbox, items, stages, trips
 from trip_planner.api.deps import get_current_session
-from trip_planner.config import require_settings
+from trip_planner.config import Settings, require_settings
 from trip_planner.errors import ApiError, ErrorCode, error_body
 from trip_planner.spa import mount_spa, static_dir
 
@@ -95,18 +97,54 @@ def _install_exception_handlers(app: FastAPI) -> None:
         return JSONResponse(status_code=503, content=error_body(ErrorCode.SERVICE_UNAVAILABLE))
 
 
-def create_app(*, check_configuration: bool = True) -> FastAPI:
+def _inbox_lifespan(settings: Settings):
+    """Run the inbox ingestion loop for the life of the application.
+
+    **Only the deployed entry point installs this.** A lifespan that started a
+    thread would otherwise run in every test that constructs an app, against
+    whichever database the environment happened to name — so the worker is
+    opt-in at construction and `tests/test_scheduler.py` drives `run_once`
+    directly instead, which is the part with behaviour worth asserting.
+    """
+
+    @asynccontextmanager
+    async def lifespan(app: FastAPI):
+        from trip_planner.scheduler import start_inbox_worker
+
+        worker = start_inbox_worker(settings)
+        try:
+            yield
+        finally:
+            if worker is not None:
+                worker.stop()
+
+    return lifespan
+
+
+def create_app(
+    *, check_configuration: bool = True, settings: Settings | None = None
+) -> FastAPI:
     """Build the application.
 
     `check_configuration` exists only for tests that construct an app while
     injecting settings; the deployed entry point always validates, and a missing
     variable raises `MissingConfiguration` naming it rather than failing later
     with a confusing connection error.
+
+    `settings`, when given, additionally installs the inbox worker's lifespan —
+    so a deployment with the inbox configured runs the loop and one without it
+    runs nothing at all, with no thread and no AWS client.
     """
     if check_configuration:
         require_settings()
 
-    app = FastAPI(title="Smart Trip Planner", version="0.1.0", docs_url=None, redoc_url=None)
+    app = FastAPI(
+        title="Smart Trip Planner",
+        version="0.1.0",
+        docs_url=None,
+        redoc_url=None,
+        lifespan=_inbox_lifespan(settings) if settings is not None else None,
+    )
 
     _install_exception_handlers(app)
 
@@ -137,4 +175,5 @@ def create_app(*, check_configuration: bool = True) -> FastAPI:
 
 def create_production_app() -> FastAPI:
     """The deployed entry point. Validates configuration before serving anything."""
-    return create_app(check_configuration=True)
+    settings = require_settings()
+    return create_app(check_configuration=False, settings=settings)
