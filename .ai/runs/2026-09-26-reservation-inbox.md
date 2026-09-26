@@ -180,8 +180,8 @@ PR: #19
 - [x] 3.1 The owner-scoped inbox attachment content route — 59adbc8
 - [x] 3.2 `api/inbox.py` — the owner inbox and quarantine recovery routes — a529f3d
 - [x] 3.3 The three error-code gates — b671482 (taken first: the routes raise these codes)
-- [ ] 3.4 The `PUBLIC_PATHS` widening and the boundary assertions
-- [ ] 3.5 The quarantine purge and S3 cleanup
+- [x] 3.4 The `PUBLIC_PATHS` widening and the boundary assertions — 2971fe6
+- [x] 3.5 The quarantine purge and S3 cleanup — 710e3aa
 
 ### Phase 4: The `/inbox` screen
 
