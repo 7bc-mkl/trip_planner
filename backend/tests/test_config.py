@@ -5,6 +5,9 @@ from __future__ import annotations
 import pytest
 
 from trip_planner.config import (
+    DEFAULT_INBOX_MAX_MESSAGE_BYTES,
+    INBOX_ENVIRONMENT_VARIABLES,
+    INBOX_OPTIONAL_ENVIRONMENT_VARIABLES,
     MissingConfiguration,
     Settings,
     WeakConfiguration,
@@ -117,3 +120,138 @@ def test_platform_connection_strings_are_normalised_to_the_pinned_driver(
         environment="production",
     )
     assert settings.sqlalchemy_url == expected
+
+
+# --------------------------------------------------------------------------- #
+# The reservation inbox's optional configuration
+# --------------------------------------------------------------------------- #
+
+#: A complete, coherent inbox configuration. Individual tests break one thing.
+INBOX_ENV = {
+    "INBOX_RECIPIENT": "Inbox@mail.Planner.example.com",
+    "INBOX_AWS_REGION": "eu-central-1",
+    "INBOX_SNS_TOPIC_ARN": "arn:aws:sns:eu-central-1:123456789012:trip-planner-inbound",
+    "INBOX_S3_BUCKET": "trip-planner-inbound-mime",
+}
+
+
+def test_an_unconfigured_deployment_starts_with_the_inbox_off() -> None:
+    """The state every existing deployment is in the moment this feature ships.
+
+    §5's real requirement: adding the inbox must not turn a running installation
+    into one that refuses to start. So "no INBOX_* variables" is not a missing
+    configuration — it is the documented off position.
+    """
+    settings = require_settings(COMPLETE_ENV)
+
+    assert settings.inbox is None
+    assert not settings.inbox_enabled
+
+
+def test_a_complete_inbox_configuration_resolves() -> None:
+    settings = require_settings(COMPLETE_ENV | INBOX_ENV)
+
+    assert settings.inbox_enabled
+    inbox = settings.inbox
+    assert inbox is not None
+    # Normalised, because the policy compares the SES recipient on this form.
+    assert inbox.recipient == "inbox@mail.planner.example.com"
+    assert inbox.s3_bucket == "trip-planner-inbound-mime"
+    assert inbox.s3_prefix == ""
+    assert inbox.allowed_senders == frozenset()
+    assert inbox.max_message_bytes == DEFAULT_INBOX_MAX_MESSAGE_BYTES
+
+
+@pytest.mark.parametrize("omitted", sorted(INBOX_ENVIRONMENT_VARIABLES))
+def test_a_partly_configured_inbox_is_refused_naming_what_is_missing(omitted: str) -> None:
+    """Half a configuration looks configured and fails later, which is the worst case.
+
+    The failure it prevents is concrete: an app that starts with a bucket but no
+    topic ARN accepts notifications it cannot verify, or verifies nothing at all,
+    depending on which half was set.
+    """
+    partial = {k: v for k, v in INBOX_ENV.items() if k != omitted}
+
+    with pytest.raises(WeakConfiguration) as caught:
+        require_settings(COMPLETE_ENV | partial)
+
+    assert omitted in str(caught.value)
+
+
+def test_a_topic_arn_that_is_not_one_is_refused() -> None:
+    with pytest.raises(WeakConfiguration) as caught:
+        require_settings(
+            COMPLETE_ENV | INBOX_ENV | {"INBOX_SNS_TOPIC_ARN": "trip-planner-inbound"}
+        )
+
+    assert "INBOX_SNS_TOPIC_ARN" in str(caught.value)
+
+
+def test_a_topic_in_another_region_is_refused_at_startup() -> None:
+    """Otherwise the symptom is "no mail ever arrives" and nothing names the cause."""
+    with pytest.raises(WeakConfiguration) as caught:
+        require_settings(COMPLETE_ENV | INBOX_ENV | {"INBOX_AWS_REGION": "eu-west-1"})
+
+    assert "eu-west-1" in str(caught.value)
+
+
+def test_the_allow_list_is_split_normalised_and_deduplicated() -> None:
+    settings = require_settings(
+        COMPLETE_ENV
+        | INBOX_ENV
+        | {"INBOX_ALLOWED_SENDERS": " Rezerwacje@Airline.example , owner@example.com ,, "}
+    )
+
+    assert settings.inbox is not None
+    assert settings.inbox.allowed_senders == {"rezerwacje@airline.example", "owner@example.com"}
+
+
+@pytest.mark.parametrize("value", ["not-a-number", "-1", "0"])
+def test_a_nonsense_message_cap_is_refused(value: str) -> None:
+    with pytest.raises(WeakConfiguration) as caught:
+        require_settings(COMPLETE_ENV | INBOX_ENV | {"INBOX_MAX_MESSAGE_BYTES": value})
+
+    assert "INBOX_MAX_MESSAGE_BYTES" in str(caught.value)
+
+
+@pytest.mark.parametrize(
+    ("prefix", "key", "expected"),
+    [
+        ("", "any/key", True),
+        ("inbound/", "inbound/ses-1", True),
+        ("inbound/", "other/ses-1", False),
+        ("inbound/", "inbound/../other/ses-1", False),
+    ],
+)
+def test_only_keys_this_deployment_writes_are_accepted(
+    prefix: str, key: str, expected: bool
+) -> None:
+    """A verified notification still names a key, and the key is not thereby ours.
+
+    A misconfigured — or hostile — receipt rule pointing at an object outside our
+    own prefix must not become a read the app performs on its own credentials.
+    """
+    settings = require_settings(COMPLETE_ENV | INBOX_ENV | {"INBOX_S3_PREFIX": prefix})
+
+    assert settings.inbox is not None
+    assert settings.inbox.owns_object_key(key) is expected
+
+
+def test_no_inbox_credential_is_read_from_the_environment() -> None:
+    """S3 is reached through the standard AWS credential chain and a scoped role.
+
+    Stated as a test because the tempting shortcut — an access key pair in two
+    more INBOX_* variables — would put a secret into `Settings`, and from there
+    into any log line that formats one.
+    """
+    assert not any(
+        "KEY" in name or "SECRET" in name or "TOKEN" in name
+        for name in INBOX_ENVIRONMENT_VARIABLES | INBOX_OPTIONAL_ENVIRONMENT_VARIABLES
+    )
+
+
+def test_settings_repr_carries_no_secret() -> None:
+    """`Settings` is formatted into crash logs; the session secret must not ride along."""
+    settings = require_settings(COMPLETE_ENV | INBOX_ENV)
+
+    assert VALID_SECRET not in repr(settings.inbox)

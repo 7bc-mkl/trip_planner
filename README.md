@@ -101,6 +101,66 @@ Generate a secret with:
 python3 -c 'import secrets; print(secrets.token_urlsafe(48))'
 ```
 
+### The reservation inbox (optional)
+
+Forwarding a confirmation to the account's inbound address is **off unless it is
+configured**, and off is a supported state: with no `INBOX_*` variable set the
+app starts exactly as it did before the feature existed, makes no AWS call, runs
+no background loop, and answers `409 inbox_not_configured` on the inbox routes.
+
+Set all four together, or none — a partial configuration is refused at startup
+naming what is missing.
+
+| Variable | What it is |
+|---|---|
+| `INBOX_RECIPIENT` | The one address the SES receipt rule matches, e.g. `inbox@mail.planner.example.com`. One address for the account (D20); there are no per-trip or plus-addresses. |
+| `INBOX_AWS_REGION` | Region of the receipt rule, the SNS topic and the bucket. All three must be in one region. |
+| `INBOX_SNS_TOPIC_ARN` | Exact ARN of the topic the receipt rule publishes to. A notification signed for any other topic is refused, so this is a security control and not a convenience. |
+| `INBOX_S3_BUCKET` | The private, encrypted bucket the receipt rule writes raw MIME to. |
+
+| Optional | Default | What it is |
+|---|---|---|
+| `INBOX_S3_PREFIX` | *(none)* | Key prefix the receipt rule writes under. A verified event naming a key outside it is refused before any GET. |
+| `INBOX_ALLOWED_SENDERS` | *(none)* | Comma-separated extra sender addresses to accept. The owner's own account address is always accepted and does not need listing; further addresses are added from the app through *Trust this sender*. |
+| `INBOX_MAX_MESSAGE_BYTES` | `41943040` (40 MB) | Hard cap on the raw MIME object the app will fetch. Applied to the read, so an oversized object costs a decision rather than its own size in memory. |
+
+**There is no credential variable, deliberately.** S3 is reached through the
+standard AWS credential chain with a least-privilege role, so no secret is ever
+read into `Settings` and none can reach a log line that formats one.
+
+#### The AWS side, which this repository does not create
+
+The application takes delivery; the infrastructure below is the operator's, and
+every item is load-bearing rather than advisory:
+
+1. **A receipt rule** on a verified domain, matching `INBOX_RECIPIENT`, with
+   **spam and virus scanning enabled**, whose actions are: write the raw MIME to
+   the S3 bucket (optionally under `INBOX_S3_PREFIX`), then publish an S3-action
+   notification to the SNS topic. *An SNS action carrying the raw message instead
+   is not an option — SNS caps mail at 150 KB and would bounce every reservation
+   PDF.*
+2. **DNS**: an MX record for the receiving domain pointing at the region's SES
+   inbound endpoint, plus the domain-verification and DKIM records SES asks for.
+3. **The bucket**: private, default-encrypted, public access blocked, with a
+   policy allowing the SES service to write and the app's role to `GetObject`
+   and `DeleteObject` **on `INBOX_S3_PREFIX` only**. A **30-day lifecycle rule**
+   expires raw MIME as a backstop; the app deletes accepted objects earlier,
+   right after the ingestion commit.
+4. **The SNS subscription**: HTTPS, to `<APP_BASE_URL>/api/v1/inbox/receipts/sns`,
+   with **raw message delivery off** (the app verifies the SNS envelope's
+   signature, and raw delivery removes it).
+5. **An SQS dead-letter queue** on that subscription, because SNS's delivery
+   retries are finite — without one, an outage longer than the retry schedule
+   discards notifications silently. Alarm on its depth.
+6. **Alarms** worth having: dead-letter queue depth above zero, and objects in
+   the bucket older than the app's deferral window but not yet expired — that
+   second one is what catches ingestion that has quietly stopped while the
+   inbox screen still looks merely quiet.
+
+A QA or staging environment sets the same variables; copy
+`.ai/qa/test-env.env.example` to `.ai/qa/test-env.env` (gitignored) and fill it
+in.
+
 ## Local deployment
 
 Three shapes, in increasing fidelity to production. Start with the first for
