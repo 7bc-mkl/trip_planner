@@ -7,6 +7,12 @@ generated days; Phase 3 adds the items that hang off a day.
 The attachments slice adds three more: `attachment` (metadata), `attachment_blob`
 (the bytes, split off so a listing cannot read them by accident) and
 `upload_event` (the upload limiter's storage, shaped after `login_attempt`).
+
+The reservation inbox's first phase adds `inbound_message` (one piece of mail the
+account took delivery of), `inbound_delivery_status` (what the screen reads to be
+honest about freshness) and `inbound_trusted_sender` (the owner's additions to
+the allow-list). It also widens `attachment` by one nullable parent, which is the
+additive path that table's own docstring anticipated in writing.
 """
 
 from __future__ import annotations
@@ -27,6 +33,7 @@ from sqlalchemy import (
     Integer,
     LargeBinary,
     Numeric,
+    SmallInteger,
     String,
     Text,
     Time,
@@ -43,11 +50,17 @@ from trip_planner.domain.uploads import ATTACHMENT_CONTENT_TYPES, MAX_ATTACHMENT
 
 __all__ = [
     "ATTACHMENT_CONTENT_TYPES",
+    "INBOUND_MESSAGE_STATES",
     "ITEM_KINDS",
     "ITEM_STATUSES",
     "MAX_ATTACHMENT_BYTES",
+    "MAX_INBOUND_SUBJECT_CHARS",
+    "MAX_INBOUND_TEXT_CHARS",
     "Attachment",
     "AttachmentBlob",
+    "InboundDeliveryStatus",
+    "InboundMessage",
+    "InboundTrustedSender",
     "Item",
     "LoginAttempt",
     "Owner",
@@ -56,12 +69,40 @@ __all__ = [
     "TripDay",
     "TripStage",
     "UploadEvent",
+    "normalise_address",
     "normalise_email",
     "normalise_place",
 ]
 
 #: The five item types the filter bar's chips are built from.
 ITEM_KINDS = ("accommodation", "transport", "activity", "meal", "other")
+
+#: The states an inbound message moves through (spec, Data Model).
+#:
+#: `pending_ingest` is the committed SNS event awaiting S3 processing —
+#: deliberately a state rather than a separate table, so the idempotency key and
+#: the message are the same row from the first moment the app knows about it.
+#: `deferred` is an exhausted inbound window; `quarantined` stores no app-side
+#: body at all. Phase 1 never writes `routed` from a model — only hand placement
+#: does — and `unrouted` is where the queue lives.
+INBOUND_MESSAGE_STATES = (
+    "pending_ingest",
+    "received",
+    "deferred",
+    "routed",
+    "unrouted",
+    "quarantined",
+    "discarded",
+)
+
+#: The subject's stored bound, in characters. Truncated on write rather than
+#: refused: a long subject is not a reason to lose a confirmation.
+MAX_INBOUND_SUBJECT_CHARS = 1000
+
+#: The stored text body's bound. 200 000 characters is far past any real
+#: confirmation and well inside what a page can render; past it the text is
+#: truncated with a marker (`domain/inbound.py`), never dropped.
+MAX_INBOUND_TEXT_CHARS = 200_000
 
 # `ATTACHMENT_CONTENT_TYPES` and `MAX_ATTACHMENT_BYTES` are defined in
 # `domain/uploads.py` — the module that derives a type from an upload's bytes and
@@ -101,6 +142,18 @@ def normalise_email(email: str) -> str:
     Both paths must agree or a lower-case login would miss a mixed-case row.
     """
     return email.strip().lower()
+
+
+def normalise_address(address: str) -> str:
+    """The comparison form for an inbound `From` address.
+
+    Deliberately the same rule as `normalise_email` and deliberately a separate
+    name. The two are compared against different things — one against the owner's
+    own account, the other against a sender allow-list — and giving the sender
+    policy its own function means tightening one later (say, stripping a
+    plus-tag) cannot silently change who can sign in.
+    """
+    return address.strip().lower()
 
 
 class Owner(Base):
@@ -504,7 +557,7 @@ class Item(Base):
 
 
 class Attachment(Base):
-    """A file pinned to exactly one parent — a day, or an item on that day.
+    """A file pinned to exactly one parent — a day, an item on that day, or an inbound message.
 
     **One table with two nullable foreign keys**, not two tables and not a
     polymorphic `(parent_type, parent_id)` pair. Two tables would duplicate every
@@ -522,6 +575,19 @@ class Attachment(Base):
     ever wanted, arrives as a nullable `trip_id` plus a widened `CHECK` — an
     ordinary additive migration rather than something to guess at now.
 
+    **The third parent, `inbound_message_id`, is that migration having happened**
+    (reservation-inbox spec, Data Model). A document that arrived by mail lives
+    here while it is still in the inbox and has no trip at all yet; approving an
+    action item later re-points the row (`item_id = …, inbound_message_id =
+    NULL`) and copies no bytes, so a 9 MB voucher is never duplicated.
+
+    The `CHECK` widened to `num_nonnulls(...) = 1`, which is **still exactly one
+    parent**: zero parents and two parents remain states the database will not
+    hold, and the shipped tests asserting both keep passing unchanged. An inbox
+    document therefore inherits the whole shipped story — one blob table, one
+    `sha256`, one cascade chain, one serving header set — without a second
+    definition of "a document" existing anywhere in the product.
+
     `content_type` is **derived from the bytes**, never copied from the request,
     and the CHECK is what makes that structural: a write path that trusted the
     client's header could still only store one of three types.
@@ -533,9 +599,12 @@ class Attachment(Base):
 
     __tablename__ = "attachment"
     __table_args__ = (
-        # Exactly one parent, always. `<>` on two booleans is XOR in PostgreSQL.
+        # Exactly one parent, always — now out of three rather than two. The
+        # constraint keeps its name because its *meaning* is unchanged; only the
+        # arity widened, and `num_nonnulls` states "exactly one" for any number
+        # of columns without the XOR chain a third column would otherwise need.
         CheckConstraint(
-            "(item_id IS NULL) <> (trip_day_id IS NULL)",
+            "num_nonnulls(item_id, trip_day_id, inbound_message_id) = 1",
             name="ck_attachment_exactly_one_parent",
         ),
         CheckConstraint(
@@ -563,6 +632,15 @@ class Attachment(Base):
         nullable=True,
         index=True,
     )
+    #: Set while the document is in the inbox and not yet in a plan. Cleared by
+    #: an approval, which sets `item_id` in the same statement — the `CHECK`
+    #: makes any other combination unrepresentable.
+    inbound_message_id: Mapped[uuid.UUID | None] = mapped_column(
+        PgUUID(as_uuid=True),
+        ForeignKey("inbound_message.id", ondelete="CASCADE"),
+        nullable=True,
+        index=True,
+    )
     #: The display name only, normalised on write. It never reaches a filesystem,
     #: a path, a shell or a storage key — the primary key is the storage identity.
     filename: Mapped[str] = mapped_column(Text, nullable=False)
@@ -570,12 +648,24 @@ class Attachment(Base):
     #: The true length of what was stored, counted while reading the body.
     byte_size: Mapped[int] = mapped_column(Integer, nullable=False)
     sha256: Mapped[str] = mapped_column(CHAR(64), nullable=False, index=True)
+    #: When sending **this document** to a model provider was attempted — that
+    #: is, when it may have left this deployment (A2). Per-attachment rather than
+    #: per-message so the inbox can say *which* files have been read off-box.
+    #:
+    #: Phase 1 never writes it: no model call exists yet. The column ships now
+    #: because it belongs to the document, not to the model integration, and
+    #: adding it here costs one nullable column instead of a second migration
+    #: over a table full of inbox documents.
+    sent_externally_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
 
     item: Mapped[Item | None] = relationship(back_populates="attachments")
     trip_day: Mapped[TripDay | None] = relationship(back_populates="attachments")
+    inbound_message: Mapped[InboundMessage | None] = relationship(back_populates="attachments")
     blob: Mapped[AttachmentBlob] = relationship(
         back_populates="attachment",
         cascade="all, delete-orphan",
@@ -659,3 +749,179 @@ class UploadEvent(Base):
 
     def __repr__(self) -> str:
         return f"<UploadEvent id={self.id!r} owner_id={self.owner_id!r} at={self.occurred_at!r}>"
+
+
+class InboundMessage(Base):
+    """One piece of mail the account's inbound address took delivery of.
+
+    **A first-class record before it is anything else** (spec, Proposed
+    Solution). The verified SNS event is committed as `pending_ingest` with its
+    S3 locator *before* a byte of MIME is fetched, so a worker crash, an S3
+    outage or an exhausted window each leave a durable row to resume from rather
+    than a lost confirmation.
+
+    `UNIQUE (owner_id, ses_message_id)` is **the** idempotency boundary. SNS
+    delivers at least once and retries, so the same receipt arrives more than
+    once as a matter of routine. The key is SES's own `mail.messageId` — assigned
+    by the receiving infrastructure — and deliberately **not** the RFC-5322
+    `Message-ID` header, which the sender writes and can therefore repeat or
+    forge, nor the SNS notification id, which differs per delivery attempt and
+    would make every retry a new message.
+
+    **No `to_address`.** There is exactly one inbound address (D20) and it lives
+    in configuration; storing it per row would be a denormalisation that can
+    drift from the configured one.
+
+    **No raw RFC-822 source.** Keeping the original would double storage and
+    preserve the HTML this design exists to avoid ever rendering. What is kept is
+    what is shown (`text_body`) and what is read.
+
+    `trip_id` is `ON DELETE SET NULL` rather than `CASCADE` on purpose: deleting
+    a trip must not silently destroy the mail that arrived for it. The message
+    returns to the unrouted queue, which is the honest state.
+    """
+
+    __tablename__ = "inbound_message"
+    __table_args__ = (
+        UniqueConstraint("owner_id", "ses_message_id", name="uq_inbound_message_ses_id"),
+        CheckConstraint(_in_list("state", INBOUND_MESSAGE_STATES), name="ck_inbound_message_state"),
+        CheckConstraint(
+            f"length(subject) <= {MAX_INBOUND_SUBJECT_CHARS}",
+            name="ck_inbound_message_subject",
+        ),
+        CheckConstraint(
+            f"length(text_body) <= {MAX_INBOUND_TEXT_CHARS}",
+            name="ck_inbound_message_text_body",
+        ),
+        CheckConstraint("attempts >= 0", name="ck_inbound_message_attempts"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        PgUUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    owner_id: Mapped[uuid.UUID] = mapped_column(
+        PgUUID(as_uuid=True),
+        ForeignKey("owner.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    #: SES's `mail.messageId`. See the class docstring for why it and nothing else.
+    ses_message_id: Mapped[str] = mapped_column(Text, nullable=False)
+    #: The exact key from the verified SES S3-action event, retained while
+    #: ingestion, deferral or quarantine recovery still needs the MIME object.
+    #: NULL once the object has been deleted or has expired.
+    s3_object_key: Mapped[str | None] = mapped_column(Text, nullable=True)
+    #: Normalised SES authentication and spam/virus results from the *signed*
+    #: notification — never an attacker-supplied `Authentication-Results` header.
+    #: A missing verdict is recorded as `unknown` and quarantines: failing closed
+    #: is the only safe reading of "SES did not say".
+    ses_sender_verdict: Mapped[str] = mapped_column(Text, nullable=False)
+    ses_scan_verdict: Mapped[str] = mapped_column(Text, nullable=False)
+    #: The SES receipt timestamp, not the untrusted `Date` header.
+    received_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, index=True
+    )
+    from_address: Mapped[str] = mapped_column(Text, nullable=False)
+    subject: Mapped[str] = mapped_column(Text, nullable=False)
+    #: Empty while `pending_ingest` or quarantined — quarantine stores no body at
+    #: all. After acceptance: plain text, from `text/plain` or from `text/html`
+    #: reduced server-side, truncated with a marker.
+    text_body: Mapped[str] = mapped_column(Text, nullable=False, server_default="")
+    state: Mapped[str] = mapped_column(Text, nullable=False, server_default="pending_ingest")
+    trip_id: Mapped[uuid.UUID | None] = mapped_column(
+        PgUUID(as_uuid=True),
+        ForeignKey("trip.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    #: Why it went where it went, as a **translation key**, never prose. In
+    #: Phase 1 hand placement is the only writer; from Phase 2 a model's choice
+    #: is recorded the same way, so an untranslated — or injected — string has no
+    #: path to the screen through the locale layer.
+    routing_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    attempts: Mapped[int] = mapped_column(SmallInteger, nullable=False, server_default="0")
+    #: A code, never a provider or AWS message: third-party prose can echo the
+    #: message's own content back into our logs.
+    last_error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    #: First attempted text send — possible egress — for the inbox list's badge.
+    #: Phase 1 never writes it; `inbound_model_egress` becomes the audit source
+    #: for every attempt when Phase 2 adds it.
+    text_sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+    attachments: Mapped[list[Attachment]] = relationship(
+        back_populates="inbound_message",
+        cascade="all, delete-orphan",
+        order_by="Attachment.created_at",
+    )
+
+    def __repr__(self) -> str:
+        """Excludes `text_body` and `subject`: both are the owner's mail."""
+        return f"<InboundMessage id={self.id!r} state={self.state!r}>"
+
+
+class InboundDeliveryStatus(Base):
+    """What the inbox screen reads to be honest about freshness.
+
+    One row per owner, so *"the last SES notification arrived at…"* and *"the
+    last ingestion failed at…"* are one cheap read rather than an aggregate over
+    every message. The screen needs them because **an empty inbox and a broken
+    inbox must not look the same**: without this, a dead SNS subscription renders
+    identically to a quiet week.
+
+    The primary key **is** the foreign key — one status per owner, enforced by
+    the schema rather than by whichever code path happens to upsert it.
+    """
+
+    __tablename__ = "inbound_delivery_status"
+
+    owner_id: Mapped[uuid.UUID] = mapped_column(
+        PgUUID(as_uuid=True),
+        ForeignKey("owner.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    last_received_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    last_error_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    #: A code, for the same reason as `InboundMessage.last_error`.
+    last_error: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    def __repr__(self) -> str:
+        return f"<InboundDeliveryStatus owner_id={self.owner_id!r}>"
+
+
+class InboundTrustedSender(Base):
+    """An address the owner chose to trust, beyond the deployment's configured allow-list.
+
+    The sender check consults the **union** of this table and the configured
+    list, which is what makes quarantine recoverable without making it a
+    delivery mechanism: *Trust this sender* inserts one normalised address after
+    an owner-authenticated, CSRF-protected action, and nothing else writes here.
+
+    A new deployment with an empty table still trusts exactly the configured
+    addresses, so the control's default does not depend on this table existing.
+
+    The composite `(owner_id, address)` primary key makes trusting the same
+    address twice a no-op at the schema level rather than a duplicate row the
+    union query would then have to de-duplicate.
+    """
+
+    __tablename__ = "inbound_trusted_sender"
+
+    owner_id: Mapped[uuid.UUID] = mapped_column(
+        PgUUID(as_uuid=True),
+        ForeignKey("owner.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    #: Stored normalised (`normalise_address`), because the policy compares on
+    #: the normalised form and a mixed-case row would never match.
+    address: Mapped[str] = mapped_column(Text, primary_key=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+    def __repr__(self) -> str:
+        return f"<InboundTrustedSender owner_id={self.owner_id!r} address={self.address!r}>"
