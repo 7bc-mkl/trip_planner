@@ -63,9 +63,11 @@ __all__ = [
     "SelectedContent",
     "SenderDecision",
     "decide_sender",
+    "decide_stored_sender",
     "html_to_text",
     "normalise_address",
     "normalise_subject",
+    "normalise_verdict",
     "select_content",
     "truncate_text",
 ]
@@ -212,6 +214,33 @@ def decide_sender(
         return SenderDecision(accepted=False, reason=QuarantineReason.UNKNOWN_SENDER)
 
     return SenderDecision(accepted=True)
+
+
+def decide_stored_sender(
+    *,
+    from_address: str,
+    sender_verdict: str,
+    scan_verdict: str,
+    allowed: frozenset[str] | set[str],
+) -> SenderDecision:
+    """`decide_sender` over the two verdicts the row actually stores.
+
+    The row keeps one scan verdict rather than two because the owner's remedy is
+    identical either way, and the *failing* one is what is kept — so a row that
+    says `FAIL` says why it was quarantined. Feeding it to both scan parameters
+    is therefore exact rather than approximate: if either scan failed, this is
+    the one that did.
+
+    `VERDICT_UNKNOWN` is not a pass, so a row recorded from a notification that
+    carried no verdict quarantines here exactly as it would have at the endpoint.
+    """
+    return decide_sender(
+        from_address=from_address,
+        dmarc_verdict=sender_verdict,
+        spam_verdict=scan_verdict,
+        virus_verdict=scan_verdict,
+        allowed=allowed,
+    )
 
 
 def _passes(verdict: str | None) -> bool:
