@@ -19,7 +19,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.exc import OperationalError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from trip_planner.api import attachments, auth, health, items, stages, trips
+from trip_planner.api import attachments, auth, health, inbox, items, stages, trips
 from trip_planner.api.deps import get_current_session
 from trip_planner.config import require_settings
 from trip_planner.errors import ApiError, ErrorCode, error_body
@@ -39,6 +39,11 @@ PUBLIC_PATHS: frozenset[str] = frozenset(
         f"{API_PREFIX}/health",
         f"{API_PREFIX}/auth/login",
         f"{API_PREFIX}/auth/logout",
+        # The one inbound path R10 permits. AWS SNS cannot hold a session or a
+        # CSRF token, so this route proves its origin with a signature instead —
+        # see `api/inbox.py`. It records that mail arrived and can do nothing
+        # else: no MIME fetch, no attachment, no plan write.
+        f"{API_PREFIX}/inbox/receipts/sns",
     }
 )
 
@@ -108,6 +113,10 @@ def create_app(*, check_configuration: bool = True) -> FastAPI:
     # Public routers: no session dependency.
     app.include_router(health.router, prefix=API_PREFIX)
     app.include_router(auth.router, prefix=API_PREFIX)
+    # The SNS receipt endpoint, deliberately public. Its path is on
+    # PUBLIC_PATHS above and tests/test_route_protection.py fails if that list
+    # grows by anything else.
+    app.include_router(inbox.public_router, prefix=API_PREFIX)
 
     # Every later router is included with AUTHENTICATED, which applies the session
     # and CSRF checks to all of its routes at once. A router added without it is
