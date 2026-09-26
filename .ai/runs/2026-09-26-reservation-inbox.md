@@ -177,9 +177,9 @@ PR: #19
 
 ### Phase 3: The API, the gates and the boundary
 
-- [ ] 3.1 The owner-scoped inbox attachment content route
-- [ ] 3.2 `api/inbox.py` — the owner inbox and quarantine recovery routes
-- [ ] 3.3 The three error-code gates
+- [x] 3.1 The owner-scoped inbox attachment content route — 59adbc8
+- [x] 3.2 `api/inbox.py` — the owner inbox and quarantine recovery routes — a529f3d
+- [x] 3.3 The three error-code gates — b671482 (taken first: the routes raise these codes)
 - [ ] 3.4 The `PUBLIC_PATHS` widening and the boundary assertions
 - [ ] 3.5 The quarantine purge and S3 cleanup
 
