@@ -139,12 +139,21 @@ def ingest_message(
     inbox: InboxSettings,
     fetcher: S3Fetcher,
     now: datetime | None = None,
+    bypass_sender_policy: bool = False,
 ) -> IngestOutcome:
     """Apply the sender policy, fetch if allowed, store what is worth keeping.
 
     Does **not** commit: the caller owns the transaction, so a message and its
     documents land together or not at all, and a crash half way leaves neither a
     body without its attachments nor attachments without their message.
+
+    `bypass_sender_policy` is the *Release this message* action and nothing else.
+    It is a parameter rather than a second function so that every other rule —
+    the windows, the storage ceiling, the part sniffing, the failure handling —
+    is provably the same code on both paths; only the one check the owner
+    explicitly overruled is skipped. The caller is responsible for having
+    established that he may overrule it (`SenderDecision.may_release_message`)
+    and for re-checking the message's stored metadata first.
     """
     moment = now or datetime.now(UTC)
 
@@ -154,7 +163,7 @@ def ingest_message(
         scan_verdict=message.ses_scan_verdict,
         allowed=allowed_senders_for(db, owner, inbox),
     )
-    if not decision.accepted:
+    if not decision.accepted and not bypass_sender_policy:
         # No GET. The private S3 copy stays for the recovery actions and expires
         # under the lifecycle rule; nothing this sender wrote enters our storage.
         #

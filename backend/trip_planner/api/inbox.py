@@ -31,10 +31,13 @@ from __future__ import annotations
 import json
 import logging
 import uuid
+from collections.abc import Callable
+from datetime import datetime
 from typing import Annotated, Any
 
 import sqlalchemy as sa
 from fastapi import APIRouter, Depends, Request, Response, status
+from pydantic import BaseModel, ConfigDict
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session as OrmSession
@@ -47,11 +50,24 @@ from trip_planner.db.models import (
     AttachmentBlob,
     InboundDeliveryStatus,
     InboundMessage,
+    InboundTrustedSender,
     Owner,
+    Trip,
 )
-from trip_planner.domain.inbound import normalise_subject, normalise_verdict
+from trip_planner.domain.inbound import (
+    SenderDecision,
+    decide_stored_sender,
+    normalise_address,
+    normalise_subject,
+    normalise_verdict,
+)
 from trip_planner.errors import ApiError, ErrorCode
-from trip_planner.inbound.ses import SignatureVerifier, verify_event
+from trip_planner.inbound.ingest import (
+    allowed_senders_for,
+    delete_ingested_object,
+    ingest_message,
+)
+from trip_planner.inbound.ses import S3Fetcher, SignatureVerifier, verify_event
 from trip_planner.inbound.transport import (
     MAX_SNS_BODY_BYTES,
     DeliveryNotice,
@@ -191,6 +207,119 @@ def get_inbox_attachment_content(
     ).scalar_one()
 
     return Response(content=data, headers=headers)
+
+
+# --------------------------------------------------------------------------- #
+# Wire shapes
+# --------------------------------------------------------------------------- #
+
+
+class InboxAttachmentRead(BaseModel):
+    """A document still in the inbox.
+
+    A shape of its own rather than the shipped `AttachmentRead`, deliberately.
+    That model carries `item_id` and `trip_day_id` and documents that exactly one
+    of them is non-null; on an inbox row neither is, so reusing it would make its
+    own contract false everywhere it already appears. Adding a third field to it
+    instead would push an always-null `inbound_message_id` into every trip and
+    day payload in the product to save one small class here.
+    """
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    filename: str
+    content_type: str
+    byte_size: int
+    sha256: str
+    created_at: datetime
+    #: When sending this document to a model provider was attempted. Always
+    #: `None` in Phase 1 — there is no model — and on the shape now so the screen
+    #: does not change contract when Phase 4 starts writing it.
+    sent_externally_at: datetime | None
+
+
+class InboxMessageRow(BaseModel):
+    """A row of the inbox list: metadata only, **never** the body.
+
+    The body is deliberately absent rather than truncated. A list that carried
+    200 000 characters per message would be a payload nobody asked for, and a
+    list that carried a preview would be a second, subtly different rendering of
+    the same text to keep in step with the detail view.
+    """
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    received_at: datetime
+    from_address: str
+    subject: str
+    state: str
+    trip_id: uuid.UUID | None
+    routing_reason: str | None
+    last_error: str | None
+    attachment_count: int
+
+
+class InboxMessageDetail(InboxMessageRow):
+    """One message, with its text and its documents."""
+
+    text_body: str
+    attachments: list[InboxAttachmentRead]
+
+
+class QuarantineRead(BaseModel):
+    """A quarantined message: **headers only, and that is the control.**
+
+    No body, no attachment, no preview — ever. Quarantine is a barrier, and a
+    barrier that renders the content it is holding back has become a delivery
+    mechanism for exactly the material the owner did not ask to see.
+
+    The headers are here for the one case that matters: a mailbox rule that
+    auto-forwards an airline's confirmation while preserving the airline's
+    `From` lands in quarantine, and a bare count would make that a silent loss.
+    The two recovery flags say which action this reason permits, so the screen
+    offers the right one rather than both.
+    """
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    received_at: datetime
+    from_address: str
+    subject: str
+    reason: str | None
+    may_trust_sender: bool
+    may_release_message: bool
+    recoverable: bool
+
+
+class InboxSummary(BaseModel):
+    """The badge's query, cheap enough to poll.
+
+    `pending_action_items` is **not** here. Action items arrive with Phase 3, and
+    a field reporting zero for a concept that does not exist yet is a contract
+    that says something false — worse than an absent field, which a consumer can
+    see is absent. It is additive when it arrives.
+    """
+
+    inbox_enabled: bool
+    #: The address to forward to, so the empty state can name it and offer a copy.
+    address: str | None
+    unrouted: int
+    quarantined: int
+    #: Honest freshness. An empty inbox and a broken inbox must not look alike.
+    last_received_at: datetime | None
+    last_error_at: datetime | None
+    last_error: str | None
+
+
+class PlaceRequest(BaseModel):
+    """Hand placement's body. `extra="forbid"` per AGENTS.md."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    trip_id: uuid.UUID
 
 
 async def _read_bounded_body(request: Request) -> bytes | None:
@@ -351,3 +480,431 @@ def _scan_verdict(notice: DeliveryNotice) -> str:
 
 
 __all__ = ["owner_router", "public_router"]
+
+
+# --------------------------------------------------------------------------- #
+# The owner's inbox
+# --------------------------------------------------------------------------- #
+
+#: How many messages one list page returns. A page rather than everything
+#: because the inbox only grows, and "he has not deleted anything in a year" is
+#: a normal state under A10 rather than an exotic one.
+PAGE_SIZE = 50
+
+#: The states the inbox list shows. `pending_ingest` and `deferred` are visible
+#: on purpose: a message that has arrived but is not yet readable is still news,
+#: and hiding it would make a slow ingestion indistinguishable from no mail.
+LISTED_STATES = ("pending_ingest", "deferred", "received", "routed", "unrouted")
+
+
+def _s3_fetcher_factory(inbox: InboxSettings) -> S3Fetcher:
+    return S3Fetcher(inbox)
+
+
+_fetcher_factory: Callable[[InboxSettings], S3Fetcher] = _s3_fetcher_factory
+
+
+def get_s3_fetcher(inbox: ConfiguredInbox) -> S3Fetcher:
+    """The seam the recovery routes reach S3 through, and the one tests replace.
+
+    A dependency rather than a module-level client so the tests that drive
+    *Trust this sender* and *Release this message* exercise the real handlers
+    without any suite run touching AWS.
+    """
+    return _fetcher_factory(inbox)
+
+
+def set_s3_fetcher_factory(factory: Callable[[InboxSettings], S3Fetcher]) -> None:
+    global _fetcher_factory
+    _fetcher_factory = factory
+
+
+Fetcher = Annotated["S3Fetcher", Depends(get_s3_fetcher)]
+
+
+def _attachment_counts(db: OrmSession, message_ids: list[uuid.UUID]) -> dict[uuid.UUID, int]:
+    """One grouped query for a page of messages, rather than one query per row.
+
+    The list is the screen's first paint, so an N+1 here is the difference
+    between an inbox that opens and one that feels broken.
+    """
+    if not message_ids:
+        return {}
+
+    rows = db.execute(
+        sa.select(Attachment.inbound_message_id, sa.func.count())
+        .where(Attachment.inbound_message_id.in_(message_ids))
+        .group_by(Attachment.inbound_message_id)
+    ).all()
+    return {message_id: int(count) for message_id, count in rows}
+
+
+def _quarantine_decision(db: OrmSession, message: InboundMessage, owner: Owner,
+                         inbox: InboxSettings) -> SenderDecision:
+    """Re-run the sender policy now, rather than trusting what was stored.
+
+    The stored `routing_reason` is a record of what was decided when the message
+    arrived; the *offer* has to reflect what is true now. An address the owner
+    trusted five minutes ago must not still be offered a *Trust this sender*
+    button, and a policy that has been tightened since must not have its old,
+    laxer answer replayed back at him.
+    """
+    return decide_stored_sender(
+        from_address=message.from_address,
+        sender_verdict=message.ses_sender_verdict,
+        scan_verdict=message.ses_scan_verdict,
+        allowed=allowed_senders_for(db, owner, inbox),
+    )
+
+
+@owner_router.get("/summary", response_model=InboxSummary)
+def get_summary(db: DbSession, owner: CurrentOwner, settings: AppSettings) -> InboxSummary:
+    """The badge's query.
+
+    Deliberately **not** behind `require_inbox`: the screen has to be able to
+    render its "not configured" state, and a summary that answered `409` would
+    make the nav badge's absence look like a failure rather than a setting.
+    """
+    inbox = settings.inbox
+    if inbox is None:
+        return InboxSummary(
+            inbox_enabled=False,
+            address=None,
+            unrouted=0,
+            quarantined=0,
+            last_received_at=None,
+            last_error_at=None,
+            last_error=None,
+        )
+
+    counts = dict(
+        db.execute(
+            sa.select(InboundMessage.state, sa.func.count())
+            .where(
+                InboundMessage.owner_id == owner.id,
+                InboundMessage.state.in_(("unrouted", "quarantined")),
+            )
+            .group_by(InboundMessage.state)
+        ).all()
+    )
+    status_row = db.get(InboundDeliveryStatus, owner.id)
+
+    return InboxSummary(
+        inbox_enabled=True,
+        address=inbox.recipient,
+        unrouted=int(counts.get("unrouted", 0)),
+        quarantined=int(counts.get("quarantined", 0)),
+        last_received_at=status_row.last_received_at if status_row else None,
+        last_error_at=status_row.last_error_at if status_row else None,
+        last_error=status_row.last_error if status_row else None,
+    )
+
+
+@owner_router.get("/messages", response_model=list[InboxMessageRow])
+def list_messages(
+    db: DbSession,
+    owner: CurrentOwner,
+    inbox: ConfiguredInbox,
+    state: str | None = None,
+    limit: int = PAGE_SIZE,
+) -> list[InboxMessageRow]:
+    """The inbox list, newest first. **Metadata only, never the body.**
+
+    An unknown `state` filter answers an empty list rather than an error: the
+    parameter names a state the product has, and a client asking for one it does
+    not have is asking about something that legitimately has no rows.
+    """
+    query = sa.select(InboundMessage).where(
+        InboundMessage.owner_id == owner.id,
+        InboundMessage.state.in_((state,) if state else LISTED_STATES),
+    )
+    messages = list(
+        db.execute(
+            query.order_by(InboundMessage.received_at.desc()).limit(min(max(limit, 1), PAGE_SIZE))
+        ).scalars()
+    )
+    # Quarantined messages are never in this list, whatever `state` asks for:
+    # they have their own route precisely so that showing them is a separate,
+    # deliberate act.
+    messages = [one for one in messages if one.state in LISTED_STATES]
+
+    counts = _attachment_counts(db, [one.id for one in messages])
+    return [
+        InboxMessageRow.model_validate(
+            {**_row_fields(one), "attachment_count": counts.get(one.id, 0)}
+        )
+        for one in messages
+    ]
+
+
+def _row_fields(message: InboundMessage) -> dict[str, Any]:
+    return {
+        "id": message.id,
+        "received_at": message.received_at,
+        "from_address": message.from_address,
+        "subject": message.subject,
+        "state": message.state,
+        "trip_id": message.trip_id,
+        "routing_reason": message.routing_reason,
+        "last_error": message.last_error,
+    }
+
+
+@owner_router.get("/messages/{message_id}", response_model=InboxMessageDetail)
+def get_message(
+    message_id: uuid.UUID, db: DbSession, owner: CurrentOwner, inbox: ConfiguredInbox
+) -> InboxMessageDetail:
+    """One message: its headers, its text **as text**, and its documents.
+
+    A quarantined message is a `404` here. Its content is exactly what quarantine
+    exists to withhold, and serving it from the detail route "because the owner
+    asked" would make the barrier a formality — `/inbox/quarantine/{id}` is the
+    route for what he may see, and it carries headers only.
+    """
+    message = find_message(db, owner, message_id)
+    if message.state == "quarantined":
+        raise ApiError(ErrorCode.NOT_FOUND, field="message_id")
+
+    attachments = list(
+        db.execute(
+            sa.select(Attachment)
+            .where(Attachment.inbound_message_id == message.id)
+            .order_by(Attachment.created_at)
+        ).scalars()
+    )
+
+    return InboxMessageDetail.model_validate(
+        {
+            **_row_fields(message),
+            "attachment_count": len(attachments),
+            "text_body": message.text_body,
+            "attachments": [InboxAttachmentRead.model_validate(one) for one in attachments],
+        }
+    )
+
+
+@owner_router.post("/messages/{message_id}/place", response_model=InboxMessageRow)
+def place_message(
+    message_id: uuid.UUID,
+    body: PlaceRequest,
+    db: DbSession,
+    owner: CurrentOwner,
+    inbox: ConfiguredInbox,
+) -> InboxMessageRow:
+    """Hand placement out of the unrouted queue.
+
+    **This changes exactly one column: `inbound_message.trip_id`.** It writes
+    nothing to the plan, moves no document onto an item and creates no action
+    item — which is why `inbound_action_item` does not need to exist for Phase 1
+    to be useful. The owner is classifying his own mail, not approving a change
+    to a trip, and D21 still governs every later plan write.
+
+    A trip that is not his answers `422 message_not_routable` rather than `404`:
+    the message is his and the route is right, so the thing that is wrong is a
+    value in the body, which is what 422 means everywhere else in this API.
+    """
+    message = find_message(db, owner, message_id)
+    if message.state == "quarantined":
+        raise ApiError(ErrorCode.NOT_FOUND, field="message_id")
+
+    trip = db.execute(
+        sa.select(Trip).where(Trip.id == body.trip_id, Trip.owner_id == owner.id)
+    ).scalar_one_or_none()
+    if trip is None:
+        raise ApiError(ErrorCode.MESSAGE_NOT_ROUTABLE, field="trip_id")
+
+    message.trip_id = trip.id
+    message.state = "routed"
+    # A translation key with no arguments, never prose — the same discipline the
+    # routing reasons a model produces will have to follow in Phase 2.
+    message.routing_reason = "placed_by_hand"
+    db.flush()
+
+    counts = _attachment_counts(db, [message.id])
+    return InboxMessageRow.model_validate(
+        {**_row_fields(message), "attachment_count": counts.get(message.id, 0)}
+    )
+
+
+@owner_router.delete("/messages/{message_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_message(
+    message_id: uuid.UUID,
+    db: DbSession,
+    owner: CurrentOwner,
+    inbox: ConfiguredInbox,
+) -> Response:
+    """Delete a message and its documents. His mail, his decision (A10).
+
+    Two shapes, decided by whether a raw S3 object is still outstanding:
+
+    - **nothing left in S3** — the row is hard-deleted immediately, and the
+      documents go with it through the cascade. Nothing is left to tidy up.
+    - **an object still there** — the row becomes a `discarded` tombstone,
+      hidden from every route, and the cleanup pass deletes the object and then
+      the row. Deleting the row first would lose the only record of which object
+      to delete, leaving a private copy of his confirmation in S3 until the
+      lifecycle rule notices it a month later.
+    """
+    message = find_message(db, owner, message_id)
+
+    if message.s3_object_key is None:
+        db.execute(sa.delete(InboundMessage).where(InboundMessage.id == message.id))
+    else:
+        message.state = "discarded"
+        # The documents go now — he asked for them gone, and the tombstone only
+        # needs to remember the S3 key.
+        db.execute(sa.delete(Attachment).where(Attachment.inbound_message_id == message.id))
+    db.flush()
+
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+# --------------------------------------------------------------------------- #
+# Quarantine, and the two ways out of it
+# --------------------------------------------------------------------------- #
+
+
+def _find_quarantined(
+    db: OrmSession, owner: Owner, message_id: uuid.UUID
+) -> InboundMessage:
+    message = find_message(db, owner, message_id)
+    if message.state != "quarantined":
+        raise ApiError(ErrorCode.NOT_FOUND, field="message_id")
+    return message
+
+
+@owner_router.get("/quarantine/{message_id}", response_model=QuarantineRead)
+def get_quarantined(
+    message_id: uuid.UUID, db: DbSession, owner: CurrentOwner, inbox: ConfiguredInbox
+) -> QuarantineRead:
+    """Sender, subject and date. **Never a body, an attachment or a preview.**"""
+    message = _find_quarantined(db, owner, message_id)
+    decision = _quarantine_decision(db, message, owner, inbox)
+
+    return QuarantineRead(
+        id=message.id,
+        received_at=message.received_at,
+        from_address=message.from_address,
+        subject=message.subject,
+        reason=message.routing_reason,
+        may_trust_sender=decision.may_trust_sender,
+        may_release_message=decision.may_release_message,
+        # Both actions need the raw object, so an expired one means neither can
+        # work — said on the row rather than discovered by pressing a button.
+        recoverable=message.s3_object_key is not None,
+    )
+
+
+@owner_router.post("/quarantine/{message_id}/trust-sender", response_model=InboxMessageRow)
+def trust_sender(
+    message_id: uuid.UUID,
+    db: DbSession,
+    owner: CurrentOwner,
+    inbox: ConfiguredInbox,
+    fetcher: Fetcher,
+) -> InboxMessageRow:
+    """Add this sender to the allow-list permanently, then ingest this message.
+
+    Offered **only** where SES said the message authenticated and the address was
+    simply unknown. Offering it for a DMARC failure would add a spoofable address
+    to the allow-list for ever on the strength of one message the owner
+    recognised the subject of — a policy change dressed up as a recovery.
+
+    The decision is re-derived here rather than read off the row, so an address
+    that has become trusted (or a policy that has been tightened) since the
+    message arrived cannot have its old answer replayed.
+    """
+    message = _find_quarantined(db, owner, message_id)
+    decision = _quarantine_decision(db, message, owner, inbox)
+    if not decision.may_trust_sender:
+        raise ApiError(ErrorCode.MESSAGE_NOT_ROUTABLE, field="message_id")
+
+    db.execute(
+        pg_insert(InboundTrustedSender)
+        .values(owner_id=owner.id, address=normalise_address(message.from_address))
+        .on_conflict_do_nothing()
+    )
+    db.flush()
+
+    return _recover(db, message, owner, inbox, fetcher, bypass_sender_policy=False)
+
+
+@owner_router.post("/quarantine/{message_id}/release", response_model=InboxMessageRow)
+def release_message(
+    message_id: uuid.UUID,
+    db: DbSession,
+    owner: CurrentOwner,
+    inbox: ConfiguredInbox,
+    fetcher: Fetcher,
+) -> InboxMessageRow:
+    """Accept **this one message**, despite its verdict. Trust nobody, change no policy.
+
+    The narrowness is the control. It applies to one stored SES object, it adds
+    no address to any list, and the next message from the same sender is
+    quarantined exactly as this one was. That is what makes it safe to offer for
+    the genuine false positive this exists for — the mailbox rule that
+    auto-forwards an airline's confirmation while breaking its DMARC alignment.
+
+    A failed *scan* is never releasable: `may_release_message` is false for it,
+    because a virus verdict is not a false positive the owner is in a position
+    to overrule.
+    """
+    message = _find_quarantined(db, owner, message_id)
+    decision = _quarantine_decision(db, message, owner, inbox)
+    if not decision.may_release_message:
+        raise ApiError(ErrorCode.MESSAGE_NOT_ROUTABLE, field="message_id")
+
+    return _recover(db, message, owner, inbox, fetcher, bypass_sender_policy=True)
+
+
+def _recover(
+    db: OrmSession,
+    message: InboundMessage,
+    owner: Owner,
+    inbox: InboxSettings,
+    fetcher: S3Fetcher,
+    *,
+    bypass_sender_policy: bool,
+) -> InboxMessageRow:
+    """Re-check the recorded metadata, then ingest — the shared half of both actions.
+
+    **The metadata re-check is not ceremony.** Both actions reach S3 with a key
+    read back out of the database, so before anything is fetched this confirms
+    the row still carries its SES id and a key this deployment owns. A row whose
+    locator was cleared, or whose key points outside the configured prefix, is
+    refused rather than read.
+
+    Ingestion itself is the **same function the worker calls**, with the same
+    windows, the same storage ceiling, the same sniffing and the same failure
+    handling. Only the one check the owner explicitly overruled is skipped, and
+    only on release.
+    """
+    if not message.s3_object_key or not inbox.owns_object_key(message.s3_object_key):
+        raise ApiError(ErrorCode.INBOX_OBJECT_UNAVAILABLE, field="message_id")
+
+    outcome = ingest_message(
+        db,
+        message,
+        owner=owner,
+        inbox=inbox,
+        fetcher=fetcher,
+        bypass_sender_policy=bypass_sender_policy,
+    )
+
+    if outcome.state == "deferred":
+        # The owner asked for this one now, and the window said not yet. A 429
+        # rather than a silent deferral, because he is standing there waiting.
+        raise ApiError(ErrorCode.INBOX_RATE_LIMITED, field="message_id")
+    if outcome.reason == "inbox_object_unavailable":
+        raise ApiError(ErrorCode.INBOX_OBJECT_UNAVAILABLE, field="message_id")
+
+    key = message.s3_object_key
+    db.flush()
+    if outcome.state == "received" and key and delete_ingested_object(fetcher, key):
+        message.s3_object_key = None
+        db.flush()
+
+    counts = _attachment_counts(db, [message.id])
+    return InboxMessageRow.model_validate(
+        {**_row_fields(message), "attachment_count": counts.get(message.id, 0)}
+    )
