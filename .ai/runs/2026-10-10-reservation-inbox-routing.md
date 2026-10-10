@@ -101,7 +101,7 @@ failure mode and budget. Verify: each documented variable name matches
 
 ### Phase 1: The deterministic half
 
-- [x] 2.1 Travel-date extraction and candidate selection, with the three exclusions — HEAD
+- [x] 2.1 Travel-date extraction and candidate selection, with the three exclusions — 23558bc
 
 ### Phase 2: The model boundary
 
