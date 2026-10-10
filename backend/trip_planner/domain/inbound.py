@@ -38,6 +38,7 @@ from __future__ import annotations
 
 import email
 import email.policy
+import re
 import unicodedata
 from dataclasses import dataclass
 from email.message import Message
@@ -106,6 +107,10 @@ _VERDICT_PASS = "PASS"
 
 #: Recorded — and quarantined on — when the notification carried no verdict at all.
 VERDICT_UNKNOWN = "unknown"
+
+#: `cid:<id>` as it appears in an HTML body — in `src`, in `background`, in a
+#: stylesheet `url()`. Unquoted forms included, because mail HTML is not tidy.
+_CID_REFERENCE = re.compile(r"""cid:([^"'\s>)]+)""", re.IGNORECASE)
 
 _TEXT_PLAIN = "text/plain"
 _TEXT_HTML = "text/html"
@@ -398,11 +403,20 @@ def select_content(raw_mime: bytes) -> SelectedContent:
     documents: list[InboundDocument] = []
     dropped = 0
 
+    inline = _inline_part_ids(message)
+
     for index, part in enumerate(message.walk()):
         if index >= MAX_MIME_PARTS:
             dropped += 1
             continue
         if part.get_content_maintype() == "multipart":
+            continue
+
+        # Body chrome — a logo, an icon, a spacer — referenced by the HTML
+        # through `cid:`. Skipped outright, and deliberately **not** counted as
+        # dropped: it was never a document, so reporting it as one would tell
+        # the owner a voucher went missing when nothing did.
+        if _content_id(part) in inline:
             continue
 
         content_type = part.get_content_type()
@@ -435,6 +449,50 @@ def select_content(raw_mime: bytes) -> SelectedContent:
         documents=tuple(documents),
         dropped_documents=dropped,
     )
+
+
+def _content_id(part: Message) -> str:
+    """A part's `Content-ID` with the angle brackets off, or `""`."""
+    raw = part.get("Content-ID")
+    return str(raw).strip().strip("<>") if raw else ""
+
+
+def _inline_part_ids(message: Message) -> frozenset[str]:
+    """The ids the HTML body references with `cid:` — the parts that are *body*.
+
+    **This is what a real confirmation taught us.** A `multipart/related` mail
+    from a booking site carries its logo, its icons and its spacer GIFs as
+    sibling parts, and Gmail labels every one of them
+    `Content-Disposition: attachment` when it forwards the message — so
+    disposition cannot tell a voucher from a tracking pixel. One real hotel
+    confirmation arrives with eleven such parts.
+
+    Without this, every one of them is stored as a document: eleven rows of
+    chrome on one message, ~64 KB of logos, a screen that claims "10 documents"
+    when the message has none, and — worst of the three — the per-message
+    document cap **spent entirely on layout graphics**, so an actual voucher in
+    a later part would be dropped to make room for a spacer.
+
+    `Content-ID` is the right discriminator because it is the one that means
+    something: a part has an id so that the body can point at it (RFC 2392).
+    The test is deliberately *referenced*, not merely *has an id* — a vendor
+    that puts a `Content-ID` on a genuine attachment nobody references still
+    gets that attachment stored, which is the direction to be wrong in.
+    """
+    referenced: set[str] = set()
+
+    for part in message.walk():
+        if part.get_content_type() != _TEXT_HTML:
+            continue
+        payload = _payload_of(part)
+        if payload is None:
+            continue
+        referenced.update(_CID_REFERENCE.findall(_decode(part, payload)))
+
+    # Only ids that actually exist as parts, so a stray `cid:` in prose cannot
+    # suppress anything.
+    present = {_content_id(part) for part in message.walk()} - {""}
+    return frozenset(referenced & present)
 
 
 def _payload_of(part: Message) -> bytes | None:

@@ -94,7 +94,9 @@ def make_message(db: OrmSession, owner: Owner, **overrides: object) -> InboundMe
         "s3_object_key": f"{PREFIX}ses-1",
         "ses_sender_verdict": "PASS",
         "ses_scan_verdict": "PASS",
-        "received_at": datetime(2026, 10, 1, 9, 0, tzinfo=UTC),
+        # Relative to now: the inbound rate window counts the last hour, so a
+        # fixed date drifts out of it and quietly disarms the window tests.
+        "received_at": datetime.now(UTC),
         "from_address": owner.email,
         "subject": "Potwierdzenie rezerwacji",
         "state": "received",

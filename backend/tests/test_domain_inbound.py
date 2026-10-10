@@ -12,6 +12,10 @@ lines instead of a hundred-line blob nobody edits.
 from __future__ import annotations
 
 from email.message import EmailMessage
+from email.mime.application import MIMEApplication
+from email.mime.image import MIMEImage
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 
 import pytest
 
@@ -439,3 +443,131 @@ def test_a_very_long_body_is_truncated_on_the_way_out_of_selection() -> None:
 
     assert len(selected.text) <= MAX_INBOUND_TEXT_CHARS
     assert selected.text.endswith(TRUNCATION_MARKER)
+
+
+# --------------------------------------------------------------------------- #
+# Inline body chrome, learned from a real confirmation
+# --------------------------------------------------------------------------- #
+
+
+def build_related(*, images: int = 3, with_voucher: bool = False) -> bytes:
+    """A `multipart/related` mail shaped like a real booking-site confirmation.
+
+    The structure is copied from one the owner actually received: a text and an
+    HTML alternative, then a run of sibling images that the HTML points at with
+    `cid:` — logos, icons, spacer GIFs. **Every one of them carries
+    `Content-Disposition: attachment`**, because that is what Gmail writes when
+    it forwards such a message, which is exactly why disposition cannot be the
+    discriminator.
+    """
+    cids = [f"img{n}@booking.example" for n in range(images)]
+    html = "<p>Zameldowanie 17 października 2026</p>" + "".join(
+        f'<img src="cid:{cid}" width="1">' for cid in cids
+    )
+
+    # Built from the MIME primitives rather than `EmailMessage` helpers, because
+    # the nesting is the point and has to match the real article exactly:
+    # `multipart/related` outermost, the text/html alternative inside it, the
+    # referenced images as its siblings.
+    alternative = MIMEMultipart("alternative")
+    alternative.attach(MIMEText("Zameldowanie 17 października 2026", "plain", "utf-8"))
+    alternative.attach(MIMEText(html, "html", "utf-8"))
+
+    related = MIMEMultipart("related")
+    related["From"] = OWNER
+    related["Subject"] = "Twoja rezerwacja jest potwierdzona"
+    related.attach(alternative)
+
+    for cid in cids:
+        image = MIMEImage(make_png(), "png")
+        image.add_header("Content-ID", f"<{cid}>")
+        # As Gmail writes it when forwarding: `attachment`, not `inline`, which
+        # is precisely why disposition cannot be the discriminator.
+        image.add_header("Content-Disposition", "attachment", filename="noname")
+        related.attach(image)
+
+    if not with_voucher:
+        return related.as_bytes()
+
+    outer = MIMEMultipart("mixed")
+    for header in ("From", "Subject"):
+        outer[header] = related[header]
+        del related[header]
+    outer.attach(related)
+    voucher = MIMEApplication(make_pdf(), "pdf")
+    voucher.add_header("Content-Disposition", "attachment", filename="voucher.pdf")
+    outer.attach(voucher)
+    return outer.as_bytes()
+
+
+def test_inline_images_the_body_references_are_not_documents() -> None:
+    """The defect a real hotel confirmation exposed, and the reason it mattered.
+
+    That message carried **eleven** `cid:`-referenced parts. Stored as
+    documents they were: eleven rows of chrome on one message, ~64 KB of logos,
+    a screen claiming ten documents for a message with none — and the
+    per-message cap spent entirely on layout graphics, so a genuine voucher in a
+    later part would have been dropped to make room for a spacer.
+    """
+    selected = select_content(build_related(images=3))
+
+    assert selected.documents == ()
+    # Not "dropped" either: they were never documents, and reporting them as
+    # dropped would tell the owner a voucher went missing when none did.
+    assert selected.dropped_documents == 0
+    assert "17 października 2026" in selected.text
+
+
+def test_a_real_voucher_survives_alongside_the_inline_chrome() -> None:
+    """The half that must not regress: skipping chrome must not skip documents.
+
+    This is the Turkish Airlines shape — a `multipart/related` body plus one
+    genuine PDF that nothing references.
+    """
+    selected = select_content(build_related(images=3, with_voucher=True))
+
+    assert [one.filename for one in selected.documents] == ["voucher.pdf"]
+    assert selected.dropped_documents == 0
+
+
+def test_an_unreferenced_content_id_is_still_treated_as_a_document() -> None:
+    """Wrong in the safe direction, deliberately.
+
+    The test is *referenced by the body*, not *has an id*. A vendor that puts a
+    `Content-ID` on a real attachment nobody points at still gets it stored —
+    losing the owner's voucher is the costlier mistake by a wide margin.
+    """
+    message = EmailMessage()
+    message["From"] = OWNER
+    message["Subject"] = "Bilet"
+    message.set_content("W zalaczeniu")
+    message.add_attachment(
+        make_pdf(),
+        maintype="application",
+        subtype="pdf",
+        filename="voucher.pdf",
+        cid="<nobody-points-at-this@example>",
+    )
+
+    assert [one.filename for one in select_content(message.as_bytes()).documents] == [
+        "voucher.pdf"
+    ]
+
+
+def test_the_inline_rule_cannot_be_used_to_suppress_an_attachment() -> None:
+    """A `cid:` in prose that names no part suppresses nothing.
+
+    Otherwise a sender could hide a document from the owner by writing the right
+    string in the body — the id has to belong to a part that actually exists.
+    """
+    message = MIMEMultipart("mixed")
+    message["From"] = OWNER
+    message["Subject"] = "Bilet"
+    message.attach(MIMEText('<p>see <a href="cid:voucher.pdf">here</a></p>', "html", "utf-8"))
+    voucher = MIMEApplication(make_pdf(), "pdf")
+    voucher.add_header("Content-Disposition", "attachment", filename="voucher.pdf")
+    message.attach(voucher)
+
+    assert [one.filename for one in select_content(message.as_bytes()).documents] == [
+        "voucher.pdf"
+    ]

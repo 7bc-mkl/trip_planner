@@ -9,7 +9,7 @@ that only returned bytes would let both regress silently.
 from __future__ import annotations
 
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from email.message import EmailMessage
 
 import pytest
@@ -99,7 +99,12 @@ def message(db_session: OrmSession, owner: Owner) -> InboundMessage:
         s3_object_key=f"{PREFIX}ses-1",
         ses_sender_verdict="PASS",
         ses_scan_verdict="PASS",
-        received_at=datetime(2026, 10, 1, 9, 0, tzinfo=UTC),
+        # **Relative to now, not a fixed date.** The inbound rate window counts
+        # the last hour, so a hard-coded `received_at` silently falls out of it
+        # as the calendar moves and the window tests stop testing anything —
+        # they went green for months and would have turned red on an ordinary
+        # Tuesday with nothing changed.
+        received_at=datetime.now(UTC),
         from_address=owner.email,
         subject="Potwierdzenie rezerwacji",
         state="pending_ingest",
@@ -418,7 +423,7 @@ def test_only_pending_and_deferred_messages_are_claimed(
                 ses_message_id=f"ses-{state}-{uuid.uuid4().hex}",
                 ses_sender_verdict="PASS",
                 ses_scan_verdict="PASS",
-                received_at=datetime(2026, 10, 2, 9, 0, tzinfo=UTC),
+                received_at=datetime.now(UTC),
                 from_address=owner.email,
                 subject=state,
                 state=state,
@@ -450,7 +455,7 @@ def test_claimed_messages_come_oldest_first(
         s3_object_key=f"{PREFIX}ses-0",
         ses_sender_verdict="PASS",
         ses_scan_verdict="PASS",
-        received_at=datetime(2026, 9, 30, 9, 0, tzinfo=UTC),
+        received_at=datetime.now(UTC) - timedelta(hours=1),
         from_address=owner.email,
         subject="Wczesniejsza",
         state="pending_ingest",
