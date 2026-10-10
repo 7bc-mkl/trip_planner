@@ -1,6 +1,6 @@
 # The reservation inbox — a forwarded confirmation becomes an action item
 
-- Date: 2026-09-26 · Author: `om-auto-write-spec` (autonomous) · Status: **ready for review — Q11 was confirmed by the owner on 2026-09-26 and recorded as D24. Phase 1 still contains no model call or model egress; the A07/A08 paper check remains a precondition before Phase 2 implementation.**
+- Date: 2026-09-26 · Author: `om-auto-write-spec` (autonomous) · Status: **Phase 1 implemented (PR #19). Q11 confirmed by the owner on 2026-09-26 as D24. The A07/A08 paper check ran on 2026-10-10 against four real confirmations and amended the candidate rule — Phase 2 is unblocked, and step 1 now carries the three date-exclusion rules that check produced.**
 - Source brief: `.ai/specs/product-brief.md`, refreshed and re-signed 2026-09-26. Its Definition of Ready addendum says in so many words that *"the reservation inbox is ready to be specified"*, that **Q11 was the one open point and is now closed by D24 before implementation**, and that this spec owes two further accounts: what the app checks about a sender (**A09**), and what an approved-but-wrong action item does to data already in a plan (`BACKWARD_COMPATIBILITY.md` §3). D25 selects AWS SES delivery; all three accounts are answered below.
 - Decisions this spec builds on, all taken by the owner on 2026-09-26 and **not reopened here**: **D20** (one address for the *account*, a model routes to the trip, an unrouted queue behind it), **D21** (every write is an action item he approves — targeted at a matching item, or proposing a new one), **D22** (the inbox goes first), **D25** (AWS SES inbound delivery), **R10** (the widening of R08 that permits exactly one inbound path), and **D16–D18** (attachment storage, formats and limits; an ISO-4217 code per amount; a magic link that exposes no documents).
 - Foundation, shipped and not reopened: `2026-09-05-walking-skeleton.md` (PRs #2, #6) and `2026-09-05-attachments-and-reservation-data.md` (PR #12). Their `/api/v1` conventions, the `ErrorCode` enum, `get_owned_trip`, the `trip` / `trip_stage` / `trip_day` / `item` / `attachment` / `attachment_blob` tables, `domain/uploads.py`'s byte sniffing and `security/quota.py`'s limiters are running code, and this feature is built **out of them** rather than beside them.
@@ -466,7 +466,7 @@ A two-column comparison, one row per proposed field: **what the item says now**,
 - **The second new risk is a sender who is not the owner** (A09). The answer is a signed and topic-bound SNS endpoint, SES verdicts, an allow-list, app-side quarantine without content, private S3 retention and separate inbound windows. Anyone who learns the address can still incur SES/S3 receiving costs; alerts and AWS-side limits are operational requirements.
 - **§3, answered directly.** A stored plan never silently changes meaning: an approval writes only ticked fields, never a non-empty field by default, refuses on a conflict it can see, and records what it wrote so it can be undone. An approved-but-wrong action item therefore changes exactly what the owner watched it change.
 - **§6, the external integrations.** `AGENTS.md`'s routing row for external APIs is `TODO — integration module not yet created`; the implementing PR must document the SES/SNS/S3 inbound adapter and the three configured model adapters actually built. All calls have timeout, bounded retry and defined failure; the model has a budget and degrades to the unrouted queue. AWS and model settings remain optional so an existing deployment starts unchanged (§5).
-- **A07 and A08 remain untested**, and the brief's paper check against real Malaysia confirmations did not run in this session. It is a Phase 2 precondition, not a formality: if the routing rule places two messages in ten, the feature's value proposition fails while every line of code works.
+- **A07 and A08: the paper check has now run (2026-10-10) and the picture is partial.** Against four real confirmations from four vendors in two languages, a date is findable in every one and the rule places 4/4 — but with a single trip in the system no message *could* have been misplaced, so that number measures the preconditions, not the discrimination. The check did change the rule: *"any extracted travel date"* pulls in booking timestamps and cancellation deadlines, which manufactures false ambiguity the moment a second trip exists. Three exclusions are now specified and are part of Phase 2 step 1. A07's real question — the right trip out of several — stays open until the owner has two overlapping trips. See *The A07/A08 paper check*.
 - **Rollback.** Three revisions, unwinding independently: rolling back Phase 3 removes action items; rolling back Phase 2 removes model egress records and returns to a manual inbox; rolling back Phase 1 removes the inbox entirely and returns `attachment` to two parents — **refusing if any document is still parented to a message**, which is the safe failure. The frontend degrades to the app as it ships today.
 - **Product-decision compliance.** This spec implements D20, D21, D22, D25 and R10 and defers nothing they mandate. It contradicts no active row: D03 is preserved (no trip is conjured from a message), R02's three statuses are the only ones offered, R07 is respected (the model makes no outbound lookup), D17 is respected (one currency per amount, no totals), and D18 is respected (no inbox content is guest-visible). D25 records the owner's transport change. The rows it *asks* for are below.
 
@@ -531,6 +531,80 @@ Each phase is independently shippable and leaves the application working and dep
 - **Phase 2 — Routing (D20).** The deterministic candidate rule, `integrations/model.py`, and messages arriving already pointed at a trip.
 
   > **Human gate before Phase 2, not a step inside it.** The brief's smallest test for **A07/A08** — take the Malaysia confirmations the owner already holds, apply this spec's routing rule by hand, and count what it would place correctly — needs material only he has, so no implementation engine can execute it. It is a precondition on starting the phase, and its result belongs back in this document. If the rule places poorly, the rule changes here before any code is written.
+  >
+  > **RUN 2026-10-10. The gate is answered, and the rule changes before Phase 2 starts.** See *The A07/A08 paper check* below.
+
+### The A07/A08 paper check — run 2026-10-10
+
+The owner supplied four real forwarded confirmations from one trip (Borneo and
+Malaysia, October 2026): a Turkish Airlines return WAW↔KUL, a Royal Brunei
+return BKI↔BWN, a Booking.com hotel, and an Avis car hire. Four unrelated
+vendors; two in Polish, two in English. The routing rule was applied to them by
+hand.
+
+**The headline number is 4/4, and on its own it is worth very little.** With one
+trip in the system every message carrying any October date routes to it, so the
+rule had no opportunity to be wrong. A sample that cannot produce a wrong answer
+is not evidence that the answer is right, and recording "4/4" without this
+sentence would be the most misleading true statement available.
+
+What the sample **does** establish, and did not have to:
+
+- **A date is findable in all four**, in every case including the travel dates
+  themselves. That is the precondition the whole rule rests on, and it was not
+  obvious — it could easily have been three out of four.
+- **The formats are messier than assumed.** `17 października 2026`,
+  `2 October 2026`, `17 Oct 2026`. **No message carried an ISO date at all.**
+  Phase 2's extractor therefore needs Polish month names, full English month
+  names and abbreviated ones; ISO parsing alone would score zero out of four.
+- **Documents are the exception.** Only the Turkish Airlines mail carried a PDF.
+  The other three put everything in the body. This supports keeping the
+  "read this document" egress action in the slippable tail where A05 put it —
+  it is not on the path for three quarters of real mail.
+- **A08's four fields are present in the text** in all four messages
+  (confirmation number, dates, amount, currency), so extraction has something to
+  extract. Whether a model gets them right is still untested.
+
+**The finding that changes the rule.** The spec says candidates come from *"any
+extracted travel date"*, but a real confirmation is full of dates that are not
+travel dates:
+
+| Message | Non-travel dates it carries |
+|---|---|
+| Booking.com hotel | free-cancellation deadline (13 Oct), price-change date (14 Oct) |
+| Turkish Airlines | transaction date (15 June) |
+| all four | the forwarding header's own date, and the original send date |
+
+With one trip this is harmless. Add a second trip over June and the Turkish
+Airlines message matches **both** — on its *booking* date — and arrives at the
+model as a two-candidate decision that should never have been ambiguous. The
+rule would be manufacturing work for the model out of a billing timestamp, in
+exactly the situation A07 says it must be reliable. Re-run against travel dates
+only, the same message is unambiguous.
+
+**So the rule as written is amended before any Phase 2 code**, per this gate's
+own terms. Candidate selection extracts *travel* dates, not every date:
+
+1. **Strip the forwarded-header block** (`---------- Forwarded message ---------`
+   and the `From:`/`Date:`/`Subject:` lines under it) before extracting
+   anything. Cheapest of the three and it removes two false dates per message.
+2. **Ignore any date earlier than the message's own `Date` header.** A date in
+   the past relative to when the mail was sent is a booking or transaction
+   timestamp, never a trip.
+3. **Ignore dates adjacent to deadline language** — *odwołać / anulować /
+   cancel / free cancellation until / refundable before*. These are policy
+   dates and cluster immediately after those phrases.
+
+Phase 2 step 1 implements the candidate rule including these three exclusions,
+and its unit tests carry a case for each, built from the structures observed
+here.
+
+**What remains untested.** A07's real question — *can it pick the right trip
+when there is more than one?* — cannot be answered until the owner has two
+overlapping trips in the app, and the sample contains one. The honest status is
+that the rule's **preconditions** are confirmed on real mail and its
+**discrimination** is not. That is a materially better position than before the
+check, and it is not the same as A07 being settled.
 - **Phase 3 — Extraction and the action item (D21).** Proposals, the review sheet, field-level approval with the never-overwrite rule and the conflict check, reject, and undo. **R04's fields arrive without being typed at the end of this phase**, which is the feature's actual promise.
 - **Phase 4 — Polish, and the slippable phase.** The explicit "read this document" egress action, the quarantine counter polish, the duplicate hint, and the owner retry action. The recovery controls and 30-day purge both ship in Phase 1; a false positive can be inspected and released before it expires.
 
@@ -558,7 +632,7 @@ Every step is testable and leaves the application working. This structure is wha
 
 *(The A07/A08 paper check is the gate above, not a step — it cannot be executed from the repository.)*
 
-1. Deterministic candidate selection in `domain/inbound.py` — date extraction from text, the ±1-day range rule, and the candidate query. Verify: unit tests for zero, one and several candidates, for dates in both locales' formats, for a message with no date at all, and for a trip boundary exactly one day out.
+1. Deterministic candidate selection in `domain/inbound.py` — **travel**-date extraction from text, the ±1-day range rule, and the candidate query. The three exclusions the 2026-10-10 paper check produced are part of this step, not a later refinement: strip the forwarded-header block before extracting; ignore any date earlier than the message's own `Date` header (a booking or transaction timestamp); ignore dates adjacent to deadline language (*odwołać*, *anulować*, *cancel*, *free cancellation until*, *refundable before*). Verify: unit tests for zero, one and several candidates; for Polish month names, full English month names and abbreviated ones — **no ISO dates, because none of the four real confirmations carried one**; for a message with no date at all; for a trip boundary exactly one day out; and one case per exclusion, each built from a structure actually observed — a Booking.com cancellation deadline, a Turkish Airlines transaction date, and a Gmail forwarded-header block.
 2. `integrations/model.py` — a provider-neutral request/response contract and factory, plus `integrations/anthropic.py`, `gemini.py`, and `openai.py`. One configured provider and model per deployment; no default or cross-provider fallback. Shared prompt, strict internal Pydantic schema, payload limits, timeout, bounded retry, and budget; each adapter translates the provider's request and response without exposing its wire format to domain code. Add the `inbound_model_egress` migration in this phase. Verify: parametrized contract tests for all three adapters with captured requests, valid output, malformed JSON, unknown fields, timeout, 429, and budget exhaustion; selection tests for each valid provider and for missing, unknown, or mismatched credentials; assertions that only the selected adapter is called and no request is sent when configuration is incomplete. **No real network call in the suite.**
 3. Wiring routing into the background ingestion worker: `received` → `routed` / `unrouted`, `attempts`, `routing_reason` as **translated keys with arguments**, and `text_sent_at` stamped for attempted text egress, with a committed `inbound_model_egress` row before each call. Verify: tests that a trip id outside the candidate set is rejected; that the cap moves a message to the queue with a reason; that `text_sent_at` and the provider/model event are recorded for a call attempt, including a timeout after request dispatch; neither is recorded when configuration or payload validation stops the call beforehand; that the request body carries **only** the message text, its three headers and the candidate trips' id/title/destinations/dates — asserted against a captured payload; and that **no attachment byte is sent in this phase**, asserted the same way.
 4. The routed state in the UI — the trip a message was placed on, the reason, and re-placement. Verify: component tests for a routed message, an unrouted one with each reason, and both locales.
