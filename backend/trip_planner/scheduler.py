@@ -33,16 +33,18 @@ from __future__ import annotations
 import logging
 import threading
 from collections.abc import Callable
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
 
 import sqlalchemy as sa
 from sqlalchemy.orm import Session as OrmSession
 
 from trip_planner.config import Settings
-from trip_planner.db.models import Owner
+from trip_planner.db.models import InboundMessage, Owner
 from trip_planner.inbound.cleanup import CleanupReport, run_cleanup
 from trip_planner.inbound.ingest import claim_pending, delete_ingested_object, ingest_message
+from trip_planner.inbound.router import month_spend, route_message
 from trip_planner.inbound.ses import S3Fetcher
+from trip_planner.integrations.model import ModelBudget, ModelClient
 
 logger = logging.getLogger(__name__)
 
@@ -81,6 +83,7 @@ class InboxWorker:
         *,
         fetcher: S3Fetcher | None = None,
         interval: timedelta = DEFAULT_INTERVAL,
+        model_client: ModelClient | None = None,
     ) -> None:
         if settings.inbox is None:
             raise ValueError("the inbox worker cannot run on a deployment with no inbox settings")
@@ -90,8 +93,10 @@ class InboxWorker:
         self._session_factory = session_factory
         self._fetcher = fetcher if fetcher is not None else S3Fetcher(settings.inbox)
         self._interval = interval
+        self._injected_client = model_client
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
+        self._client: ModelClient | None = None
 
     # ------------------------------------------------------------------ loop
 
@@ -200,6 +205,13 @@ class InboxWorker:
                 message.s3_object_key = None
                 db.commit()
 
+            # Routing follows ingestion in the same pass, so a message the owner
+            # forwarded is stored *and* pointed at its trip by the time he looks.
+            # Separate commit: a routing failure must not roll back the
+            # ingestion that just succeeded.
+            if outcome.state == "received":
+                self._route(db, message, owner)
+
         # After the ingestion, and in the same pass: the quarantine timer, the
         # deletes the owner asked for, the objects a failed delete left behind,
         # and the alarm. Its own transaction, so a cleanup failure cannot roll
@@ -214,6 +226,50 @@ class InboxWorker:
             logger.exception("inbox: the cleanup pass failed; it will run again")
 
         return processed
+
+    def _route(self, db: OrmSession, message: InboundMessage, owner: Owner) -> None:
+        """Point one freshly-ingested message at a trip, if a model is configured.
+
+        **With no model this does nothing at all**, which is Phase 1's behaviour
+        exactly: the message stays `received`, shows up in the inbox, and the
+        owner places it by hand. An inbox without a model is a working product,
+        not a degraded one.
+        """
+        model_settings = self._settings.model
+        if model_settings is None:
+            return
+
+        try:
+            client = self._model_client()
+            budget = ModelBudget(
+                monthly_limit=model_settings.monthly_budget,
+                spent_this_month=month_spend(db, now=datetime.now(UTC)),
+                input_price_per_mtok=model_settings.input_price_per_mtok,
+                output_price_per_mtok=model_settings.output_price_per_mtok,
+            )
+            route_message(
+                db,
+                message,
+                owner=owner,
+                model_settings=model_settings,
+                client=client,
+                budget=budget,
+            )
+            db.commit()
+        except Exception:
+            db.rollback()
+            # The message keeps its body and its documents either way, so the
+            # worst case is an unrouted message the owner places himself.
+            logger.exception("inbox: routing failed for a message; it stays placeable by hand")
+
+    def _model_client(self) -> ModelClient:
+        """Built once and reused, so the signing/connection setup is not per message."""
+        if self._injected_client is not None:
+            return self._injected_client
+        if self._client is None:
+            assert self._settings.model is not None
+            self._client = ModelClient.for_settings(self._settings.model)
+        return self._client
 
 
 def start_inbox_worker(settings: Settings) -> InboxWorker | None:

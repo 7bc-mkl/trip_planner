@@ -1,15 +1,26 @@
-"""inbound_model_egress
+"""inbound_model_egress and routing_reason_args
 
 Revision ID: 0008_inbound_model_egress
 Revises: 0007_inbound_message
 Create Date: 2026-10-11
 
-Phase 2 of the reservation inbox: the audit trail for every outbound model call.
+Phase 2 of the reservation inbox: the audit trail for every outbound model call,
+and the column that lets a routing reason carry its arguments.
 
-One new table and nothing else, so "safe against rows that already exist" is
-vacuous (BACKWARD_COMPATIBILITY.md §2) and the downgrade is a clean drop. That
-is deliberate and is why the spec made it a separate revision: **rolling back
-Phase 2 returns the deployment to a manual inbox** — the messages, their
+One new table plus one new nullable column, so "safe against rows that already
+exist" is satisfied trivially — every existing `inbound_message` row is valid
+with `routing_reason_args` null, which is exactly what a Phase 1 row means:
+a reason with no arguments. No backfill, no default, no rewrite.
+
+`routing_reason_args` is here rather than in its own revision because it belongs
+to this phase: a Phase 1 reason (`placed_by_hand`) needs no arguments, and the
+reasons that do — *"no trip covers 4–11 October"* — only exist once routing
+does. The downgrade drops it, which loses the arguments while leaving every
+reason key intact, so the screen degrades to the unparameterised sentence
+rather than to nothing.
+
+That clean reversibility is why the spec made Phase 2 its own revision:
+**rolling back returns the deployment to a manual inbox** — the messages, their
 documents and the `/inbox` screen are all Phase 1 and survive untouched.
 
 What the downgrade *does* destroy is the record of which provider saw what.
@@ -40,6 +51,11 @@ _PROVIDERS = ("anthropic", "gemini", "openai")
 
 
 def upgrade() -> None:
+    op.add_column(
+        "inbound_message",
+        sa.Column("routing_reason_args", postgresql.JSONB(), nullable=True),
+    )
+
     op.create_table(
         "inbound_model_egress",
         sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False),
@@ -96,6 +112,8 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    op.drop_column("inbound_message", "routing_reason_args")
+
     op.drop_index("ix_inbound_model_egress_attempted_at", table_name="inbound_model_egress")
     op.drop_index(
         "ix_inbound_model_egress_inbound_message_id", table_name="inbound_model_egress"

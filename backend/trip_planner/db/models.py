@@ -21,6 +21,7 @@ import uuid
 from datetime import date as date_type
 from datetime import datetime, time
 from decimal import Decimal
+from typing import Any
 
 from sqlalchemy import (
     CHAR,
@@ -41,7 +42,7 @@ from sqlalchemy import (
     func,
     text,
 )
-from sqlalchemy.dialects.postgresql import INET
+from sqlalchemy.dialects.postgresql import INET, JSONB
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -849,6 +850,21 @@ class InboundMessage(Base):
     #: is recorded the same way, so an untranslated — or injected — string has no
     #: path to the screen through the locale layer.
     routing_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    #: The arguments that key is rendered with — `{"from": "2026-10-04", "to":
+    #: "2026-10-11"}` for *"no trip covers 4–11 October"*.
+    #:
+    #: **Arguments rather than a sentence, and that is the whole point.** The
+    #: reason has to be specific to be worth reading, and the moment it is a
+    #: sentence it is a sentence somebody has to translate — or, from the phase
+    #: that introduces a model, a sentence a *model* could have written. Keeping
+    #: the key and its values apart means the screen renders Polish and English
+    #: from the same row, and no provider-authored or sender-authored prose has
+    #: a path to it through the locale layer.
+    #:
+    #: JSONB with no query over its interior, for the reason `inbound_action_item`
+    #: gives about `proposal`: a parallel set of nullable columns would be a
+    #: second place the shape is declared.
+    routing_reason_args: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
     attempts: Mapped[int] = mapped_column(SmallInteger, nullable=False, server_default="0")
     #: A code, never a provider or AWS message: third-party prose can echo the
     #: message's own content back into our logs.
