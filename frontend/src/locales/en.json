@@ -260,7 +260,16 @@
       "ingest_failed": "The message could not be fetched.",
       "inbox_object_unavailable": "The original message is no longer stored.",
       "inbox_rate_limited": "A lot of mail arrived at once — this one is queued.",
-      "inbox_storage_full": "The inbox is full — this one is queued."
-    }
+      "inbox_storage_full": "The inbox is full — this one is queued.",
+      "routed_by_model": "Matched automatically from the dates in this message.",
+      "model_found_no_trip": "None of your trips matched this message.",
+      "no_dates_found": "No travel dates could be read from this message.",
+      "no_trip_covers_dates": "No trip covers {from, date, medium} – {to, date, medium}.",
+      "routing_failed": "The message could not be matched to a trip automatically.",
+      "routing_refused": "The automatic match was not usable, so it is waiting for you.",
+      "routing_budget_exhausted": "Automatic matching is paused — this month's budget is used up."
+    },
+    "routedTo": "Trip:",
+    "changeTrip": "Change trip"
   }
 }

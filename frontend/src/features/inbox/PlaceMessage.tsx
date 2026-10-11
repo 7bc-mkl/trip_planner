@@ -26,13 +26,23 @@ export function PlaceMessage({
   message,
   trips,
   onPlaced,
+  label,
 }: {
   message: InboxMessage
   trips: TripSummary[]
   onPlaced: (placed: InboxMessage) => void
+  /**
+   * The button's wording. Placing and *re*-placing are the same request and the
+   * same single column, so they are the same component — only the label
+   * differs, because "Place" on a message that already has a trip would read
+   * as though it were about to do something new.
+   */
+  label?: string
 }) {
   const { t } = useTranslation()
-  const [tripId, setTripId] = useState('')
+  // Pre-selected when the message already has a trip, so re-placing starts from
+  // where it is rather than from blank.
+  const [tripId, setTripId] = useState(message.trip_id ?? '')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -77,7 +87,7 @@ export function PlaceMessage({
         ))}
       </select>
       <button type="button" className="button-primary" disabled={tripId === '' || busy} onClick={submit}>
-        {busy ? t('inbox.placing') : t('inbox.place')}
+        {busy ? t('inbox.placing') : (label ?? t('inbox.place'))}
       </button>
       <p className="inbox-place__hint">{t('inbox.placeHint')}</p>
       {error !== null && <p role="alert">{error}</p>}

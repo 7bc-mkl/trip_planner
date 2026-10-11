@@ -21,6 +21,7 @@ import uuid
 from datetime import date as date_type
 from datetime import datetime, time
 from decimal import Decimal
+from typing import Any
 
 from sqlalchemy import (
     CHAR,
@@ -41,7 +42,7 @@ from sqlalchemy import (
     func,
     text,
 )
-from sqlalchemy.dialects.postgresql import INET
+from sqlalchemy.dialects.postgresql import INET, JSONB
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -55,11 +56,14 @@ __all__ = [
     "ITEM_STATUSES",
     "MAX_ATTACHMENT_BYTES",
     "MAX_INBOUND_SUBJECT_CHARS",
+    "MODEL_EGRESS_KINDS",
+    "MODEL_PROVIDER_NAMES",
     "MAX_INBOUND_TEXT_CHARS",
     "Attachment",
     "AttachmentBlob",
     "InboundDeliveryStatus",
     "InboundMessage",
+    "InboundModelEgress",
     "InboundTrustedSender",
     "Item",
     "LoginAttempt",
@@ -94,6 +98,13 @@ INBOUND_MESSAGE_STATES = (
     "quarantined",
     "discarded",
 )
+
+#: What one egress row can be about: the message's text, or one named document.
+MODEL_EGRESS_KINDS = ("text", "document")
+
+#: The providers D24 permits. A `CHECK` rather than a convention, so a row can
+#: never record a provider the owner did not authorise.
+MODEL_PROVIDER_NAMES = ("anthropic", "gemini", "openai")
 
 #: The subject's stored bound, in characters. Truncated on write rather than
 #: refused: a long subject is not a reason to lose a confirmation.
@@ -839,6 +850,21 @@ class InboundMessage(Base):
     #: is recorded the same way, so an untranslated — or injected — string has no
     #: path to the screen through the locale layer.
     routing_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    #: The arguments that key is rendered with — `{"from": "2026-10-04", "to":
+    #: "2026-10-11"}` for *"no trip covers 4–11 October"*.
+    #:
+    #: **Arguments rather than a sentence, and that is the whole point.** The
+    #: reason has to be specific to be worth reading, and the moment it is a
+    #: sentence it is a sentence somebody has to translate — or, from the phase
+    #: that introduces a model, a sentence a *model* could have written. Keeping
+    #: the key and its values apart means the screen renders Polish and English
+    #: from the same row, and no provider-authored or sender-authored prose has
+    #: a path to it through the locale layer.
+    #:
+    #: JSONB with no query over its interior, for the reason `inbound_action_item`
+    #: gives about `proposal`: a parallel set of nullable columns would be a
+    #: second place the shape is declared.
+    routing_reason_args: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
     attempts: Mapped[int] = mapped_column(SmallInteger, nullable=False, server_default="0")
     #: A code, never a provider or AWS message: third-party prose can echo the
     #: message's own content back into our logs.
@@ -891,6 +917,82 @@ class InboundDeliveryStatus(Base):
 
     def __repr__(self) -> str:
         return f"<InboundDeliveryStatus owner_id={self.owner_id!r}>"
+
+
+class InboundModelEgress(Base):
+    """One row per outbound model call — *attempted*, not confirmed.
+
+    **This is the audit trail Q11 asked for**, and its value comes from one
+    ordering rule: the row is committed **before** the call is made. A timeout,
+    a crash or a provider that never answers therefore cannot erase the fact
+    that the owner's text may have left. The row means *may have left*, which is
+    the only thing this application is in a position to know.
+
+    No request body, no response, no key and no provider error prose is kept
+    here. What is kept is which service, which model, and when — enough for the
+    owner to answer "who has seen my mail" months later, and nothing that would
+    make this table a second copy of the mail itself.
+
+    `provider` and `model` are recorded per row rather than read back from
+    current settings, because settings change and history does not: a deployment
+    that switches provider must still be able to say which service saw what.
+
+    **Two columns beyond the spec's own list**, and the reason is in the spec
+    itself: it requires a monthly budget *"measured from provider-reported
+    usage"*, and usage has to be stored somewhere to be summed. Putting the
+    token counts on the egress row means one table answers both "what may have
+    left" and "what did it cost", rather than a second table that could
+    disagree with it. They are nullable because a provider that reports no usage
+    is a real case — and one that stops further calls, since an uncomputable
+    cost is not a zero cost.
+    """
+
+    __tablename__ = "inbound_model_egress"
+    __table_args__ = (
+        CheckConstraint(_in_list("kind", MODEL_EGRESS_KINDS), name="ck_model_egress_kind"),
+        CheckConstraint(
+            _in_list("provider", MODEL_PROVIDER_NAMES), name="ck_model_egress_provider"
+        ),
+        # A document row that names no document cannot answer the only question
+        # it exists to answer.
+        CheckConstraint(
+            "kind <> 'document' OR attachment_id IS NOT NULL OR attachment_name IS NOT NULL",
+            name="ck_model_egress_document_names_its_file",
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        PgUUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    inbound_message_id: Mapped[uuid.UUID] = mapped_column(
+        PgUUID(as_uuid=True),
+        ForeignKey("inbound_message.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    #: `SET NULL`, not `CASCADE`: deleting a document must not erase the record
+    #: that it was sent. `attachment_name` is the snapshot that survives it.
+    attachment_id: Mapped[uuid.UUID | None] = mapped_column(
+        PgUUID(as_uuid=True),
+        ForeignKey("attachment.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    attachment_name: Mapped[str | None] = mapped_column(Text, nullable=True)
+    kind: Mapped[str] = mapped_column(Text, nullable=False)
+    provider: Mapped[str] = mapped_column(Text, nullable=False)
+    model: Mapped[str] = mapped_column(Text, nullable=False)
+    #: Indexed because the budget sums a billing month's rows on every call.
+    attempted_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now(), index=True
+    )
+    input_tokens: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    output_tokens: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+    def __repr__(self) -> str:
+        return (
+            f"<InboundModelEgress id={self.id!r} kind={self.kind!r} "
+            f"provider={self.provider!r} model={self.model!r}>"
+        )
 
 
 class InboundTrustedSender(Base):

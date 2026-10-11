@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from decimal import Decimal
+
 import pytest
 
 from trip_planner.config import (
@@ -255,3 +257,148 @@ def test_settings_repr_carries_no_secret() -> None:
     settings = require_settings(COMPLETE_ENV | INBOX_ENV)
 
     assert VALID_SECRET not in repr(settings.inbox)
+
+
+# --------------------------------------------------------------------------- #
+# The model provider — one, explicitly selected, with no fallback
+# --------------------------------------------------------------------------- #
+
+MODEL_ENV = {
+    "INBOX_MODEL_PROVIDER": "anthropic",
+    "INBOX_MODEL_NAME": "small-1",
+    "ANTHROPIC_API_KEY": "test-key-not-a-real-credential",
+}
+
+
+def test_a_deployment_with_no_model_runs_the_inbox_without_routing() -> None:
+    """Phase 1's behaviour, and a supported state rather than a half-built one.
+
+    Mail still arrives, is stored and is placeable by hand; nothing is sent
+    anywhere. An inbox without a model is a useful product.
+    """
+    settings = require_settings(COMPLETE_ENV | INBOX_ENV)
+
+    assert settings.model is None
+    assert settings.inbox_enabled
+    assert not settings.routing_enabled
+
+
+def test_a_complete_model_configuration_resolves() -> None:
+    settings = require_settings(COMPLETE_ENV | INBOX_ENV | MODEL_ENV)
+
+    assert settings.routing_enabled
+    assert settings.model is not None
+    assert settings.model.provider == "anthropic"
+
+
+@pytest.mark.parametrize("provider", ["anthropic", "gemini", "openai"])
+def test_each_provider_reads_only_its_own_credential(provider: str) -> None:
+    """A deployment holding all three keys still sends to exactly one.
+
+    The others are never even looked at, so a stray credential cannot quietly
+    become the thing that saw the owner's mail.
+    """
+    from trip_planner.config import MODEL_PROVIDERS
+
+    every_key = {name: f"key-for-{name}" for name in MODEL_PROVIDERS.values()}
+    settings = require_settings(
+        COMPLETE_ENV | INBOX_ENV | every_key
+        | {"INBOX_MODEL_PROVIDER": provider, "INBOX_MODEL_NAME": "small-1"}
+    )
+
+    assert settings.model is not None
+    assert settings.model.api_key == f"key-for-{MODEL_PROVIDERS[provider]}"
+
+
+def test_the_selected_provider_without_its_key_is_refused() -> None:
+    """Naming a provider whose credential is absent is a half-configuration."""
+    with pytest.raises(WeakConfiguration, match="ANTHROPIC_API_KEY"):
+        require_settings(
+            COMPLETE_ENV | INBOX_ENV
+            | {"INBOX_MODEL_PROVIDER": "anthropic", "INBOX_MODEL_NAME": "small-1"}
+        )
+
+
+def test_another_providers_key_does_not_satisfy_the_selected_one() -> None:
+    """There is no fallback, so a key for a provider nobody selected is nothing."""
+    with pytest.raises(WeakConfiguration, match="GEMINI_API_KEY"):
+        require_settings(
+            COMPLETE_ENV | INBOX_ENV
+            | {
+                "INBOX_MODEL_PROVIDER": "gemini",
+                "INBOX_MODEL_NAME": "small-1",
+                "ANTHROPIC_API_KEY": "a-key-for-the-wrong-provider",
+            }
+        )
+
+
+def test_an_unknown_provider_is_refused() -> None:
+    """D24 authorised three named services. There is no default and no fourth."""
+    with pytest.raises(WeakConfiguration, match="INBOX_MODEL_PROVIDER"):
+        require_settings(
+            COMPLETE_ENV | INBOX_ENV | MODEL_ENV | {"INBOX_MODEL_PROVIDER": "llama-at-home"}
+        )
+
+
+def test_a_model_name_without_a_provider_is_refused() -> None:
+    with pytest.raises(WeakConfiguration, match="INBOX_MODEL_PROVIDER"):
+        require_settings(COMPLETE_ENV | INBOX_ENV | {"INBOX_MODEL_NAME": "small-1"})
+
+
+def test_a_plaintext_base_url_is_refused() -> None:
+    """The payload is the owner's mail; plaintext is not a configuration choice."""
+    with pytest.raises(WeakConfiguration, match="INBOX_MODEL_BASE_URL"):
+        require_settings(
+            COMPLETE_ENV | INBOX_ENV | MODEL_ENV
+            | {"INBOX_MODEL_BASE_URL": "http://eu.gateway.example"}
+        )
+
+
+def test_a_base_url_is_how_eu_residency_is_configured() -> None:
+    """Residency has to be a configuration change rather than a code change."""
+    settings = require_settings(
+        COMPLETE_ENV | INBOX_ENV | MODEL_ENV
+        | {"INBOX_MODEL_BASE_URL": "https://eu.gateway.example"}
+    )
+
+    assert settings.model is not None
+    assert settings.model.base_url == "https://eu.gateway.example"
+
+
+def test_an_unpriced_model_is_not_considered_priced() -> None:
+    """And an unpriced deployment makes no calls — see `ModelBudget`."""
+    settings = require_settings(COMPLETE_ENV | INBOX_ENV | MODEL_ENV)
+
+    assert settings.model is not None
+    assert not settings.model.priced
+
+
+def test_a_fully_priced_model_is_considered_priced() -> None:
+    settings = require_settings(
+        COMPLETE_ENV | INBOX_ENV | MODEL_ENV
+        | {
+            "INBOX_MODEL_MONTHLY_BUDGET": "5.00",
+            "INBOX_MODEL_INPUT_PRICE": "0.25",
+            "INBOX_MODEL_OUTPUT_PRICE": "1.25",
+        }
+    )
+
+    assert settings.model is not None
+    assert settings.model.priced
+    assert settings.model.monthly_budget == Decimal("5.00")
+
+
+@pytest.mark.parametrize("value", ["not-a-number", "-1"])
+def test_a_nonsense_price_is_refused(value: str) -> None:
+    with pytest.raises(WeakConfiguration, match="INBOX_MODEL_INPUT_PRICE"):
+        require_settings(
+            COMPLETE_ENV | INBOX_ENV | MODEL_ENV | {"INBOX_MODEL_INPUT_PRICE": value}
+        )
+
+
+def test_the_model_settings_repr_does_not_carry_the_api_key() -> None:
+    """It is the one secret this dataclass holds, and it stays in it."""
+    settings = require_settings(COMPLETE_ENV | INBOX_ENV | MODEL_ENV)
+
+    assert "test-key-not-a-real-credential" not in repr(settings.model)
+    assert "test-key-not-a-real-credential" not in repr(settings)

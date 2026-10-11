@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Link } from 'react-router-dom'
 
 import { ApiError } from '../../api/client'
 import type { InboxMessage, InboxMessageDetail, InboxSummary } from '../../api/inbox'
@@ -7,6 +8,7 @@ import { getInboxMessage, getInboxSummary, listInboxMessages } from '../../api/i
 import type { TripSummary } from '../../api/trips'
 import { listTrips } from '../../api/trips'
 import { AppShell } from '../trips/AppShell'
+import { parseIsoDate } from '../trips/format'
 import { MessageView } from './MessageView'
 import { PlaceMessage } from './PlaceMessage'
 import { QuarantineRegion } from './QuarantineRegion'
@@ -147,6 +149,31 @@ export function InboxPage() {
 }
 
 /**
+ * A reason's arguments, with its dates turned into real `Date`s.
+ *
+ * The server sends `{from: '2026-10-04'}` — a string, because that is what
+ * crosses JSON honestly — and the ICU message formats it as
+ * `{from, date, medium}`. Converting here is what makes "no trip covers
+ * 4–11 October" read correctly in Polish and English from one key, rather than
+ * the server shipping a formatted date in one language and the screen
+ * displaying it in the other.
+ *
+ * `parseIsoDate` rather than `new Date(iso)`: the latter parses as UTC midnight
+ * and renders as the day before for anyone west of Greenwich, which the trip
+ * screens already learned.
+ */
+function reasonArguments(message: InboxMessage): Record<string, unknown> {
+  const args = message.routing_reason_args ?? {}
+
+  return Object.fromEntries(
+    Object.entries(args).map(([key, value]) => [
+      key,
+      /^\d{4}-\d{2}-\d{2}$/u.test(value) ? parseIsoDate(value) : value,
+    ]),
+  )
+}
+
+/**
  * When SES last delivered, and when ingestion last failed.
  *
  * Shown always, not only on failure. "Nothing has arrived" and "nothing has
@@ -226,6 +253,8 @@ function MessageRow({
     timeStyle: 'short',
   }).format(new Date(message.received_at))
 
+  const placedOn = trips.find((trip) => trip.id === message.trip_id)
+
   return (
     <li className="inbox-row">
       <p className="inbox-row__from">{message.from_address}</p>
@@ -241,7 +270,19 @@ function MessageRow({
           a string the server composed — which is what stops an untranslated or
           injected sentence reaching the screen through the locale layer. */}
       {message.routing_reason !== null && (
-        <p className="inbox-row__reason">{t(`inbox.reason.${message.routing_reason}`)}</p>
+        <p className="inbox-row__reason">
+          {t(`inbox.reason.${message.routing_reason}`, reasonArguments(message))}
+        </p>
+      )}
+
+      {/* The trip's **current** name, read from the loaded list rather than
+          from the reason's stored arguments: renaming a trip should rename it
+          here too. The stored argument stays in the database as a record of
+          what it matched at the time, which is a different question. */}
+      {placedOn !== undefined && (
+        <p className="inbox-row__trip">
+          {t('inbox.routedTo')} <Link to={`/trips/${placedOn.id}`}>{placedOn.title}</Link>
+        </p>
       )}
 
       <button type="button" className="button-quiet" onClick={toggle} aria-expanded={open}>
@@ -255,6 +296,19 @@ function MessageRow({
 
       {message.state === 'unrouted' && (
         <PlaceMessage message={message} trips={trips} onPlaced={onChanged} />
+      )}
+
+      {/* Re-placement. Offered on a message that already has a trip because the
+          match may simply be wrong — and correcting it is the same request and
+          the same single column, so it is the same control under a different
+          label rather than a second flow. */}
+      {message.state === 'routed' && (
+        <PlaceMessage
+          message={message}
+          trips={trips}
+          onPlaced={onChanged}
+          label={t('inbox.changeTrip')}
+        />
       )}
     </li>
   )

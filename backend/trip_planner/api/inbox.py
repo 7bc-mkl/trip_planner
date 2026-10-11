@@ -262,6 +262,11 @@ class InboxMessageRow(BaseModel):
     state: str
     trip_id: uuid.UUID | None
     routing_reason: str | None
+    #: The values that key is rendered with — `{"from": "2026-10-04", "to":
+    #: "2026-10-11"}`. Sent as data rather than as a formatted sentence so the
+    #: screen renders it in whichever locale is active, and so nothing a sender
+    #: or a provider wrote can reach the owner through the locale layer.
+    routing_reason_args: dict[str, str] | None
     last_error: str | None
     attachment_count: int
 
@@ -665,6 +670,7 @@ def _row_fields(message: InboundMessage) -> dict[str, Any]:
         "state": message.state,
         "trip_id": message.trip_id,
         "routing_reason": message.routing_reason,
+        "routing_reason_args": message.routing_reason_args,
         "last_error": message.last_error,
     }
 

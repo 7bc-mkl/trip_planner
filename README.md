@@ -161,6 +161,67 @@ A QA or staging environment sets the same variables; copy
 `.ai/qa/test-env.env.example` to `.ai/qa/test-env.env` (gitignored) and fill it
 in.
 
+### Routing a confirmation to a trip (optional, and separate)
+
+With the inbox configured but **no model**, every forwarded confirmation is
+stored, readable and placeable by hand. That is a complete, useful product and
+is what the deployment does until the four variables below are set.
+
+Adding a model lets a confirmation arrive already pointed at its trip. **One
+provider is selected explicitly and there is no fallback** — D24 authorised one
+named service to read this mail, not whichever happens to be up — so switching
+later is a deliberate configuration change rather than something that happens
+during an outage.
+
+| Variable | What it is |
+|---|---|
+| `INBOX_MODEL_PROVIDER` | `anthropic`, `gemini` or `openai`. No default. |
+| `INBOX_MODEL_NAME` | The exact model identifier. The task is picking one of at most five candidate trips, so a small, cheap tier is the right choice rather than a frontier model. |
+| *the selected provider's key* | `ANTHROPIC_API_KEY`, `GEMINI_API_KEY` or `OPENAI_API_KEY`. **Only the selected provider's key is read** — a deployment holding all three still sends to exactly one. |
+
+| Optional | Default | What it is |
+|---|---|---|
+| `INBOX_MODEL_BASE_URL` | the provider's own host | Override the API host. This is the knob for **EU data residency** or for routing through a gateway; it must be `https://`. |
+| `INBOX_MODEL_MONTHLY_BUDGET` | *(unset)* | Maximum spend per billing month. |
+| `INBOX_MODEL_INPUT_PRICE` | *(unset)* | Price per million input tokens. |
+| `INBOX_MODEL_OUTPUT_PRICE` | *(unset)* | Price per million output tokens. |
+
+**The budget fails closed, deliberately.** With any of the three price settings
+unset, no model call is made at all — an unpriced deployment is not an unlimited
+one. The alternative is billing you an unknown amount because the configuration
+was never finished, and of the two ways to be wrong, a feature that visibly does
+nothing is recoverable where a surprise invoice is not. Spend is measured from
+the usage each provider reports, summed over `inbound_model_egress`.
+
+#### Before you enable it
+
+D24 leaves two things to you deliberately, and they are not code decisions:
+
+1. **Review the selected provider's data-retention and training terms.** The
+   text that leaves is a confirmation: your name, an itinerary, booking
+   references, sometimes part of a card number. The three providers' terms
+   differ and this project does not claim otherwise.
+2. **Decide whether you need EU processing**, and if so point
+   `INBOX_MODEL_BASE_URL` at a regional endpoint.
+
+#### What leaves, and what does not
+
+Per routing call: the message text (truncated to 24 000 characters), its `From`,
+`Subject` and `Date`, and for each **candidate** trip its id, title, destination
+names and date range. Nothing else — no items, no notes, no confirmation
+numbers, no costs, and **no attachment byte**. A trip that is not a candidate is
+never named. All of this is asserted against a captured request body in
+`backend/tests/test_integrations_model.py`.
+
+A message no trip's dates cover never reaches a provider at all.
+
+#### When it fails
+
+A dead or slow provider is retried three times and then the message lands in the
+unrouted queue with a reason you can read — never a failed page, and never lost
+mail. Every attempt is recorded in `inbound_model_egress` **before** the call is
+made, so a timeout cannot erase the fact that your text may have left.
+
 ## Local deployment
 
 Three shapes, in increasing fidelity to production. Start with the first for

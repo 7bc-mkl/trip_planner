@@ -422,8 +422,34 @@ def owner_client_with_inbox(
     application.dependency_overrides.clear()
 
 
+def _plan_symbols_used_in(source: str) -> set[str]:
+    """Plan-table names the module actually *references*, ignoring prose.
+
+    Parsed rather than grepped. The substring version of this check read
+    comments too, so a line explaining that items are deliberately **not** sent
+    to a provider counted as a violation — the exact opposite of what it says.
+    A test that fires on a comment saying "we do not do this" teaches people to
+    delete the comment.
+
+    The AST sees only code: an import, a name, an attribute. That is strictly
+    more precise and strictly harder to fool than the grep was.
+    """
+    import ast
+
+    tree = ast.parse(source)
+    used: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Name):
+            used.add(node.id)
+        elif isinstance(node, ast.Attribute):
+            used.add(node.attr)
+        elif isinstance(node, ast.alias):
+            used.add(node.asname or node.name.split(".")[-1])
+    return used & {"Item", "TripDay", "ItemRead", "ItemDetail"}
+
+
 def test_the_inbox_writes_to_no_plan_table_from_its_own_modules() -> None:
-    """No module under `inbound/` names `Item` at all.
+    """No module under `inbound/` so much as references `Item` or `TripDay`.
 
     The strongest available form of "every inbound-originated write goes through
     an approval the owner gave". Scoped to the inbox's own modules because
@@ -431,20 +457,21 @@ def test_the_inbox_writes_to_no_plan_table_from_its_own_modules() -> None:
     where an inbound write *could* originate, not about the table being
     read-only.
 
-    Phase 1 has no approval path yet, so today the claim is stronger still:
-    nothing inbound-originated writes to a plan under any circumstances.
+    `Trip` is deliberately **not** on this list: routing has to read the owner's
+    trips to compute candidates at all. What it may do with one is write its id
+    onto `inbound_message.trip_id` and nothing else, which the runtime test
+    below asserts rather than inferring from imports.
     """
     from pathlib import Path
 
     inbound = Path(__file__).resolve().parents[1] / "trip_planner" / "inbound"
-    offenders: list[str] = []
+    offenders = {
+        module.name: sorted(used)
+        for module in sorted(inbound.glob("*.py"))
+        if (used := _plan_symbols_used_in(module.read_text(encoding="utf-8")))
+    }
 
-    for module in sorted(inbound.glob("*.py")):
-        source = module.read_text(encoding="utf-8")
-        if "Item" in source or "TripDay" in source:
-            offenders.append(module.name)
-
-    assert offenders == [], (
+    assert offenders == {}, (
         f"modules under inbound/ reference a plan table: {offenders}. Every "
         "inbound-originated write must go through an owner-approved path."
     )
@@ -454,12 +481,12 @@ def test_the_scheduler_writes_to_no_plan_table_either() -> None:
     """The worker is the other place an inbound write could originate."""
     from pathlib import Path
 
+
     scheduler = (
         Path(__file__).resolve().parents[1] / "trip_planner" / "scheduler.py"
     ).read_text(encoding="utf-8")
 
-    assert "Item" not in scheduler
-    assert "TripDay" not in scheduler
+    assert _plan_symbols_used_in(scheduler) == set()
 
 
 def test_ingestion_never_touches_an_item(

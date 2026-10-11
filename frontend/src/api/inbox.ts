@@ -44,6 +44,14 @@ export type InboxMessage = {
   trip_id: string | null
   /** A translation-key suffix. See the module note. */
   routing_reason: string | null
+  /**
+   * The values that key renders with — `{from: '2026-10-04', to: '2026-10-11'}`.
+   *
+   * Data rather than a formatted sentence, which is what lets the screen say
+   * "no trip covers 4–11 October" in either language without the server
+   * owning a word of it.
+   */
+  routing_reason_args: Record<string, string> | null
   /** A translation-key suffix. See the module note. */
   last_error: string | null
   attachment_count: number

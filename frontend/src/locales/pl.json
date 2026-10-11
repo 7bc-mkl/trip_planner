@@ -260,7 +260,16 @@
       "ingest_failed": "Nie udało się pobrać wiadomości.",
       "inbox_object_unavailable": "Oryginalna wiadomość nie jest już przechowywana.",
       "inbox_rate_limited": "Naraz dotarło dużo poczty — ta czeka w kolejce.",
-      "inbox_storage_full": "Skrzynka jest pełna — ta wiadomość czeka w kolejce."
-    }
+      "inbox_storage_full": "Skrzynka jest pełna — ta wiadomość czeka w kolejce.",
+      "routed_by_model": "Dopasowano automatycznie na podstawie dat w tej wiadomości.",
+      "model_found_no_trip": "Żadna z Twoich podróży nie pasuje do tej wiadomości.",
+      "no_dates_found": "Nie udało się odczytać z tej wiadomości żadnych dat podróży.",
+      "no_trip_covers_dates": "Żadna podróż nie obejmuje {from, date, medium} – {to, date, medium}.",
+      "routing_failed": "Nie udało się automatycznie dopasować wiadomości do podróży.",
+      "routing_refused": "Automatyczne dopasowanie było nieczytelne, więc wiadomość czeka na Ciebie.",
+      "routing_budget_exhausted": "Automatyczne dopasowanie wstrzymane — budżet na ten miesiąc wyczerpany."
+    },
+    "routedTo": "Podróż:",
+    "changeTrip": "Zmień podróż"
   }
 }

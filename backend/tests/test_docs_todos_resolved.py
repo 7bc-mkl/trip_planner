@@ -103,3 +103,49 @@ def test_the_qa_template_carries_no_filled_in_secret() -> None:
     # No AWS key material belongs in a committed file even as an example.
     assert "AKIA" not in template
     assert "aws_secret_access_key" not in template.lower()
+
+
+def test_every_model_variable_is_documented_where_an_operator_looks() -> None:
+    """A provider setting that exists only in `config.py` cannot be found.
+
+    The same gate the inbox variables already have, extended to the model block:
+    a variable renamed in code and not in the docs fails here rather than in a
+    deployment that silently never routes anything.
+    """
+    from trip_planner.config import (
+        MODEL_ENVIRONMENT_VARIABLES,
+        MODEL_OPTIONAL_ENVIRONMENT_VARIABLES,
+        MODEL_PROVIDERS,
+    )
+
+    readme = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
+    template = (REPO_ROOT / ".ai/qa/test-env.env.example").read_text(encoding="utf-8")
+
+    names = (
+        set(MODEL_ENVIRONMENT_VARIABLES)
+        | set(MODEL_OPTIONAL_ENVIRONMENT_VARIABLES)
+        | set(MODEL_PROVIDERS.values())
+    )
+    for name in names:
+        assert name in readme, f"README.md does not document {name}"
+        assert name in template, f".ai/qa/test-env.env.example does not mention {name}"
+
+
+def test_the_docs_say_the_budget_fails_closed() -> None:
+    """The one behaviour an operator would otherwise discover by it not working.
+
+    An unpriced deployment makes no model calls at all. That is deliberate and
+    surprising, which is exactly the combination that belongs in the README
+    rather than only in a docstring.
+    """
+    readme = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
+
+    assert "fails closed" in readme.lower()
+
+
+def test_the_docs_hand_the_provider_terms_review_to_the_operator() -> None:
+    """D24 left it to them explicitly, so the README has to say so."""
+    readme = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
+
+    assert "retention" in readme.lower()
+    assert "INBOX_MODEL_BASE_URL" in readme
