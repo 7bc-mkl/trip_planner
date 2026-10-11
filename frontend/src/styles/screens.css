@@ -1091,3 +1091,10 @@ fieldset.field-card {
   margin-left: var(--space-xs);
   font-weight: 600;
 }
+
+/* The trip a message was matched to, under its reason. */
+.inbox-row__trip {
+  font: var(--type-body-sm);
+  letter-spacing: var(--tracking-body-sm);
+  color: var(--text-muted);
+}

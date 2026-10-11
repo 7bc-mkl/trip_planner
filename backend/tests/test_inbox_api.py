@@ -904,3 +904,61 @@ def test_a_release_that_fails_transiently_keeps_the_message_releasable(
     second = owner_client.post(f"{INBOX}/quarantine/{message.id}/release")
     assert second.status_code == 200
     assert second.json()["state"] == "received"
+
+
+def test_a_routing_reason_travels_with_its_arguments(
+    owner_client: TestClient, db_session: OrmSession, owner: Owner
+) -> None:
+    """Data, not a formatted sentence.
+
+    The screen renders *"no trip covers 17–18 October"* in whichever language is
+    active from one key — which is only possible if the server sends the values
+    rather than the words.
+    """
+    make_message(
+        db_session,
+        owner,
+        state="unrouted",
+        routing_reason="no_trip_covers_dates",
+        routing_reason_args={"from": "2026-10-17", "to": "2026-10-18"},
+    )
+
+    row = owner_client.get(f"{INBOX}/messages").json()[0]
+
+    assert row["routing_reason"] == "no_trip_covers_dates"
+    assert row["routing_reason_args"] == {"from": "2026-10-17", "to": "2026-10-18"}
+
+
+def test_a_reason_with_no_arguments_sends_null_rather_than_an_empty_object(
+    owner_client: TestClient, db_session: OrmSession, owner: Owner
+) -> None:
+    """A Phase 1 reason needs no arguments, and null says so unambiguously."""
+    make_message(db_session, owner, state="routed", routing_reason="placed_by_hand")
+
+    row = owner_client.get(f"{INBOX}/messages").json()[0]
+
+    assert row["routing_reason_args"] is None
+
+
+def test_the_reason_carries_no_prose_from_the_server(
+    owner_client: TestClient, db_session: OrmSession, owner: Owner
+) -> None:
+    """The whole mechanism that keeps model-authored text off the screen.
+
+    Every value the server sends for a reason is a stable code or a datum. If a
+    sentence ever appeared here, the locale layer would be bypassed and an
+    injected string would have a path to the owner.
+    """
+    make_message(
+        db_session,
+        owner,
+        state="unrouted",
+        routing_reason="no_trip_covers_dates",
+        routing_reason_args={"from": "2026-10-17", "to": "2026-10-18"},
+    )
+
+    row = owner_client.get(f"{INBOX}/messages").json()[0]
+
+    assert " " not in row["routing_reason"]
+    for value in (row["routing_reason_args"] or {}).values():
+        assert " " not in value

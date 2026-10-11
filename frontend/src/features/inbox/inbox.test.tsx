@@ -58,6 +58,7 @@ const MESSAGE = {
   state: 'received' as const,
   trip_id: null,
   routing_reason: null,
+  routing_reason_args: null,
   last_error: null,
   attachment_count: 1,
 }
@@ -509,5 +510,138 @@ describe('both locales', () => {
     await renderInbox({ messages: [MESSAGE] }, 'en')
 
     expect(await screen.findByText(/1 document/)).toBeInTheDocument()
+  })
+})
+
+
+describe('the routed state', () => {
+  const ROUTED = {
+    ...MESSAGE,
+    state: 'routed' as const,
+    trip_id: TRIP.id,
+    routing_reason: 'routed_by_model',
+    routing_reason_args: { trip: TRIP.title },
+    attachment_count: 0,
+  }
+
+  it('names the trip the message was matched to, and links to it', async () => {
+    await renderInbox({ messages: [ROUTED] })
+
+    const link = await screen.findByRole('link', { name: TRIP.title })
+    expect(link).toHaveAttribute('href', `/trips/${TRIP.id}`)
+  })
+
+  it('shows the trip as it is named now, not as it was when matched', async () => {
+    // The stored argument is a record of what it matched at the time; the
+    // screen is answering a different question — what is this trip called.
+    await renderInbox({
+      messages: [{ ...ROUTED, routing_reason_args: { trip: 'Stara nazwa' } }],
+    })
+
+    expect(await screen.findByRole('link', { name: TRIP.title })).toBeInTheDocument()
+    expect(screen.queryByText('Stara nazwa')).not.toBeInTheDocument()
+  })
+
+  it('explains that the match was automatic', async () => {
+    await renderInbox({ messages: [ROUTED] })
+
+    expect(
+      await screen.findByText(/Dopasowano automatycznie/),
+    ).toBeInTheDocument()
+  })
+
+  it('offers re-placement, because the match may simply be wrong', async () => {
+    await renderInbox({ messages: [ROUTED] })
+
+    expect(await screen.findByRole('button', { name: 'Zmień podróż' })).toBeInTheDocument()
+  })
+
+  it('starts re-placement from the trip it is already on', async () => {
+    // Blank would make correcting a near-miss a two-step job.
+    await renderInbox({ messages: [ROUTED] })
+
+    const picker = await screen.findByLabelText('Której podróży dotyczy?')
+    expect(picker).toHaveValue(TRIP.id)
+  })
+
+  it('re-places onto the trip the owner chooses', async () => {
+    await renderInbox({ messages: [ROUTED] })
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Zmień podróż' }))
+
+    await waitFor(() =>
+      expect(
+        requests.find((one) => one.method === 'POST' && one.url.endsWith('/place')),
+      ).toMatchObject({ body: { trip_id: TRIP.id } }),
+    )
+  })
+})
+
+describe('why a message was not routed', () => {
+  const unroutedWith = (reason: string, args: Record<string, string> | null = null) => ({
+    ...MESSAGE,
+    state: 'unrouted' as const,
+    routing_reason: reason,
+    routing_reason_args: args,
+    attachment_count: 0,
+  })
+
+  it('names the dates when no trip covers them', async () => {
+    // Specific enough to act on: it tells him to check his dates rather than
+    // merely that something did not work.
+    await renderInbox({
+      messages: [unroutedWith('no_trip_covers_dates', { from: '2026-10-17', to: '2026-10-18' })],
+    })
+
+    expect(await screen.findByText(/Żadna podróż nie obejmuje/)).toBeInTheDocument()
+  })
+
+  it('formats those dates through the locale rather than echoing the server', async () => {
+    // The server sends ISO strings; ICU renders them. A server-formatted date
+    // would be in one language on a screen showing the other.
+    await renderInbox({
+      messages: [unroutedWith('no_trip_covers_dates', { from: '2026-10-17', to: '2026-10-18' })],
+    })
+
+    const reason = await screen.findByText(/Żadna podróż nie obejmuje/)
+    expect(reason.textContent).toContain('paź')
+    expect(reason.textContent).not.toContain('2026-10-17')
+  })
+
+  it('renders the same reason in English', async () => {
+    await renderInbox(
+      {
+        messages: [
+          unroutedWith('no_trip_covers_dates', { from: '2026-10-17', to: '2026-10-18' }),
+        ],
+      },
+      'en',
+    )
+
+    const reason = await screen.findByText(/No trip covers/)
+    expect(reason.textContent).toContain('Oct')
+  })
+
+  it.each([
+    ['no_dates_found', /Nie udało się odczytać/],
+    ['model_found_no_trip', /Żadna z Twoich podróży/],
+    ['routing_failed', /Nie udało się automatycznie dopasować/],
+    ['routing_refused', /nieczytelne/],
+    ['routing_budget_exhausted', /budżet na ten miesiąc/i],
+  ])('explains %s in the owner\'s language', async (reason, expected) => {
+    await renderInbox({ messages: [unroutedWith(reason)] })
+
+    expect(await screen.findByText(expected)).toBeInTheDocument()
+  })
+
+  it('never renders a raw reason key', async () => {
+    // The keys are codes precisely so no sender-authored or model-authored
+    // string can reach the screen; showing the key itself would mean a missing
+    // translation shipped silently.
+    await renderInbox({ messages: [unroutedWith('no_dates_found')] })
+
+    await screen.findByText(/Nie udało się odczytać/)
+    expect(screen.queryByText('no_dates_found')).not.toBeInTheDocument()
+    expect(screen.queryByText(/inbox\.reason\./)).not.toBeInTheDocument()
   })
 })

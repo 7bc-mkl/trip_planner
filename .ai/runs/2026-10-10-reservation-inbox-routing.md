@@ -110,5 +110,5 @@ failure mode and budget. Verify: each documented variable name matches
 
 ### Phase 3: Surfacing it
 
-- [ ] 2.4 The routed state in the UI
+- [x] 2.4 The routed state in the UI — HEAD
 - [ ] 2.5 README and AGENTS.md for the model integration
