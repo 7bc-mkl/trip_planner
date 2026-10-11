@@ -106,7 +106,7 @@ failure mode and budget. Verify: each documented variable name matches
 ### Phase 2: The model boundary
 
 - [x] 2.2 `integrations/model.py`, the three adapters, and the egress migration — c7441d0
-- [x] 2.3 Routing wired into the ingestion worker — HEAD
+- [x] 2.3 Routing wired into the ingestion worker — fbd0c30
 
 ### Phase 3: Surfacing it
 
