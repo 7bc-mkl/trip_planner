@@ -24,6 +24,7 @@ from __future__ import annotations
 import os
 import re
 from dataclasses import dataclass
+from decimal import Decimal, InvalidOperation
 from functools import lru_cache
 
 #: Variables the application refuses to start without, with what each is for.
@@ -98,6 +99,40 @@ INBOX_OPTIONAL_ENVIRONMENT_VARIABLES: dict[str, str] = {
     ),
 }
 
+#: The providers D24 permits, and the credential each one reads.
+#:
+#: **Exactly one is selected per deployment and there is no fallback.** A
+#: fallback would silently widen the egress decision the owner made: he
+#: authorised one named service to see his mail, not whichever is up.
+MODEL_PROVIDERS: dict[str, str] = {
+    "anthropic": "ANTHROPIC_API_KEY",
+    "gemini": "GEMINI_API_KEY",
+    "openai": "OPENAI_API_KEY",
+}
+
+#: Set together or not at all, like the inbox block above.
+MODEL_ENVIRONMENT_VARIABLES: dict[str, str] = {
+    "INBOX_MODEL_PROVIDER": f"one of {sorted(MODEL_PROVIDERS)}; no default, and no fallback",
+    "INBOX_MODEL_NAME": (
+        "the exact model identifier to call, e.g. the provider's small/cheap tier — "
+        "routing picks one of at most five candidates, which is not a frontier task"
+    ),
+}
+
+#: Optional, with a documented default each.
+MODEL_OPTIONAL_ENVIRONMENT_VARIABLES: dict[str, str] = {
+    "INBOX_MODEL_BASE_URL": (
+        "override the provider's API host — the knob for EU data residency or a "
+        "gateway; default: the provider's own global endpoint"
+    ),
+    "INBOX_MODEL_MONTHLY_BUDGET": (
+        "maximum spend per billing month, in the price schedule's currency. "
+        "**Calls stop when it is reached**; default: unset, which also stops calls"
+    ),
+    "INBOX_MODEL_INPUT_PRICE": "price per million input tokens; default: unset",
+    "INBOX_MODEL_OUTPUT_PRICE": "price per million output tokens; default: unset",
+}
+
 #: 40 MB — the message size the spec's Edge Cases table names. Past it the object
 #: is not fetched at all: the cap is on the *read*, so a hostile 2 GB object
 #: costs one `HEAD`-sized decision rather than 2 GB of memory.
@@ -137,6 +172,52 @@ class InboxSettings:
 
 
 @dataclass(frozen=True, slots=True)
+class ModelSettings:
+    """Which model may read a forwarded confirmation, and what it may cost.
+
+    Separate from `InboxSettings` because the two boundaries are separate and
+    the spec insists they be reviewed separately: AWS stores the owner's raw
+    mail, and the model provider is shown its text. An inbox with no model is a
+    supported, useful deployment — Phase 1 is exactly that — so a missing model
+    configuration disables routing without disabling the inbox.
+
+    **The API key is here and nowhere else**, and it is the one secret this
+    dataclass holds. `__repr__` is overridden so it cannot reach a log line
+    through something that formats settings.
+    """
+
+    provider: str
+    model: str
+    api_key: str
+    #: `None` means the provider's own global endpoint. Set it for EU residency
+    #: or to route through a gateway — the whole reason it exists is that
+    #: residency should be a configuration change rather than a code change.
+    base_url: str | None
+    monthly_budget: Decimal | None
+    input_price_per_mtok: Decimal | None
+    output_price_per_mtok: Decimal | None
+
+    @property
+    def priced(self) -> bool:
+        """Whether a call's cost can be computed at all.
+
+        The spec is explicit: *when usage or price is unavailable, stop model
+        calls rather than treating cost as zero*. An unpriced deployment is
+        therefore not an unlimited one — it makes no calls, which is the only
+        reading of "unknown cost" that cannot surprise the owner with a bill.
+        """
+        return (
+            self.monthly_budget is not None
+            and self.input_price_per_mtok is not None
+            and self.output_price_per_mtok is not None
+        )
+
+    def __repr__(self) -> str:
+        """Excludes `api_key`. It is the only secret here and it stays here."""
+        return f"<ModelSettings provider={self.provider!r} model={self.model!r}>"
+
+
+@dataclass(frozen=True, slots=True)
 class Settings:
     database_url: str
     session_secret: str
@@ -144,10 +225,18 @@ class Settings:
     environment: str
     #: `None` when the deployment has no inbox configuration — a normal state.
     inbox: InboxSettings | None = None
+    #: `None` when no model is configured. Also a normal state: the inbox then
+    #: behaves exactly as Phase 1 shipped — stored and queued, no egress.
+    model: ModelSettings | None = None
 
     @property
     def inbox_enabled(self) -> bool:
         return self.inbox is not None
+
+    @property
+    def routing_enabled(self) -> bool:
+        """Routing needs both halves: somewhere for mail to arrive, and a reader."""
+        return self.inbox is not None and self.model is not None
 
     @property
     def is_production(self) -> bool:
@@ -218,7 +307,85 @@ def require_settings(environ: dict[str, str] | None = None) -> Settings:
         app_base_url=app_base_url,
         environment=environment,
         inbox=resolve_inbox_settings(env),
+        model=resolve_model_settings(env),
     )
+
+
+def resolve_model_settings(env: dict[str, str]) -> ModelSettings | None:
+    """The model configuration, or `None` when this deployment has none.
+
+    Same three outcomes as the inbox block, and the same reasoning: nothing set
+    is off, everything set is on, and a partial configuration raises rather than
+    starting something half-wired. Off is a supported state — the deployment
+    keeps the whole Phase 1 inbox and simply never sends anything anywhere.
+    """
+    present = {name for name in MODEL_ENVIRONMENT_VARIABLES if env.get(name, "").strip()}
+    if not present:
+        return None
+
+    missing = sorted(set(MODEL_ENVIRONMENT_VARIABLES) - present)
+    if missing:
+        details = "\n".join(f"  - {name}: {MODEL_ENVIRONMENT_VARIABLES[name]}" for name in missing)
+        raise WeakConfiguration(
+            "The inbox model is partly configured, which is worse than not "
+            f"configured: {sorted(present)} are set but these are not:\n{details}\n"
+            "Set them, or unset every INBOX_MODEL_* variable to run the inbox without routing."
+        )
+
+    provider = env["INBOX_MODEL_PROVIDER"].strip().lower()
+    if provider not in MODEL_PROVIDERS:
+        raise WeakConfiguration(
+            f"INBOX_MODEL_PROVIDER must be one of {sorted(MODEL_PROVIDERS)}; got {provider!r}. "
+            "D24 authorised one explicitly selected provider; there is no default."
+        )
+
+    # **Only the selected provider's key is read.** A deployment that happens to
+    # have all three in its environment still sends to exactly one, and a key
+    # for a provider that is not selected is never even looked at — so a stray
+    # credential cannot quietly become the thing that saw the owner's mail.
+    key_variable = MODEL_PROVIDERS[provider]
+    api_key = env.get(key_variable, "").strip()
+    if not api_key:
+        raise WeakConfiguration(
+            f"INBOX_MODEL_PROVIDER is {provider!r}, so {key_variable} must be set. "
+            "No other provider's key is consulted."
+        )
+
+    base_url = env.get("INBOX_MODEL_BASE_URL", "").strip() or None
+    if base_url is not None and not base_url.startswith("https://"):
+        # The payload is the owner's mail. Plaintext is not a configuration
+        # choice this application is willing to accept.
+        raise WeakConfiguration(
+            f"INBOX_MODEL_BASE_URL must be an https:// URL; got {base_url!r}"
+        )
+
+    return ModelSettings(
+        provider=provider,
+        model=env["INBOX_MODEL_NAME"].strip(),
+        api_key=api_key,
+        base_url=base_url,
+        monthly_budget=_decimal(env, "INBOX_MODEL_MONTHLY_BUDGET"),
+        input_price_per_mtok=_decimal(env, "INBOX_MODEL_INPUT_PRICE"),
+        output_price_per_mtok=_decimal(env, "INBOX_MODEL_OUTPUT_PRICE"),
+    )
+
+
+def _decimal(env: dict[str, str], name: str) -> Decimal | None:
+    """A money-shaped setting, or `None`. `Decimal`, never `float`.
+
+    Same rule as the shipped `item.cost_amount`: money that is almost right is
+    wrong, and a budget compared with floating point drifts.
+    """
+    raw = env.get(name, "").strip()
+    if not raw:
+        return None
+    try:
+        value = Decimal(raw)
+    except InvalidOperation as error:
+        raise WeakConfiguration(f"{name} must be a decimal number; got {raw!r}") from error
+    if value < 0:
+        raise WeakConfiguration(f"{name} cannot be negative; got {raw!r}")
+    return value
 
 
 def resolve_inbox_settings(env: dict[str, str]) -> InboxSettings | None:
