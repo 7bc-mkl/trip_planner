@@ -18,7 +18,14 @@ from trip_planner.db.base import Base
 config = context.config
 
 if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
+    # `disable_existing_loggers=False` is not a preference. `fileConfig`'s
+    # default is `True`, which switches off **every logger that already
+    # exists** — so running a migration in the same process as the application
+    # silently disables `trip_planner.*` logging for the rest of that process's
+    # life. The test suite migrates at session start, which made every
+    # application log line vanish for the whole run and any assertion about one
+    # fail for a reason nothing in it mentions.
+    fileConfig(config.config_file_name, disable_existing_loggers=False)
 
 target_metadata = Base.metadata
 

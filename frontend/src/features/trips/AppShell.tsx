@@ -23,6 +23,7 @@ export function AppShell({
   title,
   breadcrumb,
   actions,
+  badge,
   context,
   dock,
   children,
@@ -30,6 +31,15 @@ export function AppShell({
   title: string
   breadcrumb?: ReactNode
   actions?: ReactNode
+  /**
+   * One slot in the header controls, beside the locale switch and sign-out.
+   *
+   * Optional, and a screen that passes nothing renders the header exactly as it
+   * was — which is what keeps the reservation inbox's arrival invisible to a
+   * deployment that has not configured it. The badge decides for itself whether
+   * it has anything to say; this is only where it goes.
+   */
+  badge?: ReactNode
   /**
    * The trip a trip-scoped route is showing, named in the header between the
    * wordmark and the controls: the title and its date range, truncated to one
@@ -67,6 +77,7 @@ export function AppShell({
           </Link>
           {context !== undefined && <p className="app-header__context">{context}</p>}
           <div className="app-header__controls">
+            {badge}
             <LocaleSwitch
               onChange={(locale) => {
                 // Signed in, the choice is stored on the owner rather than only

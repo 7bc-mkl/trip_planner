@@ -26,6 +26,10 @@ export type ErrorCode =
   | 'invalid_cost'
   | 'invalid_reservation_field'
   | 'days_have_attachments'
+  | 'inbox_not_configured'
+  | 'message_not_routable'
+  | 'inbox_rate_limited'
+  | 'inbox_object_unavailable'
 
 export const ERROR_CODES: readonly ErrorCode[] = [
   'invalid_credentials',
@@ -52,4 +56,8 @@ export const ERROR_CODES: readonly ErrorCode[] = [
   'invalid_cost',
   'invalid_reservation_field',
   'days_have_attachments',
+  'inbox_not_configured',
+  'message_not_routable',
+  'inbox_rate_limited',
+  'inbox_object_unavailable',
 ] as const

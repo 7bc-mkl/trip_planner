@@ -6,6 +6,11 @@
 .ai/qa/test-env-build-cache.json
 .ai/qa/.test-env.pid
 .ai/qa/.test-env.lock/
+# Real forwarded confirmations, for the A07/A08 paper check and for deriving
+# fixtures. THIS REPOSITORY IS PUBLIC: these carry names, itineraries, booking
+# references and part card numbers, and a commit is world-readable for ever.
+# What gets committed is the redacted fixture derived from them, never these.
+.ai/qa/fixtures-inbound/
 .ai/cezar/
 # Note: .ai/scripts/ IS committed — the env launchers must be reproducible.
 

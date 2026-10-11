@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom'
 import { listTrips } from '../../api/trips'
 import type { TripSummary } from '../../api/trips'
 import { ApiError } from '../../api/client'
+import { InboxBadge } from '../inbox/InboxBadge'
 import { AppShell } from './AppShell'
 import { ReadinessTile } from './ReadinessTile'
 import { formatDateRange, routeSummary } from './format'
@@ -46,6 +47,7 @@ export function TripListPage() {
   return (
     <AppShell
       title={t('trips.title')}
+      badge={<InboxBadge />}
       actions={
         <Link className="button-primary" to="/trips/new">
           {t('trips.new')}

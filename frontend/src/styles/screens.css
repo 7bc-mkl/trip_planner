@@ -948,3 +948,146 @@ fieldset.field-card {
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+/* --- /inbox ---------------------------------------------------------------
+ *
+ * Screen-scoped, so it lives here rather than in the component layer: none of
+ * these rules could appear on a second screen. Every value is an existing
+ * token — no new colour, radius or border — which is what keeps
+ * `check_css_tokens.py` and `check_contrast.py` green without a new declared
+ * pair (spec, UI/UX).
+ */
+
+.inbox-region + .inbox-region {
+  margin-top: var(--space-xl);
+}
+
+.inbox-region h2 {
+  font: var(--type-headline-sm);
+  letter-spacing: var(--tracking-headline-sm);
+  margin-bottom: var(--space-sm);
+}
+
+.inbox-status {
+  color: var(--text-muted);
+  font: var(--type-body-sm);
+  letter-spacing: var(--tracking-body-sm);
+  margin-bottom: var(--space-lg);
+}
+
+/* The failure half of the freshness line, distinguished by weight and by the
+   words themselves — never by colour alone, which a person who cannot see the
+   difference would simply miss. */
+.inbox-status__error {
+  font-weight: 600;
+}
+
+.inbox-address {
+  /* The forwarding address is a string he copies character by character, so it
+     is set in a face where l, 1 and I do not collide. No new token: the stack
+     is stated here because it exists for exactly this one line. */
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.inbox-list {
+  list-style: none;
+  display: grid;
+  gap: var(--space-md);
+}
+
+.inbox-row,
+.inbox-quarantine > li {
+  display: grid;
+  gap: var(--space-xs);
+  padding: var(--space-md);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--elevation-1);
+}
+
+.inbox-row__from,
+.inbox-quarantine__from {
+  color: var(--text-muted);
+  font: var(--type-body-sm);
+  letter-spacing: var(--tracking-body-sm);
+  overflow-wrap: anywhere;
+}
+
+.inbox-row__subject,
+.inbox-quarantine__subject {
+  font-weight: 600;
+}
+
+.inbox-row__meta,
+.inbox-row__reason,
+.inbox-quarantine__reason {
+  color: var(--text-muted);
+  font: var(--type-body-sm);
+  letter-spacing: var(--tracking-body-sm);
+}
+
+.inbox-quarantine {
+  list-style: none;
+  display: grid;
+  gap: var(--space-md);
+  margin-top: var(--space-md);
+}
+
+/* The message body. `pre-wrap` keeps the sender's own line breaks without a
+   single tag being introduced to carry them — the text is text, and there is
+   no markup anywhere in this subtree to render. */
+.inbox-message__body {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  margin-top: var(--space-sm);
+}
+
+.inbox-message__empty {
+  color: var(--text-muted);
+  font: var(--type-body-sm);
+  letter-spacing: var(--tracking-body-sm);
+  margin-top: var(--space-sm);
+}
+
+.inbox-message__documents {
+  list-style: none;
+  display: grid;
+  gap: var(--space-xs);
+  margin-top: var(--space-sm);
+}
+
+.inbox-message__documents > li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.inbox-message__filename {
+  overflow-wrap: anywhere;
+}
+
+.inbox-message__size {
+  color: var(--text-muted);
+  font: var(--type-body-sm);
+  letter-spacing: var(--tracking-body-sm);
+}
+
+.inbox-place {
+  display: grid;
+  gap: var(--space-xs);
+  margin-top: var(--space-sm);
+}
+
+.inbox-place__hint {
+  color: var(--text-muted);
+  font: var(--type-body-sm);
+  letter-spacing: var(--tracking-body-sm);
+}
+
+.inbox-badge__count {
+  margin-left: var(--space-xs);
+  font-weight: 600;
+}

@@ -40,15 +40,20 @@ RESOLVED = [
         "TODO: name the validation library",
         "request validation is Pydantic v2 with extra=\"forbid\" (spec A7)",
     ),
-]
-
-STILL_OPEN = [
     (
         "AGENTS.md",
         "TODO — integration module not yet created",
-        "D04 and R07 exclude external calls from the first version",
+        "backend/trip_planner/inbound/ is the integration module, added by the "
+        "reservation inbox's first phase. D04 and R07 exclude live price, inventory "
+        "and vendor lookup — they have never excluded taking delivery of mail the "
+        "owner forwarded himself, which is what D20 and D25 ask for",
     ),
 ]
+
+#: Empty, and that is a real state rather than a placeholder: every TODO row the
+#: earlier milestones left has now been answered by the code that established the
+#: convention. A new row added to a doc belongs here until it is.
+STILL_OPEN: list[tuple[str, str, str]] = []
 
 
 @pytest.mark.parametrize(("filename", "marker", "because"), RESOLVED)
@@ -57,7 +62,44 @@ def test_resolved_todo_is_gone(filename: str, marker: str, because: str) -> None
     assert marker not in text, f"{filename} still carries '{marker}', but {because}"
 
 
-@pytest.mark.parametrize(("filename", "marker", "because"), STILL_OPEN)
-def test_open_todo_is_still_recorded(filename: str, marker: str, because: str) -> None:
-    text = (REPO_ROOT / filename).read_text(encoding="utf-8")
-    assert marker in text, f"{filename} dropped '{marker}', but {because}"
+def test_open_todos_are_still_recorded() -> None:
+    """Deleting a TODO row without building the thing it points at fails here.
+
+    Written as one test over the list rather than a parametrized case per row,
+    because `STILL_OPEN` is legitimately empty today and an empty parametrize
+    argument is a pytest warning — which this suite turns into an error.
+    """
+    for filename, marker, because in STILL_OPEN:
+        text = (REPO_ROOT / filename).read_text(encoding="utf-8")
+        assert marker in text, f"{filename} dropped '{marker}', but {because}"
+
+
+def test_every_inbox_variable_is_documented_where_an_operator_looks() -> None:
+    """A setting that exists only in `config.py` is a setting nobody can find.
+
+    Both places, because they answer different questions: the README explains
+    what to set and what AWS has to look like, and the QA template is what a
+    tester copies. A variable renamed in code and not in the docs fails here
+    rather than in an environment that silently runs with the inbox off.
+    """
+    from trip_planner.config import (
+        INBOX_ENVIRONMENT_VARIABLES,
+        INBOX_OPTIONAL_ENVIRONMENT_VARIABLES,
+    )
+
+    readme = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
+    template = (REPO_ROOT / ".ai/qa/test-env.env.example").read_text(encoding="utf-8")
+
+    for name in INBOX_ENVIRONMENT_VARIABLES | INBOX_OPTIONAL_ENVIRONMENT_VARIABLES:
+        assert name in readme, f"README.md does not document {name}"
+        assert name in template, f".ai/qa/test-env.env.example does not mention {name}"
+
+
+def test_the_qa_template_carries_no_filled_in_secret() -> None:
+    """The template is committed; the copy made from it is not, and must stay that way."""
+    template = (REPO_ROOT / ".ai/qa/test-env.env.example").read_text(encoding="utf-8")
+
+    assert "SESSION_SECRET=''" in template
+    # No AWS key material belongs in a committed file even as an example.
+    assert "AKIA" not in template
+    assert "aws_secret_access_key" not in template.lower()
