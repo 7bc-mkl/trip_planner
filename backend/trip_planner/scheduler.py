@@ -205,11 +205,24 @@ class InboxWorker:
                 message.s3_object_key = None
                 db.commit()
 
-            # Routing follows ingestion in the same pass, so a message the owner
-            # forwarded is stored *and* pointed at its trip by the time he looks.
-            # Separate commit: a routing failure must not roll back the
-            # ingestion that just succeeded.
-            if outcome.state == "received":
+        # A separate bounded queue includes mail deferred by a budget, a
+        # transient failure, a restart, or enabling the provider after ingestion.
+        if self._settings.model is not None:
+            pending = list(
+                db.scalars(
+                    sa.select(InboundMessage)
+                    .where(
+                        InboundMessage.owner_id == owner.id,
+                        InboundMessage.state == "received",
+                        InboundMessage.trip_id.is_(None),
+                    )
+                    .order_by(InboundMessage.received_at)
+                    .limit(BATCH_SIZE)
+                )
+            )
+            for message in pending:
+                if self._stop.is_set():
+                    break
                 self._route(db, message, owner)
 
         # After the ingestion, and in the same pass: the quarantine timer, the
@@ -228,7 +241,7 @@ class InboxWorker:
         return processed
 
     def _route(self, db: OrmSession, message: InboundMessage, owner: Owner) -> None:
-        """Point one freshly-ingested message at a trip, if a model is configured.
+        """Point one stored, received message at a trip, if a model is configured.
 
         **With no model this does nothing at all**, which is Phase 1's behaviour
         exactly: the message stays `received`, shows up in the inbox, and the

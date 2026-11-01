@@ -191,7 +191,8 @@ unset, no model call is made at all — an unpriced deployment is not an unlimit
 one. The alternative is billing you an unknown amount because the configuration
 was never finished, and of the two ways to be wrong, a feature that visibly does
 nothing is recoverable where a surprise invoice is not. Spend is measured from
-the usage each provider reports, summed over `inbound_model_egress`.
+the usage each provider reports, priced when it is received and accumulated in
+`model_billing_month`.
 
 #### Before you enable it
 
@@ -217,10 +218,24 @@ A message no trip's dates cover never reaches a provider at all.
 
 #### When it fails
 
-A dead or slow provider is retried three times and then the message lands in the
-unrouted queue with a reason you can read — never a failed page, and never lost
-mail. Every attempt is recorded in `inbound_model_egress` **before** the call is
-made, so a timeout cannot erase the fact that your text may have left.
+Every attempt is recorded in `inbound_model_egress` **before** the call is
+made, so a timeout cannot erase the fact that your text may have left. Retries
+are capped at three worker attempts and remain subject to the spending guard.
+
+The worker revisits stored `received` messages without fetching MIME again.
+Each dispatch has its own committed egress row. Routing sends once per worker
+attempt; subsequent attempts check the budget again. If a timeout, crash or
+response leaves usage unknown, further model calls stop for that UTC billing
+month. The inbox still supports manual placement. This intentionally takes
+precedence over retrying a provider whose cost cannot be established.
+
+Anonymous `model_billing_month` totals retain only the month, already-priced
+spending and unresolved-call count. Deleting mail removes its message-specific
+egress history, but does not refund spending or clear unknown costs. Changing
+prices does not reprice earlier calls; keep the configured budget and prices in
+the same currency throughout a billing month. The next UTC month starts a new
+budget. Provider-reported usage is recorded even if its routing proposal is
+invalid. An owner placement or discard made during a call wins over its result.
 
 ## Local deployment
 

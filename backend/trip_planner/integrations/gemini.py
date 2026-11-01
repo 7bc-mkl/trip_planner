@@ -8,8 +8,9 @@ package exists to keep out of everything else.
 
 from __future__ import annotations
 
-from typing import Any
 from urllib.parse import quote
+
+from pydantic import BaseModel, Field, StrictInt
 
 from trip_planner.config import ModelSettings
 from trip_planner.integrations.model import Usage
@@ -19,6 +20,29 @@ __all__ = ["ADAPTER", "GeminiAdapter"]
 DEFAULT_BASE_URL = "https://generativelanguage.googleapis.com"
 
 MAX_OUTPUT_TOKENS = 256
+
+
+class _Part(BaseModel):
+    text: str = ""
+
+
+class _Content(BaseModel):
+    parts: list[_Part]
+
+
+class _Candidate(BaseModel):
+    content: _Content
+
+
+class _Usage(BaseModel):
+    promptTokenCount: StrictInt | None = Field(default=None, ge=0)
+    candidatesTokenCount: StrictInt | None = Field(default=None, ge=0)
+    thoughtsTokenCount: StrictInt = Field(default=0, ge=0)
+
+
+class _Response(BaseModel):
+    candidates: list[_Candidate]
+    usageMetadata: _Usage | None = None
 
 
 class GeminiAdapter:
@@ -46,13 +70,16 @@ class GeminiAdapter:
             },
         }
 
-    def read_response(self, body: dict[str, Any]) -> tuple[str, Usage]:
-        parts = body["candidates"][0]["content"]["parts"]
-        text = "".join(part.get("text", "") for part in parts)
-        usage = body.get("usageMetadata") or {}
-        return text, Usage(
-            input_tokens=usage.get("promptTokenCount"),
-            output_tokens=usage.get("candidatesTokenCount"),
+    def read_response(self, body: dict[str, object]) -> tuple[str, Usage]:
+        response = _Response.model_validate(body)
+        usage = response.usageMetadata or _Usage()
+        return "".join(part.text for part in response.candidates[0].content.parts), Usage(
+            input_tokens=usage.promptTokenCount,
+            output_tokens=(
+                usage.candidatesTokenCount + usage.thoughtsTokenCount
+                if usage.candidatesTokenCount is not None
+                else None
+            ),
         )
 
 

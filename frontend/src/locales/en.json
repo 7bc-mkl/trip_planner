@@ -267,6 +267,7 @@
       "no_trip_covers_dates": "No trip covers {from, date, medium} – {to, date, medium}.",
       "routing_failed": "The message could not be matched to a trip automatically.",
       "routing_refused": "The automatic match was not usable, so it is waiting for you.",
+      "routing_budget_unavailable": "Automatic matching is paused because usage or pricing is unavailable. You can place this message by hand.",
       "routing_budget_exhausted": "Automatic matching is paused — this month's budget is used up."
     },
     "routedTo": "Trip:",

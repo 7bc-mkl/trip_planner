@@ -211,6 +211,20 @@ No `to_address`: there is exactly one (D20), and storing it per row would be a d
 
 No request body, response, key, or provider error prose is retained in this table. Keep this history if the deployment changes providers; the owner can see which service may have received text or a named document. The existing `text_sent_at` and `sent_externally_at` columns support simple UI badges, while this table answers Q11 over time. Create and commit the event before invoking the adapter; a failed send remains marked as *possible* egress. Deleting a message deletes its audit rows with it, in keeping with A10.
 
+### Phase 2 accounting clarification (review correction)
+
+`model_billing_month` contains only a UTC month key, already-priced `spent`
+amount and `unresolved_calls` count. It has no message identifier or content
+and survives mail deletion; the per-message egress audit still cascades as A10
+requires. Before each dispatch, increment unresolved calls and commit alongside
+its egress row. Reported usage settles that reservation and increments spending
+at that call's configured prices, before validating the routing proposal.
+Missing usage leaves the reservation unresolved and stops further calls in the
+month, including retries. This fail-closed rule takes precedence over the retry
+cap; manual placement remains available. A new month starts fresh. The worker
+revisits received mail independently of ingestion, and rechecks message state
+before applying a result so an owner action during the call wins.
+
 ### `inbound_action_item`
 
 | Column | Type | Notes |

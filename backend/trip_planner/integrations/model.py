@@ -52,7 +52,7 @@ import logging
 import time
 import urllib.error
 import urllib.request
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
@@ -141,7 +141,9 @@ class Usage:
 
     @property
     def is_known(self) -> bool:
-        return self.input_tokens is not None and self.output_tokens is not None
+        return all(
+            type(value) is int and value >= 0 for value in (self.input_tokens, self.output_tokens)
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -149,12 +151,12 @@ class ModelBudget:
     """The monthly spend cap, and whether another call is permitted at all.
 
     Pure arithmetic over values the caller supplies — the worker reads the
-    month's spend out of `inbound_model_egress` and passes it in. Keeping the
+    month's spend out of `model_billing_month` and passes it in. Keeping the
     database out of here is what lets every budget rule be tested without one.
     """
 
     monthly_limit: Decimal | None
-    spent_this_month: Decimal
+    spent_this_month: Decimal | None
     input_price_per_mtok: Decimal | None
     output_price_per_mtok: Decimal | None
 
@@ -181,7 +183,7 @@ class ModelBudget:
         if not self.is_priced:
             return False
         assert self.monthly_limit is not None
-        return self.spent_this_month < self.monthly_limit
+        return self.spent_this_month is not None and self.spent_this_month < self.monthly_limit
 
     def cost_of(self, usage: Usage) -> Decimal | None:
         """What one call cost, or `None` when the provider reported no usage."""
@@ -440,7 +442,11 @@ class ModelClient:
         )
 
     def route(
-        self, request: RoutingRequest, *, budget: ModelBudget
+        self,
+        request: RoutingRequest,
+        *,
+        budget: ModelBudget,
+        on_usage: Callable[[Usage], None] | None = None,
     ) -> tuple[RoutingProposal, Usage]:
         """Ask which candidate the message belongs to.
 
@@ -455,6 +461,8 @@ class ModelClient:
 
         prompt = f"{PROMPT}\n{json.dumps(request.payload(), ensure_ascii=False)}"
         raw, usage = self._call(prompt)
+        if on_usage is not None:
+            on_usage(usage)
         return parse_proposal(raw, candidate_ids=request.candidate_ids()), usage
 
     def _call(self, prompt: str) -> tuple[str, Usage]:

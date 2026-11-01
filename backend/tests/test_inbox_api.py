@@ -298,6 +298,7 @@ def test_placing_a_message_changes_exactly_one_column(
 
     trip = create(owner_client)
     message = make_message(db_session, owner, state="unrouted")
+    message.routing_reason_args = {"from": "2026-10-17", "to": "2026-10-18"}
     data = make_pdf()
     db_session.add(
         Attachment(
@@ -317,6 +318,7 @@ def test_placing_a_message_changes_exactly_one_column(
     assert response.status_code == 200, response.text
     assert response.json()["state"] == "routed"
     assert response.json()["routing_reason"] == "placed_by_hand"
+    assert response.json()["routing_reason_args"] is None
 
     db_session.expire_all()
     stored = db_session.get(InboundMessage, message.id)

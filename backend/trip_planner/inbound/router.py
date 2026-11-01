@@ -28,7 +28,7 @@ from __future__ import annotations
 
 import logging
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import UTC, date, datetime
 from decimal import Decimal
 
@@ -36,7 +36,13 @@ import sqlalchemy as sa
 from sqlalchemy.orm import Session as OrmSession
 
 from trip_planner.config import ModelSettings
-from trip_planner.db.models import InboundMessage, InboundModelEgress, Owner, Trip
+from trip_planner.db.models import (
+    InboundMessage,
+    InboundModelEgress,
+    ModelBillingMonth,
+    Owner,
+    Trip,
+)
 from trip_planner.domain.routing import (
     CandidateTrip,
     TripWindow,
@@ -106,52 +112,20 @@ def trip_windows_for(db: OrmSession, owner: Owner) -> list[TripWindow]:
             # Items, notes, confirmation numbers and costs are not here, and the
             # type has nowhere to put them.
             destinations=tuple(
-                place
-                for place in (trip.departure_place, trip.return_place)
-                if place
+                place for place in (trip.departure_place, trip.return_place) if place
             ),
         )
         for trip in trips
     ]
 
 
-def month_spend(db: OrmSession, *, now: datetime) -> Decimal:
-    """What this billing month's model calls have cost so far.
-
-    Summed from `inbound_model_egress`, which is the same table that records
-    *what may have left* — so the budget and the audit trail cannot disagree
-    about how many calls were made.
-
-    A call whose usage the provider never reported contributes nothing here,
-    which is exactly why an unreported-usage deployment stops making calls:
-    `ModelBudget` refuses when the price schedule or the usage is missing, so
-    the gap cannot quietly read as free.
-    """
-    from trip_planner.config import get_settings
-
-    settings = get_settings()
-    model = settings.model
-    if model is None or not model.priced:
+def month_spend(db: OrmSession, *, now: datetime) -> Decimal | None:
+    """Already-priced spend, or unknown when an outbound call is unresolved."""
+    month = now.astimezone(UTC).date().replace(day=1)
+    ledger = db.get(ModelBillingMonth, month, populate_existing=True)
+    if ledger is None:
         return Decimal(0)
-
-    assert model.input_price_per_mtok is not None
-    assert model.output_price_per_mtok is not None
-
-    start_of_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-    rows = db.execute(
-        sa.select(InboundModelEgress.input_tokens, InboundModelEgress.output_tokens).where(
-            InboundModelEgress.attempted_at >= start_of_month
-        )
-    ).all()
-
-    million = Decimal(1_000_000)
-    total = Decimal(0)
-    for input_tokens, output_tokens in rows:
-        if input_tokens is None or output_tokens is None:
-            continue
-        total += Decimal(input_tokens) * model.input_price_per_mtok / million
-        total += Decimal(output_tokens) * model.output_price_per_mtok / million
-    return total
+    return None if ledger.unresolved_calls else ledger.spent
 
 
 def route_message(
@@ -166,11 +140,22 @@ def route_message(
 ) -> RoutingOutcome:
     """Decide which trip a received message belongs to.
 
-    **Commits once, deliberately**, to persist the egress row before the call —
-    see step 4 of the module docstring. Everything else is left for the caller's
-    transaction, so a message and its routing land together.
+    Commits the audit and unknown-cost reservation before dispatch, and known
+    usage before proposal validation. The caller commits the final placement.
     """
     moment = now or datetime.now(UTC)
+    # Refresh under a row lock before dispatch; manual placement/deletion wins.
+    current = db.scalar(
+        sa.select(InboundMessage)
+        .where(
+            InboundMessage.id == message.id,
+            InboundMessage.owner_id == owner.id,
+        )
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    )
+    if current is None or current.state != "received" or current.trip_id is not None:
+        return RoutingOutcome(state=current.state if current is not None else "discarded")
 
     dates = extract_travel_dates(message.text_body)
     candidates = select_candidates(dates, trip_windows_for(db, owner))
@@ -185,7 +170,12 @@ def route_message(
         # Stopped **before** the row is written and before anything leaves, so
         # no egress is recorded: nothing was attempted.
         logger.warning("inbox: routing skipped, the model budget does not permit a call")
-        return _defer(message, "routing_budget_exhausted")
+        reason = (
+            "routing_budget_exhausted"
+            if budget.is_priced and budget.spent_this_month is not None
+            else "routing_budget_unavailable"
+        )
+        return _defer(message, reason)
 
     # The point of no return. Committed first, so a crash in the next line still
     # leaves the owner able to see that his text may have gone to this provider.
@@ -196,6 +186,12 @@ def route_message(
         model=model_settings.model,
         attempted_at=moment,
     )
+    month = moment.astimezone(UTC).date().replace(day=1)
+    ledger = db.get(ModelBillingMonth, month)
+    if ledger is None:
+        ledger = ModelBillingMonth(month=month, spent=Decimal(0), unresolved_calls=0)
+        db.add(ledger)
+    ledger.unresolved_calls += 1
     db.add(egress)
     message.text_sent_at = message.text_sent_at or moment
     db.commit()
@@ -208,22 +204,56 @@ def route_message(
         candidates=tuple(one.trip for one in candidates),
     )
 
+    egress_id = egress.id
+    message_id = message.id
+
+    def record_usage(usage: Usage) -> None:
+        # Commit accounting even if parsing the proposal fails, or the owner
+        # deletes/places the message while the provider is answering.
+        cost = budget.cost_of(usage)
+        if cost is not None:
+            ledger.spent += cost
+            ledger.unresolved_calls -= 1
+        audit = db.get(InboundModelEgress, egress_id, populate_existing=True)
+        if audit is not None and usage.is_known:
+            audit.input_tokens = usage.input_tokens
+            audit.output_tokens = usage.output_tokens
+        db.commit()
+
+    failure: str | None = None
+    proposal = None
     try:
-        proposal, usage = client.route(request, budget=budget)
+        # The worker owns retries so every HTTP attempt has its own durable
+        # audit and fresh budget check. Unknown usage stops the next dispatch.
+        proposal, _ = replace(client, max_attempts=1).route(
+            request,
+            budget=budget,
+            on_usage=record_usage,
+        )
     except ModelRefused:
-        # The answer arrived and is unusable. Retrying would send the mail again
-        # for the same result, so this is decided.
-        logger.warning("inbox: the model's routing answer was refused")
-        return _queue(message, "routing_refused", None, called_model=True)
+        failure = "routing_refused"
     except ModelCallFailed:
-        return _after_transient_failure(message)
+        failure = "routing_failed"
 
-    _record_usage(db, egress, usage)
-
-    if proposal.trip_id is None:
-        return _queue(message, "model_found_no_trip", None, called_model=True)
-
-    return _route_to(message, proposal.trip_id, candidates)
+    current = db.scalar(
+        sa.select(InboundMessage)
+        .where(
+            InboundMessage.id == message_id,
+        )
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    )
+    if current is None or current.state != "received" or current.trip_id is not None:
+        return RoutingOutcome(
+            state=current.state if current is not None else "discarded", called_model=True
+        )
+    if failure == "routing_refused":
+        return _queue(current, failure, None, called_model=True)
+    if failure is not None:
+        return _after_transient_failure(current)
+    if proposal is None or proposal.trip_id is None:
+        return _queue(current, "model_found_no_trip", None, called_model=True)
+    return _route_to(current, proposal.trip_id, candidates)
 
 
 def _route_to(
@@ -295,6 +325,8 @@ def _defer(message: InboundMessage, reason: str) -> RoutingOutcome:
     it would ask the owner to do by hand what the system is about to do for him.
     """
     message.last_error = reason
+    message.routing_reason = reason
+    message.routing_reason_args = None
     return RoutingOutcome(state="received", reason=reason, called_model=False)
 
 
@@ -312,16 +344,3 @@ def _after_transient_failure(message: InboundMessage) -> RoutingOutcome:
         return _queue(message, "routing_failed", None, called_model=True)
 
     return RoutingOutcome(state="received", reason="routing_failed", called_model=True)
-
-
-def _record_usage(db: OrmSession, egress: InboundModelEgress, usage: Usage) -> None:
-    """Stamp what the provider said it charged for, onto the row already written.
-
-    Separate from the insert because the insert happens *before* the call and
-    the usage only exists after it. A row with null tokens is therefore a real
-    and meaningful state: the call was attempted and the provider reported no
-    usage, which is what makes the next budget check refuse rather than guess.
-    """
-    egress.input_tokens = usage.input_tokens
-    egress.output_tokens = usage.output_tokens
-    db.flush()

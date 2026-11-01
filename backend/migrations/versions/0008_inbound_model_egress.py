@@ -7,7 +7,7 @@ Create Date: 2026-10-11
 Phase 2 of the reservation inbox: the audit trail for every outbound model call,
 and the column that lets a routing reason carry its arguments.
 
-One new table plus one new nullable column, so "safe against rows that already
+Two new tables plus one new nullable column, so "safe against rows that already
 exist" is satisfied trivially — every existing `inbound_message` row is valid
 with `routing_reason_args` null, which is exactly what a Phase 1 row means:
 a reason with no arguments. No backfill, no default, no rewrite.
@@ -22,6 +22,10 @@ rather than to nothing.
 That clean reversibility is why the spec made Phase 2 its own revision:
 **rolling back returns the deployment to a manual inbox** — the messages, their
 documents and the `/inbox` screen are all Phase 1 and survive untouched.
+
+The anonymous monthly spending ledger is independent of message deletion.
+Downgrade also removes its spending totals and unknown-usage reservations;
+export them before rollback if routing will later be enabled again.
 
 What the downgrade *does* destroy is the record of which provider saw what.
 Written down here rather than discovered later: if that history matters to the
@@ -51,6 +55,14 @@ _PROVIDERS = ("anthropic", "gemini", "openai")
 
 
 def upgrade() -> None:
+    op.create_table(
+        "model_billing_month",
+        sa.Column("month", sa.Date(), primary_key=True),
+        sa.Column("spent", sa.Numeric(), nullable=False),
+        sa.Column("unresolved_calls", sa.Integer(), nullable=False),
+        sa.CheckConstraint("spent >= 0", name="ck_model_billing_spent"),
+        sa.CheckConstraint("unresolved_calls >= 0", name="ck_model_billing_unresolved"),
+    )
     op.add_column(
         "inbound_message",
         sa.Column("routing_reason_args", postgresql.JSONB(), nullable=True),
@@ -112,6 +124,7 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    op.drop_table("model_billing_month")
     op.drop_column("inbound_message", "routing_reason_args")
 
     op.drop_index("ix_inbound_model_egress_attempted_at", table_name="inbound_model_egress")

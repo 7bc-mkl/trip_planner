@@ -294,7 +294,7 @@ function MessageRow({
       {open && detail === null && error === null && <p role="status">{t('app.loading')}</p>}
       {open && detail !== null && <MessageView message={detail} />}
 
-      {message.state === 'unrouted' && (
+      {(message.state === 'unrouted' || message.state === 'received') && (
         <PlaceMessage message={message} trips={trips} onPlaced={onChanged} />
       )}
 

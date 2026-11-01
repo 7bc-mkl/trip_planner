@@ -520,3 +520,23 @@ def test_the_three_adapters_answer_the_same_question() -> None:
         results.append((proposal.trip_id, usage))
 
     assert len(set(results)) == 1
+
+
+@pytest.mark.parametrize("provider", PROVIDERS)
+@pytest.mark.parametrize("count", [-1, True, "120", 1.5])
+def test_invalid_provider_usage_is_rejected(provider: str, count: object) -> None:
+    transport = CapturingTransport(200, answer(provider, '{"trip_id": null}', tokens=(count, 8)))
+    with pytest.raises(ModelCallFailed):
+        client_for(provider, transport).route(request_for(), budget=budget())
+
+
+def test_unknown_monthly_spend_stops_dispatch() -> None:
+    assert not budget(spent_this_month=None).permits_a_call()
+
+
+def test_gemini_usage_includes_thinking_tokens() -> None:
+    response = answer('gemini', '{"trip_id": null}')
+    response['usageMetadata']['thoughtsTokenCount'] = 192
+    transport = CapturingTransport(200, response)
+    _, usage = client_for('gemini', transport).route(request_for(), budget=budget())
+    assert usage.output_tokens == 200

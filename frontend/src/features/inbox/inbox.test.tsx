@@ -645,3 +645,23 @@ describe('why a message was not routed', () => {
     expect(screen.queryByText(/inbox\.reason\./)).not.toBeInTheDocument()
   })
 })
+
+it.each(['pl', 'en'] as const)(
+  'allows manual placement while routing is paused (%s)',
+  async (locale) => {
+    await renderInbox(
+      { messages: [{ ...MESSAGE, routing_reason: 'routing_budget_unavailable' }] },
+      locale,
+    )
+    const select = await screen.findByLabelText(
+      locale === 'pl' ? 'Której podróży dotyczy?' : 'Which trip is this about?',
+    )
+    await userEvent.selectOptions(select, TRIP.id)
+    await userEvent.click(
+      screen.getByRole('button', { name: locale === 'pl' ? 'Przypisz' : 'Place' }),
+    )
+    await waitFor(() =>
+      expect(requests.some((one) => one.url.endsWith('/place') && one.method === 'POST')).toBe(true),
+    )
+  },
+)

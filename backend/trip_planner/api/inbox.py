@@ -743,6 +743,7 @@ def place_message(
     # A translation key with no arguments, never prose — the same discipline the
     # routing reasons a model produces will have to follow in Phase 2.
     message.routing_reason = "placed_by_hand"
+    message.routing_reason_args = None
     db.flush()
 
     counts = _attachment_counts(db, [message.id])

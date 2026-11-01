@@ -7,7 +7,7 @@ three providers, which is what keeps "switch provider" a configuration change.
 
 from __future__ import annotations
 
-from typing import Any
+from pydantic import BaseModel, Field, StrictInt
 
 from trip_planner.config import ModelSettings
 from trip_planner.integrations.model import Usage
@@ -27,6 +27,21 @@ API_VERSION = "2023-06-01"
 #: control and a way of making a runaway response impossible rather than merely
 #: unlikely.
 MAX_OUTPUT_TOKENS = 256
+
+
+class _Block(BaseModel):
+    type: str
+    text: str = ""
+
+
+class _Usage(BaseModel):
+    input_tokens: StrictInt | None = Field(default=None, ge=0)
+    output_tokens: StrictInt | None = Field(default=None, ge=0)
+
+
+class _Response(BaseModel):
+    content: list[_Block]
+    usage: _Usage | None = None
 
 
 class AnthropicAdapter:
@@ -59,15 +74,12 @@ class AnthropicAdapter:
             "messages": [{"role": "user", "content": prompt}],
         }
 
-    def read_response(self, body: dict[str, Any]) -> tuple[str, Usage]:
-        blocks = body["content"]
-        text = "".join(
-            block.get("text", "") for block in blocks if block.get("type") == "text"
-        )
-        usage = body.get("usage") or {}
-        return text, Usage(
-            input_tokens=usage.get("input_tokens"),
-            output_tokens=usage.get("output_tokens"),
+    def read_response(self, body: dict[str, object]) -> tuple[str, Usage]:
+        response = _Response.model_validate(body)
+        usage = response.usage or _Usage()
+        return "".join(block.text for block in response.content if block.type == "text"), Usage(
+            input_tokens=usage.input_tokens,
+            output_tokens=usage.output_tokens,
         )
 
 

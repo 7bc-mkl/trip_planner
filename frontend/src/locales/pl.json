@@ -267,6 +267,7 @@
       "no_trip_covers_dates": "Żadna podróż nie obejmuje {from, date, medium} – {to, date, medium}.",
       "routing_failed": "Nie udało się automatycznie dopasować wiadomości do podróży.",
       "routing_refused": "Automatyczne dopasowanie było nieczytelne, więc wiadomość czeka na Ciebie.",
+      "routing_budget_unavailable": "Automatyczne dopasowanie jest wstrzymane, ponieważ dane o zużyciu lub cenach są niedostępne. Możesz ręcznie przypisać wiadomość do podróży.",
       "routing_budget_exhausted": "Automatyczne dopasowanie wstrzymane — budżet na ten miesiąc wyczerpany."
     },
     "routedTo": "Podróż:",

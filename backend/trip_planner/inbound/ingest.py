@@ -220,6 +220,7 @@ def ingest_message(
         store_inbound_attachment(db, message=message, document=document)
 
     message.state = "received"
+    message.attempts = 0
     message.last_error = None
     db.flush()
 

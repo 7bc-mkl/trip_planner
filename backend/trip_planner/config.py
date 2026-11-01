@@ -383,8 +383,8 @@ def _decimal(env: dict[str, str], name: str) -> Decimal | None:
         value = Decimal(raw)
     except InvalidOperation as error:
         raise WeakConfiguration(f"{name} must be a decimal number; got {raw!r}") from error
-    if value < 0:
-        raise WeakConfiguration(f"{name} cannot be negative; got {raw!r}")
+    if not value.is_finite() or value < 0:
+        raise WeakConfiguration(f"{name} must be finite and non-negative; got {raw!r}")
     return value
 
 

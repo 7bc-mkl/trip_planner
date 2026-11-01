@@ -21,7 +21,6 @@ import uuid
 from datetime import date as date_type
 from datetime import datetime, time
 from decimal import Decimal
-from typing import Any
 
 from sqlalchemy import (
     CHAR,
@@ -64,6 +63,7 @@ __all__ = [
     "InboundDeliveryStatus",
     "InboundMessage",
     "InboundModelEgress",
+    "ModelBillingMonth",
     "InboundTrustedSender",
     "Item",
     "LoginAttempt",
@@ -864,7 +864,7 @@ class InboundMessage(Base):
     #: JSONB with no query over its interior, for the reason `inbound_action_item`
     #: gives about `proposal`: a parallel set of nullable columns would be a
     #: second place the shape is declared.
-    routing_reason_args: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
+    routing_reason_args: Mapped[dict[str, str] | None] = mapped_column(JSONB, nullable=True)
     attempts: Mapped[int] = mapped_column(SmallInteger, nullable=False, server_default="0")
     #: A code, never a provider or AWS message: third-party prose can echo the
     #: message's own content back into our logs.
@@ -937,14 +937,9 @@ class InboundModelEgress(Base):
     current settings, because settings change and history does not: a deployment
     that switches provider must still be able to say which service saw what.
 
-    **Two columns beyond the spec's own list**, and the reason is in the spec
-    itself: it requires a monthly budget *"measured from provider-reported
-    usage"*, and usage has to be stored somewhere to be summed. Putting the
-    token counts on the egress row means one table answers both "what may have
-    left" and "what did it cost", rather than a second table that could
-    disagree with it. They are nullable because a provider that reports no usage
-    is a real case — and one that stops further calls, since an uncomputable
-    cost is not a zero cost.
+    Token counts record reported usage. Monthly already-priced spending and
+    unresolved calls live separately in ModelBillingMonth, so deleting mail or
+    changing a price cannot restore an already-spent budget.
     """
 
     __tablename__ = "inbound_model_egress"
@@ -993,6 +988,24 @@ class InboundModelEgress(Base):
             f"<InboundModelEgress id={self.id!r} kind={self.kind!r} "
             f"provider={self.provider!r} model={self.model!r}>"
         )
+
+
+class ModelBillingMonth(Base):
+    """Anonymous monthly totals survive deletion of mail and its egress audit.
+
+    Unknown calls reserve the budget until usage is known or the month ends.
+    No message, owner, provider, or request identifier is retained here.
+    """
+
+    __tablename__ = "model_billing_month"
+    __table_args__ = (
+        CheckConstraint("spent >= 0", name="ck_model_billing_spent"),
+        CheckConstraint("unresolved_calls >= 0", name="ck_model_billing_unresolved"),
+    )
+
+    month: Mapped[date_type] = mapped_column(Date, primary_key=True)
+    spent: Mapped[Decimal] = mapped_column(Numeric(), nullable=False, default=Decimal(0))
+    unresolved_calls: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
 
 class InboundTrustedSender(Base):

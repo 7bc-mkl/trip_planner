@@ -388,7 +388,7 @@ def test_a_fully_priced_model_is_considered_priced() -> None:
     assert settings.model.monthly_budget == Decimal("5.00")
 
 
-@pytest.mark.parametrize("value", ["not-a-number", "-1"])
+@pytest.mark.parametrize("value", ["not-a-number", "-1", "NaN", "Infinity", "-Infinity"])
 def test_a_nonsense_price_is_refused(value: str) -> None:
     with pytest.raises(WeakConfiguration, match="INBOX_MODEL_INPUT_PRICE"):
         require_settings(

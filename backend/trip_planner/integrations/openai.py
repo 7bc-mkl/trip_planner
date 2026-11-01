@@ -6,7 +6,7 @@ the parametrized contract tests run the same cases against all of them.
 
 from __future__ import annotations
 
-from typing import Any
+from pydantic import BaseModel, Field, StrictInt
 
 from trip_planner.config import ModelSettings
 from trip_planner.integrations.model import Usage
@@ -16,6 +16,24 @@ __all__ = ["ADAPTER", "OpenAIAdapter"]
 DEFAULT_BASE_URL = "https://api.openai.com"
 
 MAX_OUTPUT_TOKENS = 256
+
+
+class _Message(BaseModel):
+    content: str | None = None
+
+
+class _Choice(BaseModel):
+    message: _Message
+
+
+class _Usage(BaseModel):
+    prompt_tokens: StrictInt | None = Field(default=None, ge=0)
+    completion_tokens: StrictInt | None = Field(default=None, ge=0)
+
+
+class _Response(BaseModel):
+    choices: list[_Choice]
+    usage: _Usage | None = None
 
 
 class OpenAIAdapter:
@@ -43,12 +61,12 @@ class OpenAIAdapter:
             "messages": [{"role": "user", "content": prompt}],
         }
 
-    def read_response(self, body: dict[str, Any]) -> tuple[str, Usage]:
-        text = body["choices"][0]["message"]["content"] or ""
-        usage = body.get("usage") or {}
-        return text, Usage(
-            input_tokens=usage.get("prompt_tokens"),
-            output_tokens=usage.get("completion_tokens"),
+    def read_response(self, body: dict[str, object]) -> tuple[str, Usage]:
+        response = _Response.model_validate(body)
+        usage = response.usage or _Usage()
+        return response.choices[0].message.content or "", Usage(
+            input_tokens=usage.prompt_tokens,
+            output_tokens=usage.completion_tokens,
         )
 
 
