@@ -189,7 +189,15 @@ export function ActionItemSheet({
         setChanged(true)
         adopt(result)
       })
-      .catch(report)
+      .catch((caught: unknown) => {
+        report(caught)
+        // A stale revision would refuse every later attempt too: reload, so the
+        // next choice is made against the proposal as it now stands.
+        if (caught instanceof ApiError && caught.code === 'action_item_conflict') {
+          return getActionItem(actionItemId).then(adopt)
+        }
+        return undefined
+      })
   }
 
   const toggle = <T,>(set: Set<T>, value: T, apply: (next: Set<T>) => void) => {

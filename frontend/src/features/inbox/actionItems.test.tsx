@@ -168,6 +168,7 @@ type Overrides = {
   reload?: unknown
   approve?: (body: unknown) => Response
   retarget?: unknown
+  retargetStatus?: number
   ownerLocale?: Locale
   summary?: unknown
 }
@@ -209,8 +210,15 @@ function backend(overrides: Overrides = {}): Handler {
     if (url.endsWith('/reject') && method === 'POST') return new Response(null, { status: 204 })
     if (url.endsWith('/undo') && method === 'POST')
       return json(200, { ...ACTION_ITEM, revision: 2 })
-    if (url.endsWith('/retarget') && method === 'POST')
+    if (url.endsWith('/retarget') && method === 'POST') {
+      if (overrides.retargetStatus) {
+        reloaded = true
+        return json(overrides.retargetStatus, {
+          error: { code: 'action_item_conflict', field: 'revision' },
+        })
+      }
       return json(200, overrides.retarget ?? ACTION_ITEM)
+    }
     if (/\/inbox\/messages\/[^/]+$/u.test(url)) return json(200, MESSAGE_DETAIL)
     if (url.endsWith('/trips') && method === 'GET') return json(200, [TRIP])
     if (url.endsWith(`/trips/${TRIP.id}`)) return json(200, TRIP_DETAIL)
@@ -389,6 +397,19 @@ describe('the review sheet', () => {
     await waitFor(() => expect(sent('/retarget')).toHaveLength(1))
     expect(sent('/retarget')[0]?.body).toEqual({ target_item_id: FERRY.id, expected_revision: 1 })
     expect(await within(dialog).findByText(/Updates “Ferry”/)).toBeInTheDocument()
+  })
+
+  it('reloads after a re-target refused for a stale revision', async () => {
+    const dialog = await openSheet({ retargetStatus: 409, reload: { ...ACTION_ITEM, revision: 5 } })
+
+    const picker = await within(dialog).findByRole('combobox', { name: 'Point this proposal at' })
+    await userEvent.selectOptions(picker, `item:${FERRY.id}`)
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Change target' }))
+
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent(/Something changed/)
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Approve selected' }))
+    await waitFor(() => expect(sent('/approve')).toHaveLength(1))
+    expect((sent('/approve')[0]?.body as { expected_revision?: number } | undefined)?.expected_revision).toBe(5)
   })
 
   it('rejects without confirmation and closes', async () => {

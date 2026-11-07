@@ -714,3 +714,42 @@ def test_deleting_the_trip_removes_a_create_proposal_and_keeps_the_message(
     ) == 0
     survivor = db_session.get(InboundMessage, message_id)
     assert survivor is not None and survivor.trip_id is None
+
+
+def test_undo_of_a_created_item_refuses_once_the_owner_has_added_to_it(
+    world: World, owner_client: TestClient
+) -> None:
+    """Regression: undo used to delete a created item along with the owner's later notes."""
+    action_item = world.propose(title="Ferry", start_date="2026-10-19")
+    approved = approve(owner_client, action_item, fields=["title"]).json()
+    item_id = uuid.UUID(approved["applied"]["item_id"])
+    created = fresh(world.db, Item, item_id)
+    created.notes = "Seat 12A, gate B"
+    created.kind = "transport"
+    world.db.flush()
+
+    response = owner_client.post(f"{INBOX}/action-items/{action_item.id}/undo")
+
+    assert response.status_code == 409
+    assert response.json()["error"] == {"code": "action_item_conflict", "field": "item"}
+    kept = fresh(world.db, Item, item_id)
+    assert kept is not None and kept.notes == "Seat 12A, gate B"
+
+
+def test_undo_supersedes_a_newer_proposal_for_the_same_message(
+    world: World, owner_client: TestClient
+) -> None:
+    """Regression: undo could leave two pending, approvable proposals for one message."""
+    message = world.message()
+    world.document(message)
+    first = world.propose(message, title="Ferry", start_date="2026-10-19")
+    assert approve(owner_client, first, fields=["title"]).status_code == 200
+    second = owner_client.post(
+        f"{INBOX}/messages/{message.id}/action-items",
+        json={"target_item_id": str(world.hotel.id)},
+    ).json()
+
+    assert owner_client.post(f"{INBOX}/action-items/{first.id}/undo").status_code == 200
+
+    assert fresh(world.db, InboundActionItem, uuid.UUID(second["id"])).state == "superseded"
+    assert owner_client.get(f"{INBOX}/summary").json()["pending_action_items"] == 1

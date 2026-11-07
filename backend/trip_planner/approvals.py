@@ -786,6 +786,12 @@ def undo(db: OrmSession, owner: Owner, action_item_id: uuid.UUID) -> InboundActi
     if applied["status_after"] is not None and item.status != applied["status_after"]:
         raise ApiError(ErrorCode.ACTION_ITEM_CONFLICT, field="status")
 
+    if applied["created"] and (live != after or item.notes is not None):
+        # A created item is removed whole, so *every* value on it must still be
+        # what the approval wrote — a note, a kind or a day the owner added by
+        # hand afterwards is his, and deleting the item would silently lose it.
+        raise ApiError(ErrorCode.ACTION_ITEM_CONFLICT, field="item")
+
     moved = [uuid.UUID(str(one)) for one in applied["attachment_ids"]]  # type: ignore[union-attr]
     documents = list(
         db.execute(
@@ -808,7 +814,7 @@ def undo(db: OrmSession, owner: Owner, action_item_id: uuid.UUID) -> InboundActi
         others = db.execute(
             sa.select(sa.func.count()).select_from(Attachment).where(*conditions)
         ).scalar_one()
-        if int(others) or field_value(live, "title") != field_value(after, "title"):
+        if int(others):
             raise ApiError(ErrorCode.ACTION_ITEM_CONFLICT, field="item")
         db.flush()
         db.delete(item)
@@ -823,6 +829,9 @@ def undo(db: OrmSession, owner: Owner, action_item_id: uuid.UUID) -> InboundActi
         proposal.snapshot_status = item.status
         _store(action_item, proposal)
 
+    # A proposal the owner made for this message after the approval would
+    # otherwise sit beside this one, both pending and both approvable.
+    supersede_pending(db, message)
     action_item.state = "pending"
     action_item.applied = None
     action_item.decided_at = None
