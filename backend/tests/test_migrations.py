@@ -371,3 +371,19 @@ def test_routing_revision_round_trip_preserves_the_manual_inbox(
     assert {"inbound_model_egress", "model_billing_month"} <= set(
         sa.inspect(engine).get_table_names()
     )
+
+
+def test_action_item_revision_round_trip_preserves_the_routing_inbox(
+    alembic_config: Config, engine: sa.Engine,
+) -> None:
+    """Rolling Phase 3 back leaves Phase 2 standing: messages, egress, routes."""
+    head = _current_revision(engine)
+    try:
+        command.downgrade(alembic_config, "0008_inbound_model_egress")
+        tables = set(sa.inspect(engine).get_table_names())
+        assert "inbound_action_item" not in tables
+        assert {"inbound_message", "inbound_model_egress"} <= tables
+    finally:
+        command.upgrade(alembic_config, "head")
+    assert _current_revision(engine) == head
+    assert "inbound_action_item" in set(sa.inspect(engine).get_table_names())
