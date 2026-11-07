@@ -269,22 +269,34 @@ class InboxWorker:
                 client=client,
                 budget=budget,
             )
-            if outcome.state == "routed":
-                # A proposal, never a write: the approval service reads the
-                # routed trip to aim it, and writes nothing to the plan.
-                propose_from_routing(
-                    db,
-                    message,
-                    owner=owner,
-                    fields=outcome.fields,
-                    alternatives=outcome.alternatives,
-                )
             db.commit()
         except Exception:
             db.rollback()
             # The message keeps its body and its documents either way, so the
             # worst case is an unrouted message the owner places himself.
             logger.exception("inbox: routing failed for a message; it stays placeable by hand")
+            return
+
+        if outcome.state != "routed":
+            return
+        # Committed apart from the route, on purpose: a failure here must not
+        # roll the route back, or the next pass would send the owner's text to
+        # the provider a second time for the same answer. A routed message with
+        # no proposal is still one the owner can propose by hand.
+        try:
+            # A proposal, never a write: the approval service reads the routed
+            # trip to aim it, and writes nothing to the plan.
+            propose_from_routing(
+                db,
+                message,
+                owner=owner,
+                fields=outcome.fields,
+                alternatives=outcome.alternatives,
+            )
+            db.commit()
+        except Exception:
+            db.rollback()
+            logger.exception("inbox: proposing failed for a routed message; it stays routed")
 
     def _model_client(self) -> ModelClient:
         """Built once and reused, so the signing/connection setup is not per message."""

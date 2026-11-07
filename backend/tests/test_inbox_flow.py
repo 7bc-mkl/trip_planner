@@ -15,6 +15,7 @@ import uuid
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 
+import pytest
 import sqlalchemy as sa
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session as OrmSession
@@ -178,3 +179,59 @@ def test_a_forwarded_confirmation_becomes_an_approved_booking(
     assert after == {"arranged": 1, "tracked": 1}
     assert owner_client.get(f"{INBOX}/summary").json()["pending_action_items"] == 0
     assert db_session.get(InboundActionItem, uuid.UUID(pending["id"])).state == "approved"
+
+
+def test_a_failing_proposal_keeps_the_route_and_sends_nothing_twice(
+    db_session: OrmSession,
+    owner: Owner,
+    inbox_settings: Settings,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A bug in building the proposal must not undo the routing it follows.
+
+    Rolling the route back would leave the message `received`, and the next
+    pass would send the owner's text to the provider a second time for the
+    same answer. The route is committed first; a failed proposal leaves a
+    routed message the owner can still propose by hand.
+    """
+    import trip_planner.scheduler as scheduler_module
+
+    trip = make_trip(owner)
+    db_session.add(trip)
+    db_session.flush()
+    message = InboundMessage(
+        owner_id=owner.id,
+        ses_message_id=f"ses-{uuid.uuid4().hex}",
+        ses_sender_verdict="PASS",
+        ses_scan_verdict="PASS",
+        received_at=datetime.now(UTC),
+        from_address=owner.email,
+        subject="Booking",
+        state="received",
+        text_body="Check-in 17 October 2026",
+    )
+    db_session.add(message)
+    db_session.flush()
+
+    def broken(*args: object, **kwargs: object) -> None:
+        raise RuntimeError("a bug in the proposal builder")
+
+    monkeypatch.setattr(scheduler_module, "propose_from_routing", broken)
+    model = settings_for("anthropic")
+    transport = CapturingTransport(
+        200, answer("anthropic", json.dumps({"trip_id": str(trip.id)}))
+    )
+    worker = InboxWorker(
+        dataclasses.replace(inbox_settings, model=model),
+        lambda: db_session,
+        fetcher=StubS3(),  # type: ignore[arg-type]
+        model_client=ModelClient(
+            settings=model, adapter=build_adapter(model), transport=transport, retry_pause=0
+        ),
+    )
+
+    worker._route(db_session, message, owner)
+
+    db_session.expire_all()
+    routed = db_session.get(InboundMessage, message.id)
+    assert (routed.state, routed.trip_id) == ("routed", trip.id)
