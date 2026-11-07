@@ -88,9 +88,9 @@ action) — the slippable tail, unchanged by this.
 
 ### Phase 1: Data and pure rules
 
-- [ ] 1.1 Alembic revision 0009 and the InboundActionItem model
-- [ ] 1.2 domain/extraction.py
-- [ ] 1.3 Proposal diff and item-target rule
+- [x] 1.1 Alembic revision 0009 and the InboundActionItem model — 623f5b3
+- [x] 1.2 domain/extraction.py — df15dde
+- [x] 1.3 Proposal diff and item-target rule — eb2b059
 
 ### Phase 2: The approval service and API
 
