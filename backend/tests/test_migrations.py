@@ -350,3 +350,24 @@ def test_the_reservation_revision_round_trips_over_existing_rows(
             connection.execute(
                 sa.text("DELETE FROM owner WHERE id = :id"), {"id": owner_id}
             )
+
+
+def test_routing_revision_round_trip_preserves_the_manual_inbox(
+    alembic_config: Config, engine: sa.Engine,
+) -> None:
+    head = _current_revision(engine)
+    try:
+        command.downgrade(alembic_config, "0007_inbound_message")
+        tables = set(sa.inspect(engine).get_table_names())
+        assert "inbound_message" in tables
+        assert "inbound_model_egress" not in tables
+        assert "model_billing_month" not in tables
+        assert "routing_reason_args" not in {
+            column['name'] for column in sa.inspect(engine).get_columns('inbound_message')
+        }
+    finally:
+        command.upgrade(alembic_config, "head")
+    assert _current_revision(engine) == head
+    assert {"inbound_model_egress", "model_billing_month"} <= set(
+        sa.inspect(engine).get_table_names()
+    )
