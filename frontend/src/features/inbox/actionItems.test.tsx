@@ -421,6 +421,16 @@ describe('the review sheet', () => {
     expect(sent('/reject')).toHaveLength(1)
   })
 
+  it('keeps focus on the page, not the body, once a decided proposal leaves the list', async () => {
+    const dialog = await openSheet()
+
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Reject' }))
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+    await waitFor(() => expect(document.activeElement).not.toBe(document.body))
+    expect(document.activeElement?.tagName).toMatch(/^H[12]$/)
+  })
+
   it('offers undo after approving, and says what it will restore', async () => {
     const dialog = await openSheet()
     await userEvent.click(within(dialog).getByRole('button', { name: 'Approve selected' }))

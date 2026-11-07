@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 
@@ -49,6 +49,13 @@ export function InboxPage() {
   const [messages, setMessages] = useState<InboxMessage[] | null>(null)
   const [actionItems, setActionItems] = useState<ActionItem[]>([])
   const [reviewing, setReviewing] = useState<string | null>(null)
+  /**
+   * Set when a decided sheet closes. The button that opened it belongs to a
+   * proposal the reload is about to remove, so the sheet's own focus return
+   * would land on a node that then vanishes and leave focus on `<body>`. Once
+   * the list has re-rendered, focus moves to the page heading instead.
+   */
+  const refocus = useRef(false)
   const [trips, setTrips] = useState<TripSummary[]>([])
   const [error, setError] = useState<string | null>(null)
 
@@ -93,6 +100,19 @@ export function InboxPage() {
     load(controller.signal)
     return () => controller.abort()
   }, [load])
+
+  useEffect(() => {
+    if (!refocus.current) {
+      return
+    }
+    refocus.current = false
+    const heading =
+      document.getElementById('inbox-actions-heading') ?? document.querySelector('main h1')
+    if (heading instanceof HTMLElement) {
+      heading.setAttribute('tabindex', '-1')
+      heading.focus()
+    }
+  }, [actionItems])
 
   const unrouted = (messages ?? []).filter((one) => one.state === 'unrouted')
   const rest = (messages ?? []).filter((one) => one.state !== 'unrouted')
@@ -183,6 +203,7 @@ export function InboxPage() {
           onClose={(changed) => {
             setReviewing(null)
             if (changed) {
+              refocus.current = true
               load()
             }
           }}

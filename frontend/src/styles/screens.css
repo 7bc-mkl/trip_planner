@@ -1127,7 +1127,12 @@ fieldset.field-card {
   border-bottom: 1px solid var(--hairline);
   text-align: left;
   vertical-align: top;
-  overflow-wrap: anywhere;
+  /* `break-word`, not `anywhere`: `anywhere` lowers the cells' min-content
+     width, so on a phone the table squeezed "Confirmation number" and
+     "MYR 90.00" into mid-word breaks. A word now breaks only when it alone
+     cannot fit. */
+  overflow-wrap: break-word;
+  hyphens: auto;
 }
 
 .action-sheet__table thead th {

@@ -25,6 +25,9 @@
 # process boundary, not the application's behaviour.
 #
 # history:
+# - 2026-11-07 the inbox is configured with inert values (no SNS, no S3, no
+#   model). Without them every `/inbox` route answered `inbox_not_configured`
+#   and the action-item sheet (reservation inbox Phase 3) could not be QA'd.
 # - 2026-09-05 initial generation, on `deploy/compose.yml` + a port override.
 #   Failed cold: `bind: address already in use` on 8000. Compose *appends*
 #   `ports` lists and `!override` needs Compose >= 2.24 (this machine has 2.18),
@@ -228,6 +231,15 @@ export DATABASE_URL SESSION_SECRET
 export APP_BASE_URL="$BASE_URL"
 export ENVIRONMENT=development
 export STATIC_DIR="$REPO_ROOT/frontend/dist"
+# The reservation inbox, configured with inert values so `/inbox` renders its
+# real screens instead of the "not configured" state. No SNS topic or bucket by
+# these names exists, nothing subscribes this address, and no model is set, so
+# nothing is received or sent: QA seeds inbox rows straight into the database.
+export INBOX_RECIPIENT="inbox@qa.invalid"
+export INBOX_AWS_REGION="eu-central-1"
+export INBOX_SNS_TOPIC_ARN="arn:aws:sns:eu-central-1:000000000000:trip-planner-qa"
+export INBOX_S3_BUCKET="trip-planner-qa-unused"
+export INBOX_S3_PREFIX="inbound/"
 
 # --- build ------------------------------------------------------------------
 CACHED=$(read_json_string "$BUILD_CACHE" fingerprint)
