@@ -94,9 +94,9 @@ action) — the slippable tail, unchanged by this.
 
 ### Phase 2: The approval service and API
 
-- [ ] 2.1 Action items from routing and by hand
-- [ ] 2.2 Approve
-- [ ] 2.3 Reject, undo and retarget
+- [x] 2.1 Action items from routing and by hand — 06260a9
+- [x] 2.2 Approve — 06260a9
+- [x] 2.3 Reject, undo and retarget — 06260a9
 
 ### Phase 3: The sheet, end to end, and the guarantees
 
