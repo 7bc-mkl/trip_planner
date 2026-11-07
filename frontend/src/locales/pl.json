@@ -325,8 +325,12 @@
       "close": "Zamknij",
       "approved": "Zatwierdzono.",
       "rejected": "Odrzucono. Wiadomość nadal jest w skrzynce.",
-      "undoWill": "Cofnięcie przywróci {fields, plural, =0 {zero pól} one {# pole} few {# pola} many {# pól} other {# pola}} i zwróci {documents, plural, =0 {zero dokumentów} one {# dokument} few {# dokumenty} many {# dokumentów} other {# dokumentu}} do skrzynki — o ile nic innego ich nie zmieniło.",
-      "undoCreated": "Cofnięcie usunie utworzoną pozycję i zwróci jej dokumenty do skrzynki — o ile nic innego jej nie zmieniło."
-    }
+      "undoCreated": "Cofnięcie usunie utworzoną pozycję i zwróci jej dokumenty do skrzynki — o ile nic innego jej nie zmieniło.",
+      "undoFields": "Cofnięcie przywróci {fields, plural, one {# pole} few {# pola} many {# pól} other {# pola}} — o ile nic innego ich nie zmieniło.",
+      "undoDocuments": "Cofnięcie zwróci {documents, plural, one {# dokument} few {# dokumenty} many {# dokumentów} other {# dokumentu}} do skrzynki — o ile nic innego ich nie przeniosło.",
+      "undoBoth": "Cofnięcie przywróci {fields, plural, one {# pole} few {# pola} many {# pól} other {# pola}} i zwróci {documents, plural, one {# dokument} few {# dokumenty} many {# dokumentów} other {# dokumentu}} do skrzynki — o ile nic innego ich nie zmieniło.",
+      "undoCreatedOnly": "Cofnięcie usunie utworzoną pozycję — o ile nic innego jej nie zmieniło."
+    },
+    "upToDate": "Już aktualne"
   }
 }

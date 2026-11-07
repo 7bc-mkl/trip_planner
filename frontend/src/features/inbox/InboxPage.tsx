@@ -429,6 +429,8 @@ function ActionItemCard({
   const { t, i18n } = useTranslation()
   const date =
     actionItem.target_date === null ? '' : formatDate(actionItem.target_date, i18n.language)
+  const changes =
+    actionItem.fields.filter((row) => row.changed).length + (actionItem.status?.changed ? 1 : 0)
 
   let where: string
   if (actionItem.target_item_id !== null) {
@@ -448,7 +450,12 @@ function ActionItemCard({
         {where}
       </p>
       <p className="inbox-row__meta">
-        {t('inbox.claimCount', { count: actionItem.fields.length })}
+        {/* Only what would change: a duplicate forward claims five fields the
+            item already holds, and "5 fields" on its card promised work the
+            sheet then showed did not exist (QA, #22). */}
+        {changes === 0 && actionItem.attachments.length === 0
+          ? t('inbox.upToDate')
+          : t('inbox.claimCount', { count: changes })}
         {actionItem.attachments.length > 0 && (
           <> · {t('inbox.documentCount', { count: actionItem.attachments.length })}</>
         )}

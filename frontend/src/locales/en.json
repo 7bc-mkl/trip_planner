@@ -325,8 +325,12 @@
       "close": "Close",
       "approved": "Approved.",
       "rejected": "Rejected. The message is still in your inbox.",
-      "undoWill": "Undo restores {fields, plural, =0 {no fields} one {# field} other {# fields}} and returns {documents, plural, =0 {no documents} one {# document} other {# documents}} to the inbox — as long as nothing else has changed them.",
-      "undoCreated": "Undo removes the item it created and returns its documents to the inbox — as long as nothing else has changed it."
-    }
+      "undoCreated": "Undo removes the item it created and returns its documents to the inbox — as long as nothing else has changed it.",
+      "undoFields": "Undo restores {fields, plural, one {# field} other {# fields}} — as long as nothing else has changed them.",
+      "undoDocuments": "Undo returns {documents, plural, one {# document} other {# documents}} to the inbox — as long as nothing else has moved them.",
+      "undoBoth": "Undo restores {fields, plural, one {# field} other {# fields}} and returns {documents, plural, one {# document} other {# documents}} to the inbox — as long as nothing else has changed them.",
+      "undoCreatedOnly": "Undo removes the item it created — as long as nothing else has changed it."
+    },
+    "upToDate": "Already up to date"
   }
 }

@@ -116,12 +116,35 @@ export function ActionItemSheet({
 
   const close = () => onClose(changed)
 
-  function handleKeyDown(event: React.KeyboardEvent) {
-    if (event.key === 'Escape') {
-      event.stopPropagation()
-      close()
-      return
+  // The latest `close`, for the document-level listener below, which is
+  // registered once and would otherwise keep the first render's `changed`.
+  const closeRef = useRef(close)
+  closeRef.current = close
+
+  // Escape is listened for on the document, not only on the overlay. A decision
+  // replaces the button that had focus (Approve becomes Undo, Undo becomes
+  // Approve), the browser drops focus to `<body>`, and an overlay-only handler
+  // then never sees the key — the sheet stopped closing on Esc (QA, #22).
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.stopPropagation()
+        closeRef.current()
+      }
     }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [])
+
+  // And focus is put back inside the sheet whenever its contents are replaced,
+  // so a keyboard user is never left on `<body>` behind a modal.
+  useEffect(() => {
+    if (panel.current !== null && !panel.current.contains(document.activeElement)) {
+      closeButton.current?.focus()
+    }
+  }, [item])
+
+  function handleKeyDown(event: React.KeyboardEvent) {
     if (event.key !== 'Tab' || panel.current === null) {
       return
     }
@@ -235,6 +258,11 @@ export function ActionItemSheet({
 
             {item.fields.length > 0 || item.status !== null ? (
               <table className="action-sheet__table">
+                <colgroup>
+                  <col className="action-sheet__col-field" />
+                  <col />
+                  <col />
+                </colgroup>
                 <thead>
                   <tr>
                     <th scope="col">{t('inbox.sheet.field')}</th>
@@ -253,7 +281,7 @@ export function ActionItemSheet({
                             disabled={!pending || !row.changed}
                             onChange={() => toggle(ticked, row.name, setTicked)}
                           />
-                          {t(`inbox.field.${row.name}`)}
+                          <span className="action-sheet__label">{t(`inbox.field.${row.name}`)}</span>
                         </label>
                       </th>
                       <td>{formatValue(row.name, row.current, i18n.language, t)}</td>
@@ -277,7 +305,7 @@ export function ActionItemSheet({
                             disabled={!pending || !item.status.changed}
                             onChange={() => setStatusTicked(!statusTicked)}
                           />
-                          {t('inbox.field.status')}
+                          <span className="action-sheet__label">{t('inbox.field.status')}</span>
                         </label>
                       </th>
                       <td>
@@ -354,12 +382,7 @@ export function ActionItemSheet({
             {item.state === 'approved' && item.applied !== null && (
               <p className="action-sheet__outcome" role="status">
                 {t('inbox.sheet.approved')}{' '}
-                {item.applied.created
-                  ? t('inbox.sheet.undoCreated')
-                  : t('inbox.sheet.undoWill', {
-                      fields: item.applied.fields.length + (item.applied.status_changed ? 1 : 0),
-                      documents: item.applied.attachment_count,
-                    })}
+                {undoSentence(item.applied, t)}
               </p>
             )}
             {item.state === 'rejected' && (
@@ -419,6 +442,25 @@ export function ActionItemSheet({
       </div>
     </div>
   )
+}
+
+/**
+ * What Undo will do, naming only the halves that are not empty — "restores
+ * 2 fields", "returns 1 document", or both — rather than "restores no fields".
+ */
+function undoSentence(applied: NonNullable<ActionItem['applied']>, t: TFunction): string {
+  if (applied.created) {
+    return t(applied.attachment_count > 0 ? 'inbox.sheet.undoCreated' : 'inbox.sheet.undoCreatedOnly')
+  }
+  const fields = applied.fields.length + (applied.status_changed ? 1 : 0)
+  const documents = applied.attachment_count
+  if (fields > 0 && documents > 0) {
+    return t('inbox.sheet.undoBoth', { fields, documents })
+  }
+  if (documents > 0) {
+    return t('inbox.sheet.undoDocuments', { documents })
+  }
+  return t('inbox.sheet.undoFields', { fields })
 }
 
 /** Where the proposal points, and why — a translated key, never prose. */

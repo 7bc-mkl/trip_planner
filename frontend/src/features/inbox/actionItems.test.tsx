@@ -421,6 +421,41 @@ describe('the review sheet', () => {
     expect(sent('/reject')).toHaveLength(1)
   })
 
+  it('closes on Esc after approving with the keyboard', async () => {
+    // Regression (QA, #22): Approve is replaced by Undo, focus fell to <body>,
+    // and an overlay-only Escape handler never fired.
+    const dialog = await openSheet()
+    within(dialog).getByRole('button', { name: 'Approve selected' }).focus()
+    await userEvent.keyboard('{Enter}')
+    await within(dialog).findByRole('button', { name: 'Undo' })
+
+    expect(dialog.contains(document.activeElement)).toBe(true)
+    await userEvent.keyboard('{Escape}')
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+  })
+
+  it('names only the non-empty half of what undo restores', async () => {
+    const dialog = await openSheet({
+      approve: () =>
+        json(200, {
+          ...ACTION_ITEM,
+          state: 'approved',
+          applied: {
+            item_id: HOTEL.id,
+            created: false,
+            fields: [],
+            status_changed: false,
+            attachment_count: 1,
+          },
+        }),
+    })
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Approve selected' }))
+
+    expect(await within(dialog).findByText(/Undo returns 1 document to the inbox/)).toBeInTheDocument()
+    expect(within(dialog).queryByText(/no fields/)).not.toBeInTheDocument()
+  })
+
   it('keeps focus on the page, not the body, once a decided proposal leaves the list', async () => {
     const dialog = await openSheet()
 
@@ -435,7 +470,9 @@ describe('the review sheet', () => {
     const dialog = await openSheet()
     await userEvent.click(within(dialog).getByRole('button', { name: 'Approve selected' }))
 
-    expect(await within(dialog).findByText(/restores 2 fields and returns 1 document/)).toBeInTheDocument()
+    expect(
+      await within(dialog).findByText(/restores 2 fields and returns 1 document/),
+    ).toBeInTheDocument()
     await userEvent.click(within(dialog).getByRole('button', { name: 'Undo' }))
 
     await waitFor(() => expect(sent('/undo')).toHaveLength(1))
@@ -452,6 +489,22 @@ describe('the review sheet', () => {
 
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
     expect(review).toHaveFocus()
+  })
+})
+
+describe('a proposal that changes nothing', () => {
+  it('says so on its card instead of counting fields', async () => {
+    const noop = {
+      ...ACTION_ITEM,
+      fields: ACTION_ITEM.fields.map((row) => ({ ...row, changed: false, default_ticked: false })),
+      status: { current: 'done', proposed: 'done', changed: false, default_ticked: false },
+      attachments: [],
+    }
+    await renderInbox({ actionItem: noop })
+
+    const region = await screen.findByRole('region', { name: 'Awaiting you' })
+    expect(within(region).getByText('Already up to date')).toBeInTheDocument()
+    expect(within(region).queryByText(/fields/)).not.toBeInTheDocument()
   })
 })
 

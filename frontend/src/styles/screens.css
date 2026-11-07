@@ -1115,10 +1115,19 @@ fieldset.field-card {
   overflow-wrap: anywhere;
 }
 
+/* A fixed layout, so the columns share the dialog's width instead of growing to
+   their content's min-content: with `auto`, a long title or reference made the
+   table 410px wide inside a 358px dialog on a phone and clipped "The message
+   says" — the column the owner decides on (QA, #22). */
 .action-sheet__table {
   width: 100%;
+  table-layout: fixed;
   border-collapse: collapse;
   margin-top: var(--space-md);
+}
+
+.action-sheet__table col.action-sheet__col-field {
+  width: 34%;
 }
 
 .action-sheet__table th,
@@ -1145,6 +1154,15 @@ fieldset.field-card {
   display: flex;
   align-items: center;
   gap: var(--space-xs);
+  min-width: 0;
+}
+
+/* A flex item's text does not shrink below its longest word unless it is told
+   it may, so "Confirmation" ran into the next column on a phone. */
+.action-sheet__label {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  hyphens: auto;
 }
 
 /* The difference is said in words; weight only reinforces it. Never colour
