@@ -100,6 +100,6 @@ action) — the slippable tail, unchanged by this.
 
 ### Phase 3: The sheet, end to end, and the guarantees
 
-- [ ] 3.1 The action-item sheet
-- [ ] 3.2 End-to-end flow test
-- [ ] 3.3 Guarantee tests
+- [x] 3.1 The action-item sheet — 762bdb4
+- [x] 3.2 End-to-end flow test — 2d424fe
+- [x] 3.3 Guarantee tests — 939740e
