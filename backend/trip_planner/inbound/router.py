@@ -43,6 +43,7 @@ from trip_planner.db.models import (
     Owner,
     Trip,
 )
+from trip_planner.domain.extraction import ExtractedFields
 from trip_planner.domain.routing import (
     CandidateTrip,
     TripWindow,
@@ -88,6 +89,13 @@ class RoutingOutcome:
     #: Whether a provider was contacted at all. The tests that matter most in
     #: this module assert this is `False`.
     called_model: bool = False
+    #: What the model claimed the message says — validated by the rejecting
+    #: reader, not yet coerced. Routing does nothing with it: turning it into a
+    #: proposal reads the plan, and nothing under `inbound/` may.
+    fields: ExtractedFields | None = None
+    #: The other candidates, as `(trip id, title)`, for the sheet's one-click
+    #: re-targets.
+    alternatives: tuple[tuple[str, str], ...] = ()
 
 
 def trip_windows_for(db: OrmSession, owner: Owner) -> list[TripWindow]:
@@ -253,11 +261,15 @@ def route_message(
         return _after_transient_failure(current)
     if proposal is None or proposal.trip_id is None:
         return _queue(current, "model_found_no_trip", None, called_model=True)
-    return _route_to(current, proposal.trip_id, candidates)
+    return _route_to(current, proposal.trip_id, candidates, fields=proposal.fields)
 
 
 def _route_to(
-    message: InboundMessage, trip_id: str, candidates: tuple[CandidateTrip, ...]
+    message: InboundMessage,
+    trip_id: str,
+    candidates: tuple[CandidateTrip, ...],
+    *,
+    fields: ExtractedFields | None = None,
 ) -> RoutingOutcome:
     """Set the one column routing is allowed to set."""
     chosen = next((one for one in candidates if one.trip.id == trip_id), None)
@@ -275,6 +287,10 @@ def _route_to(
         reason_args=message.routing_reason_args,
         trip_id=trip_id,
         called_model=True,
+        fields=fields,
+        alternatives=tuple(
+            (one.trip.id, one.trip.title) for one in candidates if one.trip.id != trip_id
+        ),
     )
 
 

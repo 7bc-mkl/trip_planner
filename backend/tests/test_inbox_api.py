@@ -166,12 +166,15 @@ def test_the_summary_answers_on_an_unconfigured_deployment(
     assert body["address"] is None
 
 
-def test_the_summary_does_not_promise_action_items_that_do_not_exist_yet(
+def test_the_summary_counts_pending_action_items_once_they_exist(
     owner_client: TestClient,
 ) -> None:
-    """A field reporting zero for a concept Phase 1 does not have says something
-    false; an absent field is something a consumer can see is absent."""
-    assert "pending_action_items" not in owner_client.get(f"{INBOX}/summary").json()
+    """Phase 3 added the field, additively, with the concept it counts.
+
+    The counting rules themselves — pending only, never another owner's — are
+    asserted in `tests/test_action_items_api.py`.
+    """
+    assert owner_client.get(f"{INBOX}/summary").json()["pending_action_items"] == 0
 
 
 # --------------------------------------------------------------------------- #

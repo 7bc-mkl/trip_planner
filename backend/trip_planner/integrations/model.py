@@ -61,6 +61,7 @@ from typing import Protocol
 from pydantic import BaseModel, ConfigDict, ValidationError
 
 from trip_planner.config import ModelSettings
+from trip_planner.domain.extraction import ExtractedFields
 from trip_planner.domain.routing import TripWindow
 
 logger = logging.getLogger(__name__)
@@ -201,18 +202,24 @@ class ModelBudget:
 
 
 class RoutingProposal(BaseModel):
-    """The entire Phase 2 response: one trip id, or nothing.
+    """The whole response: one trip id or nothing, and what the message says.
 
     `extra="forbid"` is the load-bearing line. A provider that returns extra
     keys — or a message that talks one into returning them — produces a
-    validation error rather than a value anything stores. Phase 3 widens this
-    with a sparse `fields` object; it does not widen what a provider may *do*,
-    which stays "return data that this model accepts".
+    validation error rather than a value anything stores.
+
+    Phase 3 widened this with the sparse `fields` object the adapter contract
+    names, and nothing else. It did not widen what a provider may *do*, which
+    stays "return data that this model accepts": `ExtractedFields` is itself a
+    rejecting reader, it has no item id, no instruction and no prose, and every
+    value in it is coerced and re-validated by `domain/extraction.py` before a
+    proposal carries it — and then only as a proposal the owner approves.
     """
 
     model_config = ConfigDict(extra="forbid")
 
     trip_id: str | None = None
+    fields: ExtractedFields | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -272,12 +279,23 @@ class RoutingRequest:
 PROMPT = """\
 You are given one forwarded travel confirmation and a list of candidate trips.
 
-Return ONLY a JSON object of the form {"trip_id": "<id>"} naming the single \
-candidate trip the confirmation belongs to, or {"trip_id": null} if none of \
-them fits.
+Return ONLY a JSON object of the form {"trip_id": "<id>", "fields": {...}}. \
+"trip_id" names the single candidate trip the confirmation belongs to, or is \
+null if none of them fits. The id MUST be copied exactly from the candidate \
+list.
 
-The id MUST be copied exactly from the candidate list. Do not invent an id, do \
-not explain, do not return any other key.
+"fields" describes the booking the confirmation is for, using only these keys, \
+each optional — omit any key the confirmation does not state:
+  "title": a short name for the booking, e.g. "Turkish Airlines TK1234 WAW-IST"
+  "kind": one of "accommodation", "transport", "activity", "meal", "other"
+  "confirmation_number": the booking reference exactly as written
+  "start_date", "end_date": the travel dates, as YYYY-MM-DD
+  "start_time", "end_time": local times as HH:MM
+  "cost_amount": the total price as a decimal string, e.g. "1234.50"
+  "cost_currency": its ISO-4217 code, e.g. "PLN"
+
+Use travel dates only — never a booking date, a payment date or a cancellation \
+deadline. Do not invent values, do not explain, do not return any other key.
 """
 
 

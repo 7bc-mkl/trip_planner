@@ -66,17 +66,16 @@ class ErrorCode(StrEnum):
     DAYS_HAVE_ATTACHMENTS = "days_have_attachments"
 
     # The reservation inbox, Phase 1.
-    #
-    # **Four of the spec's seven, deliberately.** `action_item_conflict`,
-    # `action_item_already_decided` and `invalid_action_selection` all name
-    # conditions on the approval path, which Phase 1 does not build — and this
-    # module's own rule is that members arrive alongside the endpoints that raise
-    # them, because a code nothing can produce is a locale entry in two languages
-    # for a message no user will ever see. They ship with Phase 3.
     INBOX_NOT_CONFIGURED = "inbox_not_configured"
     MESSAGE_NOT_ROUTABLE = "message_not_routable"
     INBOX_RATE_LIMITED = "inbox_rate_limited"
     INBOX_OBJECT_UNAVAILABLE = "inbox_object_unavailable"
+
+    # The reservation inbox, Phase 3 — the approval path. The remaining three of
+    # the spec's seven, arriving with the endpoints that raise them.
+    ACTION_ITEM_ALREADY_DECIDED = "action_item_already_decided"
+    ACTION_ITEM_CONFLICT = "action_item_conflict"
+    INVALID_ACTION_SELECTION = "invalid_action_selection"
 
 
 #: The status each code is served with. Kept beside the enum so a code cannot be
@@ -127,6 +126,11 @@ STATUS_FOR_CODE: dict[ErrorCode, int] = {
     # resource has not gone — only the raw object recovery needs. "Gone" would
     # suggest the message itself is unrecoverable, which it is not.
     ErrorCode.INBOX_OBJECT_UNAVAILABLE: status.HTTP_409_CONFLICT,
+    # 409: the request is well-formed; the action item's state is what refuses
+    # it — already decided, or changed since the sheet was opened.
+    ErrorCode.ACTION_ITEM_ALREADY_DECIDED: status.HTTP_409_CONFLICT,
+    ErrorCode.ACTION_ITEM_CONFLICT: status.HTTP_409_CONFLICT,
+    ErrorCode.INVALID_ACTION_SELECTION: status.HTTP_422_UNPROCESSABLE_CONTENT,
 }
 
 

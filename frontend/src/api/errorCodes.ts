@@ -30,6 +30,9 @@ export type ErrorCode =
   | 'message_not_routable'
   | 'inbox_rate_limited'
   | 'inbox_object_unavailable'
+  | 'action_item_already_decided'
+  | 'action_item_conflict'
+  | 'invalid_action_selection'
 
 export const ERROR_CODES: readonly ErrorCode[] = [
   'invalid_credentials',
@@ -60,4 +63,7 @@ export const ERROR_CODES: readonly ErrorCode[] = [
   'message_not_routable',
   'inbox_rate_limited',
   'inbox_object_unavailable',
+  'action_item_already_decided',
+  'action_item_conflict',
+  'invalid_action_selection',
 ] as const

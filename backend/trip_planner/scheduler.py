@@ -38,6 +38,7 @@ from datetime import UTC, datetime, timedelta
 import sqlalchemy as sa
 from sqlalchemy.orm import Session as OrmSession
 
+from trip_planner.approvals import propose_from_routing
 from trip_planner.config import Settings
 from trip_planner.db.models import InboundMessage, Owner
 from trip_planner.inbound.cleanup import CleanupReport, run_cleanup
@@ -260,7 +261,7 @@ class InboxWorker:
                 input_price_per_mtok=model_settings.input_price_per_mtok,
                 output_price_per_mtok=model_settings.output_price_per_mtok,
             )
-            route_message(
+            outcome = route_message(
                 db,
                 message,
                 owner=owner,
@@ -268,6 +269,16 @@ class InboxWorker:
                 client=client,
                 budget=budget,
             )
+            if outcome.state == "routed":
+                # A proposal, never a write: the approval service reads the
+                # routed trip to aim it, and writes nothing to the plan.
+                propose_from_routing(
+                    db,
+                    message,
+                    owner=owner,
+                    fields=outcome.fields,
+                    alternatives=outcome.alternatives,
+                )
             db.commit()
         except Exception:
             db.rollback()
