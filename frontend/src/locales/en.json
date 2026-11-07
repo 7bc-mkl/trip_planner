@@ -274,6 +274,59 @@
       "routing_budget_exhausted": "Automatic matching is paused — this month's budget is used up."
     },
     "routedTo": "Trip:",
-    "changeTrip": "Change trip"
+    "changeTrip": "Change trip",
+    "actionsTitle": "Awaiting you",
+    "review": "Review",
+    "claimCount": "{count, plural, =0 {No fields} one {# field} other {# fields}}",
+    "propose": "Propose",
+    "proposing": "Proposing…",
+    "proposeLabel": "Put this message's documents on",
+    "field": {
+      "title": "Title",
+      "kind": "Type",
+      "confirmation_number": "Confirmation number",
+      "cost": "Cost",
+      "start_time": "Start time",
+      "end_time": "End time",
+      "end_date": "Ends on",
+      "status": "Status"
+    },
+    "target": {
+      "matched_confirmation_number": "Matched by its confirmation number.",
+      "matched_title_and_day": "Matched by its title and day.",
+      "several_items_match": "Several items could match — choose one.",
+      "new_item_on_day": "No existing item matched, so this would add a new one.",
+      "no_usable_day": "No day of the trip fits the message's dates — choose where it goes.",
+      "chosen_by_owner": "You chose where this goes."
+    },
+    "sheet": {
+      "title": "Review proposal",
+      "field": "Field",
+      "now": "The item now",
+      "message": "The message says",
+      "empty": "—",
+      "same": "(already the same)",
+      "differs": "(differs — not ticked by default)",
+      "noFields": "The message claims no fields — only its documents.",
+      "documents": "Documents",
+      "source": "The message",
+      "updates": "Updates “{title}” on {date}",
+      "creates": "Adds a new item on {date}",
+      "needsTarget": "Waiting for you to choose where this goes",
+      "chooseTarget": "Choose…",
+      "newItemOn": "New item on {date}",
+      "alternatives": "Other trips that matched:",
+      "retargetLabel": "Point this proposal at",
+      "retarget": "Change target",
+      "retargeting": "Changing…",
+      "approve": "Approve selected",
+      "reject": "Reject",
+      "undo": "Undo",
+      "close": "Close",
+      "approved": "Approved.",
+      "rejected": "Rejected. The message is still in your inbox.",
+      "undoWill": "Undo restores {fields, plural, =0 {no fields} one {# field} other {# fields}} and returns {documents, plural, =0 {no documents} one {# document} other {# documents}} to the inbox — as long as nothing else has changed them.",
+      "undoCreated": "Undo removes the item it created and returns its documents to the inbox — as long as nothing else has changed it."
+    }
   }
 }
