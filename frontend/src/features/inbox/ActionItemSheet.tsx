@@ -284,9 +284,17 @@ export function ActionItemSheet({
                           <span className="action-sheet__label">{t(`inbox.field.${row.name}`)}</span>
                         </label>
                       </th>
-                      <td>{formatValue(row.name, row.current, i18n.language, t)}</td>
                       <td>
-                        {formatValue(row.name, row.proposed, i18n.language, t)}
+                        <Caption>{t('inbox.sheet.now')}</Caption>
+                        <Value money={row.name === 'cost'}>
+                          {formatValue(row.name, row.current, i18n.language, t)}
+                        </Value>
+                      </td>
+                      <td>
+                        <Caption>{t('inbox.sheet.message')}</Caption>
+                        <Value money={row.name === 'cost'}>
+                          {formatValue(row.name, row.proposed, i18n.language, t)}
+                        </Value>
                         <Difference
                           changed={row.changed}
                           hadValue={row.current !== null}
@@ -309,11 +317,13 @@ export function ActionItemSheet({
                         </label>
                       </th>
                       <td>
+                        <Caption>{t('inbox.sheet.now')}</Caption>
                         {item.status.current === null
                           ? t('inbox.sheet.empty')
                           : t(`item.status.${item.status.current}`)}
                       </td>
                       <td>
+                        <Caption>{t('inbox.sheet.message')}</Caption>
                         {t(`item.status.${item.status.proposed}`)}
                         <Difference
                           changed={item.status.changed}
@@ -484,6 +494,28 @@ function TargetLine({ item }: { item: ActionItem }) {
       <br />
       <span className="inbox-row__reason">{t(`inbox.target.${item.target_reason}`)}</span>
     </p>
+  )
+}
+
+/**
+ * The column's name, repeated inside the cell. Hidden while the sheet is a
+ * table — the header already says it — and shown on a phone, where each row is
+ * stacked so the values get the full width instead of a third of it each.
+ */
+function Caption({ children }: { children: string }) {
+  return <span className="action-sheet__caption">{children}</span>
+}
+
+/**
+ * One value. A money amount never wraps: split across two lines, "612.4" and
+ * "0" read as a different number — on the screen where the owner decides what
+ * gets written (QA, #22).
+ */
+function Value({ money, children }: { money: boolean; children: string }) {
+  return (
+    <span className={money ? 'action-sheet__value action-sheet__value--money' : 'action-sheet__value'}>
+      {children}
+    </span>
   )
 }
 

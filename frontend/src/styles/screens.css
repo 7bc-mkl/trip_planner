@@ -1141,7 +1141,6 @@ fieldset.field-card {
      "MYR 90.00" into mid-word breaks. A word now breaks only when it alone
      cannot fit. */
   overflow-wrap: break-word;
-  hyphens: auto;
 }
 
 .action-sheet__table thead th {
@@ -1161,8 +1160,55 @@ fieldset.field-card {
    it may, so "Confirmation" ran into the next column on a phone. */
 .action-sheet__label {
   min-width: 0;
-  overflow-wrap: anywhere;
-  hyphens: auto;
+  overflow-wrap: break-word;
+}
+
+.action-sheet__caption {
+  display: none;
+}
+
+.action-sheet__value--money {
+  white-space: nowrap;
+}
+
+/* On a phone the comparison stops being a three-column table: each field is
+   a block — its checkbox and name, then "The item now" and "The message says"
+   each on their own line at the full width of the dialog. Squeezed into
+   columns, ordinary words ("Accomm|odation") and money ("MYR 612.4|0") broke
+   mid-word (QA, #22). The captions carry the column names the hidden header
+   would have. */
+@media (max-width: 767px) {
+  .action-sheet__table,
+  .action-sheet__table tbody,
+  .action-sheet__table tr,
+  .action-sheet__table th,
+  .action-sheet__table td {
+    display: block;
+    width: auto;
+  }
+
+  .action-sheet__table colgroup,
+  .action-sheet__table thead {
+    display: none;
+  }
+
+  .action-sheet__table tr {
+    padding: var(--space-sm) 0;
+    border-bottom: 1px solid var(--hairline);
+  }
+
+  .action-sheet__table th,
+  .action-sheet__table td {
+    border-bottom: 0;
+    padding: var(--space-xs) 0;
+  }
+
+  .action-sheet__caption {
+    display: block;
+    color: var(--text-muted);
+    font: var(--type-body-sm);
+    letter-spacing: var(--tracking-body-sm);
+  }
 }
 
 /* The difference is said in words; weight only reinforces it. Never colour

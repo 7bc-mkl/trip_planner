@@ -308,6 +308,15 @@ describe('the review sheet', () => {
     expect(within(dialog).getByText(/differs — not ticked by default/)).toBeInTheDocument()
   })
 
+  it('keeps a money amount on one line', async () => {
+    // Regression (QA, #22): at 390px "MYR 612.40" broke into "MYR 612.4" / "0".
+    const dialog = await openSheet()
+    const row = within(dialog).getByRole('checkbox', { name: 'Cost' }).closest('tr')
+    const amounts = row?.querySelectorAll('.action-sheet__value--money') ?? []
+
+    expect(amounts).toHaveLength(2)
+  })
+
   it('shows the source message beside the proposal, as text', async () => {
     const dialog = await openSheet()
 
