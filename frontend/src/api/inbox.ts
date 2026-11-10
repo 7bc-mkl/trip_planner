@@ -60,6 +60,8 @@ export type InboxMessage = {
 export type InboxMessageDetail = InboxMessage & {
   text_body: string
   attachments: InboxAttachment[]
+  /** This message's proposals, newest first — ids only; the sheet loads one. */
+  action_item_ids: string[]
 }
 
 export type QuarantinedMessage = {
@@ -86,6 +88,8 @@ export type QuarantinedMessage = {
  */
 export type InboxSummary = {
   inbox_enabled: boolean
+  /** Proposals awaiting the owner's decision (D21). */
+  pending_action_items: number
   /** The address to forward to, for the empty state. `null` when unconfigured. */
   address: string | null
   unrouted: number
@@ -161,4 +165,130 @@ export function deleteInboxMessage(messageId: string): Promise<void> {
  */
 export function inboxAttachmentUrl(messageId: string, attachmentId: string): string {
   return `/api/v1${INBOX}/messages/${messageId}/attachments/${attachmentId}/content`
+}
+
+/* ------------------------------------------------------------------------ *
+ * Action items — Phase 3 (D21)
+ * ------------------------------------------------------------------------ */
+
+/** What an approval may name. `cost` is one field: an amount and its currency. */
+export type ApprovableField =
+  | 'title'
+  | 'kind'
+  | 'confirmation_number'
+  | 'cost'
+  | 'start_time'
+  | 'end_time'
+  | 'end_date'
+
+export type CostValue = { amount: string; currency: string }
+
+/**
+ * A typed value on the wire: an ISO date, an `HH:MM` time, a cost pair, or a
+ * plain string. **Never prose a model composed** — the sheet formats every one
+ * of these through `Intl` or a translation key.
+ */
+export type FieldValue = string | CostValue | null
+
+export type FieldRow = {
+  name: ApprovableField
+  current: FieldValue
+  proposed: FieldValue
+  changed: boolean
+  /** True only when the item's value is empty — nothing to lose (A6). */
+  default_ticked: boolean
+}
+
+export type StatusRow = {
+  current: string | null
+  proposed: string
+  changed: boolean
+  /** True only for a forward move; a backwards one is offered, never ticked. */
+  default_ticked: boolean
+}
+
+export type ActionItem = {
+  id: string
+  message_id: string
+  subject: string
+  from_address: string
+  received_at: string
+  kind: 'update_item' | 'create_item'
+  state: 'pending' | 'approved' | 'rejected' | 'superseded'
+  /** Sent back as `expected_revision`. */
+  revision: number
+  source: 'model' | 'owner'
+  trip_id: string | null
+  trip_title: string | null
+  target_item_id: string | null
+  target_item_title: string | null
+  target_trip_day_id: string | null
+  target_date: string | null
+  /** A translation-key suffix under `inbox.target.` — never prose. */
+  target_reason: string
+  fields: FieldRow[]
+  status: StatusRow | null
+  attachments: InboxAttachment[]
+  alternatives: { trip_id: string; title: string }[]
+  applied: {
+    item_id: string
+    created: boolean
+    fields: ApprovableField[]
+    status_changed: boolean
+    attachment_count: number
+  } | null
+  decided_at: string | null
+  created_at: string
+}
+
+export type ApprovalSelection = {
+  target_item_id?: string | null
+  target_trip_day_id?: string | null
+  fields: ApprovableField[]
+  attachment_ids: string[]
+  set_status: string | null
+  expected_revision: number
+}
+
+export type Target = { target_item_id: string } | { target_trip_day_id: string }
+
+export function listActionItems(signal?: AbortSignal): Promise<ActionItem[]> {
+  return request<ActionItem[]>(`${INBOX}/action-items`, { signal })
+}
+
+export function getActionItem(id: string, signal?: AbortSignal): Promise<ActionItem> {
+  return request<ActionItem>(`${INBOX}/action-items/${id}`, { signal })
+}
+
+export function approveActionItem(id: string, selection: ApprovalSelection): Promise<ActionItem> {
+  return request<ActionItem>(`${INBOX}/action-items/${id}/approve`, {
+    method: 'POST',
+    body: selection,
+  })
+}
+
+export function rejectActionItem(id: string): Promise<void> {
+  return request<void>(`${INBOX}/action-items/${id}/reject`, { method: 'POST' })
+}
+
+export function undoActionItem(id: string): Promise<ActionItem> {
+  return request<ActionItem>(`${INBOX}/action-items/${id}/undo`, { method: 'POST' })
+}
+
+export function retargetActionItem(
+  id: string,
+  target: Target,
+  expectedRevision: number,
+): Promise<ActionItem> {
+  return request<ActionItem>(`${INBOX}/action-items/${id}/retarget`, {
+    method: 'POST',
+    body: { ...target, expected_revision: expectedRevision },
+  })
+}
+
+export function proposeForMessage(messageId: string, target: Target): Promise<ActionItem> {
+  return request<ActionItem>(`${INBOX}/messages/${messageId}/action-items`, {
+    method: 'POST',
+    body: target,
+  })
 }

@@ -1,28 +1,38 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 
 import { ApiError } from '../../api/client'
-import type { InboxMessage, InboxMessageDetail, InboxSummary } from '../../api/inbox'
-import { getInboxMessage, getInboxSummary, listInboxMessages } from '../../api/inbox'
+import type {
+  ActionItem,
+  InboxMessage,
+  InboxMessageDetail,
+  InboxSummary,
+  Target,
+} from '../../api/inbox'
+import {
+  getInboxMessage,
+  getInboxSummary,
+  listActionItems,
+  listInboxMessages,
+  proposeForMessage,
+} from '../../api/inbox'
 import type { TripSummary } from '../../api/trips'
 import { listTrips } from '../../api/trips'
 import { AppShell } from '../trips/AppShell'
-import { parseIsoDate } from '../trips/format'
+import { formatDate, parseIsoDate } from '../trips/format'
+import { ActionItemSheet } from './ActionItemSheet'
 import { MessageView } from './MessageView'
 import { PlaceMessage } from './PlaceMessage'
 import { QuarantineRegion } from './QuarantineRegion'
+import { TargetPicker } from './TargetPicker'
 
 /**
  * `/inbox` — what the account's forwarding address has taken delivery of.
  *
- * **Three regions, in the order his attention should go.** The spec's first
- * region is *action items awaiting you*, and it is deliberately absent here:
- * action items arrive with the extraction phase, and an always-empty region
- * would promise a feature this build does not have. Its place is taken by the
- * mail that has been placed or is ready to be read, which is what Phase 1
- * actually produces. The other two — *unrouted* and *quarantined* — are the
- * spec's, unchanged.
+ * **The regions, in the order his attention should go**: *action items
+ * awaiting you* first — proposals the owner approves field by field (D21) — then
+ * the *unrouted* queue, the rest of his mail, and the *quarantined* count.
  *
  * **Honest freshness, and it is load-bearing.** The screen says when SES last
  * delivered and when ingestion last failed, because an empty inbox and a broken
@@ -37,6 +47,15 @@ export function InboxPage() {
   const { t, i18n } = useTranslation()
   const [summary, setSummary] = useState<InboxSummary | null>(null)
   const [messages, setMessages] = useState<InboxMessage[] | null>(null)
+  const [actionItems, setActionItems] = useState<ActionItem[]>([])
+  const [reviewing, setReviewing] = useState<string | null>(null)
+  /**
+   * Set when a decided sheet closes. The button that opened it belongs to a
+   * proposal the reload is about to remove, so the sheet's own focus return
+   * would land on a node that then vanishes and leave focus on `<body>`. Once
+   * the list has re-rendered, focus moves to the page heading instead.
+   */
+  const refocus = useRef(false)
   const [trips, setTrips] = useState<TripSummary[]>([])
   const [error, setError] = useState<string | null>(null)
 
@@ -53,12 +72,15 @@ export function InboxPage() {
             setMessages([])
             return
           }
-          return Promise.all([listInboxMessages(signal), listTrips(signal)]).then(
-            ([loadedMessages, loadedTrips]) => {
-              setMessages(loadedMessages)
-              setTrips(loadedTrips)
-            },
-          )
+          return Promise.all([
+            listInboxMessages(signal),
+            listTrips(signal),
+            listActionItems(signal),
+          ]).then(([loadedMessages, loadedTrips, loadedActionItems]) => {
+            setMessages(loadedMessages)
+            setTrips(loadedTrips)
+            setActionItems(loadedActionItems)
+          })
         })
         .catch((caught: unknown) => {
           if (signal?.aborted) {
@@ -78,6 +100,19 @@ export function InboxPage() {
     load(controller.signal)
     return () => controller.abort()
   }, [load])
+
+  useEffect(() => {
+    if (!refocus.current) {
+      return
+    }
+    refocus.current = false
+    const heading =
+      document.getElementById('inbox-actions-heading') ?? document.querySelector('main h1')
+    if (heading instanceof HTMLElement) {
+      heading.setAttribute('tabindex', '-1')
+      heading.focus()
+    }
+  }, [actionItems])
 
   const unrouted = (messages ?? []).filter((one) => one.state === 'unrouted')
   const rest = (messages ?? []).filter((one) => one.state !== 'unrouted')
@@ -99,6 +134,21 @@ export function InboxPage() {
         <>
           <DeliveryStatus summary={summary} locale={i18n.language} />
 
+          {actionItems.length > 0 && (
+            <section className="inbox-region" aria-labelledby="inbox-actions-heading">
+              <h2 id="inbox-actions-heading">{t('inbox.actionsTitle')}</h2>
+              <ul className="inbox-list">
+                {actionItems.map((actionItem) => (
+                  <ActionItemCard
+                    key={actionItem.id}
+                    actionItem={actionItem}
+                    onReview={() => setReviewing(actionItem.id)}
+                  />
+                ))}
+              </ul>
+            </section>
+          )}
+
           {messages !== null && messages.length === 0 && summary.quarantined === 0 && (
             <section className="empty-state">
               <h2>{t('inbox.emptyTitle')}</h2>
@@ -119,6 +169,7 @@ export function InboxPage() {
                     message={message}
                     trips={trips}
                     onChanged={() => load()}
+                    onReview={setReviewing}
                   />
                 ))}
               </ul>
@@ -135,6 +186,7 @@ export function InboxPage() {
                     message={message}
                     trips={trips}
                     onChanged={() => load()}
+                    onReview={setReviewing}
                   />
                 ))}
               </ul>
@@ -143,6 +195,19 @@ export function InboxPage() {
 
           <QuarantineRegion count={summary.quarantined} onRecovered={() => load()} />
         </>
+      )}
+
+      {reviewing !== null && (
+        <ActionItemSheet
+          actionItemId={reviewing}
+          onClose={(changed) => {
+            setReviewing(null)
+            if (changed) {
+              refocus.current = true
+              load()
+            }
+          }}
+        />
       )}
     </AppShell>
   )
@@ -222,10 +287,12 @@ function MessageRow({
   message,
   trips,
   onChanged,
+  onReview,
 }: {
   message: InboxMessage
   trips: TripSummary[]
   onChanged: () => void
+  onReview: (actionItemId: string) => void
 }) {
   const { t, i18n } = useTranslation()
   const [detail, setDetail] = useState<InboxMessageDetail | null>(null)
@@ -294,6 +361,40 @@ function MessageRow({
       {open && detail === null && error === null && <p role="status">{t('app.loading')}</p>}
       {open && detail !== null && <MessageView message={detail} />}
 
+      {/* A proposal already exists: open it. Otherwise, for a message on a
+          trip, the owner may propose a placement himself — documents onto an
+          item, still approved like any other write (D21). */}
+      {open && detail !== null && detail.action_item_ids.length > 0 && (
+        <button
+          type="button"
+          className="button-quiet"
+          onClick={() => onReview(detail.action_item_ids[0] ?? '')}
+        >
+          {t('inbox.review')}
+        </button>
+      )}
+      {open &&
+        detail !== null &&
+        detail.action_item_ids.length === 0 &&
+        detail.trip_id !== null &&
+        detail.attachments.length > 0 && (
+          <TargetPicker
+            tripId={detail.trip_id}
+            label={t('inbox.proposeLabel')}
+            actionLabel={t('inbox.propose')}
+            busyLabel={t('inbox.proposing')}
+            onChoose={(target: Target) =>
+              proposeForMessage(message.id, target)
+                .then((created) => onReview(created.id))
+                .catch((caught: unknown) => {
+                  setError(
+                    caught instanceof ApiError ? t(caught.translationKey) : t('error.unknown'),
+                  )
+                })
+            }
+          />
+        )}
+
       {(message.state === 'unrouted' || message.state === 'received') && (
         <PlaceMessage message={message} trips={trips} onPlaced={onChanged} />
       )}
@@ -310,6 +411,58 @@ function MessageRow({
           label={t('inbox.changeTrip')}
         />
       )}
+    </li>
+  )
+}
+
+/**
+ * One proposal awaiting the owner: where it points, how many fields it claims,
+ * and whether a document came with it. The sheet is where it is decided.
+ */
+function ActionItemCard({
+  actionItem,
+  onReview,
+}: {
+  actionItem: ActionItem
+  onReview: () => void
+}) {
+  const { t, i18n } = useTranslation()
+  const date =
+    actionItem.target_date === null ? '' : formatDate(actionItem.target_date, i18n.language)
+  const changes =
+    actionItem.fields.filter((row) => row.changed).length + (actionItem.status?.changed ? 1 : 0)
+
+  let where: string
+  if (actionItem.target_item_id !== null) {
+    where = t('inbox.sheet.updates', { title: actionItem.target_item_title ?? '', date })
+  } else if (actionItem.target_trip_day_id !== null) {
+    where = t('inbox.sheet.creates', { date })
+  } else {
+    where = t('inbox.sheet.needsTarget')
+  }
+
+  return (
+    <li className="inbox-row">
+      <p className="inbox-row__from">{actionItem.from_address}</p>
+      <p className="inbox-row__subject">{actionItem.subject}</p>
+      <p className="inbox-row__trip">
+        {actionItem.trip_title !== null && <>{actionItem.trip_title} · </>}
+        {where}
+      </p>
+      <p className="inbox-row__meta">
+        {/* Only what would change: a duplicate forward claims five fields the
+            item already holds, and "5 fields" on its card promised work the
+            sheet then showed did not exist (QA, #22). */}
+        {changes === 0 && actionItem.attachments.length === 0
+          ? t('inbox.upToDate')
+          : t('inbox.claimCount', { count: changes })}
+        {actionItem.attachments.length > 0 && (
+          <> · {t('inbox.documentCount', { count: actionItem.attachments.length })}</>
+        )}
+      </p>
+      <button type="button" className="button-primary" onClick={onReview}>
+        {t('inbox.review')}
+      </button>
     </li>
   )
 }

@@ -38,7 +38,7 @@ export function InboxBadge() {
     return null
   }
 
-  const waiting = summary.unrouted + summary.quarantined
+  const waiting = summary.pending_action_items + summary.unrouted + summary.quarantined
 
   return (
     <Link className="button-quiet inbox-badge" to="/inbox">

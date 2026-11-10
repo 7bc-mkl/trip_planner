@@ -222,7 +222,10 @@
     "inbox_not_configured": "Skrzynka rezerwacji nie jest jeszcze skonfigurowana w tej instalacji.",
     "message_not_routable": "To nie jest Twoja podróż, więc nie można do niej przypisać tej wiadomości.",
     "inbox_rate_limited": "Skrzynka odebrała ostatnio dużo poczty. Ta wiadomość czeka w kolejce i zostanie przetworzona wkrótce.",
-    "inbox_object_unavailable": "Oryginalna wiadomość nie jest już przechowywana, więc nie da się jej odzyskać. Wygasa 30 dni po otrzymaniu."
+    "inbox_object_unavailable": "Oryginalna wiadomość nie jest już przechowywana, więc nie da się jej odzyskać. Wygasa 30 dni po otrzymaniu.",
+    "action_item_already_decided": "Ta propozycja została już rozpatrzona. Odśwież skrzynkę, żeby zobaczyć jej stan.",
+    "action_item_conflict": "Coś się zmieniło od otwarcia tej propozycji. Wczytaliśmy ją ponownie z aktualnymi wartościami — sprawdź i spróbuj jeszcze raz.",
+    "invalid_action_selection": "Ten wybór nie należy do tej propozycji. Wczytaj ją ponownie i wybierz jeszcze raz."
   },
   "inbox": {
     "title": "Skrzynka",
@@ -271,6 +274,63 @@
       "routing_budget_exhausted": "Automatyczne dopasowanie wstrzymane — budżet na ten miesiąc wyczerpany."
     },
     "routedTo": "Podróż:",
-    "changeTrip": "Zmień podróż"
+    "changeTrip": "Zmień podróż",
+    "actionsTitle": "Czekają na Ciebie",
+    "review": "Przejrzyj",
+    "claimCount": "{count, plural, =0 {Brak pól} one {# pole} few {# pola} many {# pól} other {# pola}}",
+    "propose": "Zaproponuj",
+    "proposing": "Proponowanie…",
+    "proposeLabel": "Dołącz dokumenty tej wiadomości do",
+    "field": {
+      "title": "Tytuł",
+      "kind": "Typ",
+      "confirmation_number": "Numer potwierdzenia",
+      "cost": "Koszt",
+      "start_time": "Godzina rozpoczęcia",
+      "end_time": "Godzina zakończenia",
+      "end_date": "Kończy się",
+      "status": "Status"
+    },
+    "target": {
+      "matched_confirmation_number": "Dopasowano po numerze potwierdzenia.",
+      "matched_title_and_day": "Dopasowano po tytule i dniu.",
+      "several_items_match": "Pasuje kilka pozycji — wybierz jedną.",
+      "new_item_on_day": "Żadna istniejąca pozycja nie pasuje, więc zostanie dodana nowa.",
+      "no_usable_day": "Żaden dzień podróży nie pasuje do dat z wiadomości — wybierz, gdzie to trafi.",
+      "chosen_by_owner": "Cel wybrano ręcznie."
+    },
+    "sheet": {
+      "title": "Przejrzyj propozycję",
+      "field": "Pole",
+      "now": "Pozycja teraz",
+      "message": "Wiadomość mówi",
+      "empty": "—",
+      "same": "(już tak jest)",
+      "differs": "(inaczej — domyślnie niezaznaczone)",
+      "noFields": "Wiadomość nie podaje żadnych pól — tylko dokumenty.",
+      "documents": "Dokumenty",
+      "source": "Wiadomość",
+      "updates": "Aktualizuje „{title}” w dniu {date}",
+      "creates": "Dodaje nową pozycję w dniu {date}",
+      "needsTarget": "Czeka, aż wybierzesz, gdzie to trafi",
+      "chooseTarget": "Wybierz…",
+      "newItemOn": "Nowa pozycja w dniu {date}",
+      "alternatives": "Inne pasujące podróże:",
+      "retargetLabel": "Skieruj tę propozycję do",
+      "retarget": "Zmień cel",
+      "retargeting": "Zmienianie…",
+      "approve": "Zatwierdź zaznaczone",
+      "reject": "Odrzuć",
+      "undo": "Cofnij",
+      "close": "Zamknij",
+      "approved": "Zatwierdzono.",
+      "rejected": "Odrzucono. Wiadomość nadal jest w skrzynce.",
+      "undoCreated": "Cofnięcie usunie utworzoną pozycję i zwróci jej dokumenty do skrzynki — o ile nic innego jej nie zmieniło.",
+      "undoFields": "Cofnięcie przywróci {fields, plural, one {# pole} few {# pola} many {# pól} other {# pola}} — o ile nic innego ich nie zmieniło.",
+      "undoDocuments": "Cofnięcie zwróci {documents, plural, one {# dokument} few {# dokumenty} many {# dokumentów} other {# dokumentu}} do skrzynki — o ile nic innego ich nie przeniosło.",
+      "undoBoth": "Cofnięcie przywróci {fields, plural, one {# pole} few {# pola} many {# pól} other {# pola}} i zwróci {documents, plural, one {# dokument} few {# dokumenty} many {# dokumentów} other {# dokumentu}} do skrzynki — o ile nic innego ich nie zmieniło.",
+      "undoCreatedOnly": "Cofnięcie usunie utworzoną pozycję — o ile nic innego jej nie zmieniło."
+    },
+    "upToDate": "Już aktualne"
   }
 }

@@ -49,6 +49,8 @@ from trip_planner.db.base import Base
 from trip_planner.domain.uploads import ATTACHMENT_CONTENT_TYPES, MAX_ATTACHMENT_BYTES
 
 __all__ = [
+    "ACTION_ITEM_KINDS",
+    "ACTION_ITEM_STATES",
     "ATTACHMENT_CONTENT_TYPES",
     "INBOUND_MESSAGE_STATES",
     "ITEM_KINDS",
@@ -60,6 +62,7 @@ __all__ = [
     "MAX_INBOUND_TEXT_CHARS",
     "Attachment",
     "AttachmentBlob",
+    "InboundActionItem",
     "InboundDeliveryStatus",
     "InboundMessage",
     "InboundModelEgress",
@@ -98,6 +101,13 @@ INBOUND_MESSAGE_STATES = (
     "quarantined",
     "discarded",
 )
+
+#: D21's two paths, and no third.
+ACTION_ITEM_KINDS = ("update_item", "create_item")
+
+#: Where an action item can be. `superseded` is a proposal replaced by a newer
+#: one for the same message — a re-placement — rather than decided by the owner.
+ACTION_ITEM_STATES = ("pending", "approved", "rejected", "superseded")
 
 #: What one egress row can be about: the message's text, or one named document.
 MODEL_EGRESS_KINDS = ("text", "document")
@@ -1006,6 +1016,99 @@ class ModelBillingMonth(Base):
     month: Mapped[date_type] = mapped_column(Date, primary_key=True)
     spent: Mapped[Decimal] = mapped_column(Numeric(), nullable=False, default=Decimal(0))
     unresolved_calls: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
+
+class InboundActionItem(Base):
+    """A proposed change to a plan, waiting for the owner. **D21 as a table.**
+
+    A forwarded confirmation never writes to `item`. It produces one of these,
+    and the owner's approval — field by field — is the only writer. Exactly two
+    kinds, D21's two paths and no third: `update_item` targets an existing item,
+    `create_item` targets the day a new one would land on. Either may wait with
+    no target at all when the deterministic rule found several matches or no
+    usable day, and the owner names it in the review sheet.
+
+    `proposal` is JSONB with a `schema_version` and a rejecting reader
+    (`domain/extraction.Proposal`), never queried by its interior: a parallel
+    set of nullable columns would be a second place an item's shape is
+    declared. It carries the proposed values **and** what each field held when
+    the proposal was made — the snapshot the approval re-diffs against.
+
+    `revision` is the optimistic-concurrency token, bumped whenever the proposal
+    is regenerated or re-targeted; `schema_version` says nothing about
+    freshness. `applied` records what approval wrote and what each field held
+    before, which is what makes undo a `SELECT` rather than a guess.
+
+    `owner_id` is denormalised **deliberately**: the pending-count query on
+    every page load must not join three tables to answer a badge.
+    """
+
+    __tablename__ = "inbound_action_item"
+    __table_args__ = (
+        CheckConstraint(_in_list("kind", ACTION_ITEM_KINDS), name="ck_inbound_action_item_kind"),
+        CheckConstraint(
+            _in_list("state", ACTION_ITEM_STATES), name="ck_inbound_action_item_state"
+        ),
+        CheckConstraint("revision >= 1", name="ck_inbound_action_item_revision"),
+        CheckConstraint(
+            "(kind = 'update_item' AND target_trip_day_id IS NULL)"
+            " OR (kind = 'create_item' AND target_item_id IS NULL)",
+            name="ck_inbound_action_item_target_matches_kind",
+        ),
+        Index(
+            "ix_inbound_action_item_pending",
+            "owner_id",
+            postgresql_where=text("state = 'pending'"),
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        PgUUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    inbound_message_id: Mapped[uuid.UUID] = mapped_column(
+        PgUUID(as_uuid=True),
+        ForeignKey("inbound_message.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    owner_id: Mapped[uuid.UUID] = mapped_column(
+        PgUUID(as_uuid=True),
+        ForeignKey("owner.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    kind: Mapped[str] = mapped_column(Text, nullable=False)
+    #: `CASCADE`: a proposal against a deleted item has nothing left to change.
+    #: The message and its documents survive and can be proposed again.
+    target_item_id: Mapped[uuid.UUID | None] = mapped_column(
+        PgUUID(as_uuid=True),
+        ForeignKey("item.id", ondelete="CASCADE"),
+        nullable=True,
+        index=True,
+    )
+    target_trip_day_id: Mapped[uuid.UUID | None] = mapped_column(
+        PgUUID(as_uuid=True),
+        ForeignKey("trip_day.id", ondelete="CASCADE"),
+        nullable=True,
+        index=True,
+    )
+    proposal: Mapped[dict[str, object]] = mapped_column(JSONB, nullable=False)
+    schema_version: Mapped[int] = mapped_column(
+        SmallInteger, nullable=False, server_default="1", default=1
+    )
+    revision: Mapped[int] = mapped_column(Integer, nullable=False, server_default="1", default=1)
+    state: Mapped[str] = mapped_column(
+        Text, nullable=False, server_default="pending", default="pending"
+    )
+    applied: Mapped[dict[str, object] | None] = mapped_column(JSONB, nullable=True)
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+    def __repr__(self) -> str:
+        """Excludes `proposal`: it carries values copied out of the owner's mail."""
+        return f"<InboundActionItem id={self.id!r} kind={self.kind!r} state={self.state!r}>"
 
 
 class InboundTrustedSender(Base):

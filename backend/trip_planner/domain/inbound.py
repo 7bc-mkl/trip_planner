@@ -41,10 +41,17 @@ import email.policy
 import re
 import unicodedata
 from dataclasses import dataclass
+from datetime import date as date_type
 from email.message import Message
 from enum import StrEnum
 from html.parser import HTMLParser
 
+from trip_planner.domain.extraction import (
+    APPROVABLE_FIELDS,
+    TITLE_MAX,
+    ProposalValues,
+    normalise_title,
+)
 from trip_planner.domain.uploads import (
     MAX_ATTACHMENT_BYTES,
     InspectedUpload,
@@ -58,15 +65,29 @@ __all__ = [
     "MAX_INBOUND_SUBJECT_CHARS",
     "MAX_INBOUND_TEXT_CHARS",
     "MAX_MIME_PARTS",
+    "PROPOSED_STATUS",
+    "STATUS_ORDER",
     "TRUNCATION_MARKER",
+    "DayCandidate",
+    "FieldDiff",
     "InboundDocument",
+    "ItemCandidate",
     "QuarantineReason",
     "SelectedContent",
     "SenderDecision",
+    "StatusDiff",
+    "Target",
+    "choose_target",
     "decide_sender",
     "decide_stored_sender",
+    "diff_proposal",
+    "diff_status",
+    "fallback_title",
+    "field_value",
     "html_to_text",
+    "is_no_op",
     "normalise_address",
+    "normalise_reference",
     "normalise_subject",
     "normalise_verdict",
     "select_content",
@@ -538,3 +559,202 @@ def _as_document(part: Message, payload: bytes) -> InboundDocument | None:
         part.get_filename() or "", content_type=inspected.content_type
     )
     return InboundDocument(filename=filename.display, data=payload, inspected=inspected)
+
+
+# --------------------------------------------------------------------------- #
+# Phase 3 — the proposal diff and the item-target rule
+# --------------------------------------------------------------------------- #
+#
+# Both are pure functions over plain values, which is what makes A6's "never
+# overwrite by default" rule assertable rather than merely stated: the review
+# sheet's default ticks and the approval's re-diff are decided here, from the
+# values alone, and `tests/test_domain_inbound_proposal.py` pins every case.
+
+#: R02's three statuses in the order they progress. A move is *forward* when
+#: it goes up this list — and only a forward move is ever ticked by default.
+STATUS_ORDER: dict[str, int] = {"to_plan": 0, "to_book": 1, "done": 2}
+
+#: The status a forwarded confirmation proposes. A confirmation is evidence the
+#: thing is booked, which is what *gotowe* means (D05).
+PROPOSED_STATUS = "done"
+
+_REFERENCE_NOISE = re.compile(r"[\s\-/#.:_]+")
+
+
+def field_value(values: ProposalValues, name: str) -> object | None:
+    """One approvable field's value; `cost` is the (amount, currency) pair or `None`."""
+    if name == "cost":
+        if values.cost_amount is None or values.cost_currency is None:
+            return None
+        return (values.cost_amount, values.cost_currency)
+    return getattr(values, name)
+
+
+@dataclass(frozen=True, slots=True)
+class FieldDiff:
+    """One row of the review sheet: what the item says, what the message says."""
+
+    name: str
+    current: object | None
+    proposed: object | None
+    #: Whether approving this row would change anything at all.
+    changed: bool
+    #: The checkbox's default. True only when the item's value is empty — there
+    #: is nothing to lose — and never for a no-op.
+    default_ticked: bool
+
+
+@dataclass(frozen=True, slots=True)
+class StatusDiff:
+    current: str | None
+    proposed: str | None
+    changed: bool
+    #: True only for a forward move. A backwards move is offered, never ticked.
+    default_ticked: bool
+
+
+def diff_proposal(proposed: ProposalValues, current: ProposalValues | None) -> list[FieldDiff]:
+    """The rows a proposal claims, each with its default tick (A6).
+
+    `current` is `None` for an item that does not exist yet, which makes every
+    current value empty — so a new item's claimed fields all default ticked.
+    A field the proposal makes no claim about is not a row at all.
+    """
+    rows: list[FieldDiff] = []
+    for name in APPROVABLE_FIELDS:
+        new = field_value(proposed, name)
+        if new is None:
+            continue
+        old = field_value(current, name) if current is not None else None
+        changed = old != new
+        rows.append(
+            FieldDiff(
+                name=name,
+                current=old,
+                proposed=new,
+                changed=changed,
+                default_ticked=changed and old is None,
+            )
+        )
+    return rows
+
+
+def diff_status(proposed: str | None, current: str | None) -> StatusDiff | None:
+    """The status row, or `None` when the proposal claims no status."""
+    if proposed is None:
+        return None
+    changed = proposed != current
+    forward = STATUS_ORDER[proposed] > (STATUS_ORDER[current] if current is not None else -1)
+    return StatusDiff(
+        current=current, proposed=proposed, changed=changed, default_ticked=changed and forward
+    )
+
+
+def is_no_op(fields: list[FieldDiff], status: StatusDiff | None) -> bool:
+    """A proposal identical to the item: every row present, none would change."""
+    return not any(row.changed for row in fields) and (status is None or not status.changed)
+
+
+@dataclass(frozen=True, slots=True)
+class ItemCandidate:
+    """An existing item of the routed trip, reduced to what targeting reads."""
+
+    id: str
+    day_id: str
+    date: date_type
+    end_date: date_type | None
+    title: str
+    confirmation_number: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class DayCandidate:
+    id: str
+    date: date_type
+
+
+@dataclass(frozen=True, slots=True)
+class Target:
+    """Where a proposal points. Either id may be `None` while it waits for the owner."""
+
+    kind: str
+    item_id: str | None
+    day_id: str | None
+    #: A translation key the sheet renders, never prose.
+    reason: str
+
+
+def normalise_reference(value: str | None) -> str:
+    """A booking reference as two vendors might both write it: `sx-9912 l` → `SX9912L`."""
+    if value is None:
+        return ""
+    return _REFERENCE_NOISE.sub("", value).upper()
+
+
+def _title_key(value: str) -> str:
+    return normalise_title(value).casefold()
+
+
+def choose_target(
+    proposed: ProposalValues,
+    *,
+    items: list[ItemCandidate],
+    days: list[DayCandidate],
+) -> Target:
+    """The deterministic item-target rule (spec, Architecture).
+
+    Two exact tiers against the routed trip's own items, then a new item:
+
+    1. a normalised, non-empty confirmation number;
+    2. if none matched, a normalised title on the same start day — and the same
+       end day, when the proposal claims one.
+
+    One match at a tier is an `update_item`. Several wait for the owner rather
+    than guessing. No match is a `create_item` on the proposed start day, or —
+    with no usable day — a `create_item` waiting for the owner's choice. Every
+    outcome is still only a proposal; the owner sees the target and can change
+    it before approving.
+    """
+    reference = normalise_reference(proposed.confirmation_number)
+    if reference:
+        matches = [
+            one for one in items if normalise_reference(one.confirmation_number) == reference
+        ]
+        if len(matches) == 1:
+            return Target("update_item", matches[0].id, None, "matched_confirmation_number")
+        if matches:
+            return Target("update_item", None, None, "several_items_match")
+
+    if proposed.title and proposed.start_date is not None:
+        key = _title_key(proposed.title)
+        matches = [
+            one
+            for one in items
+            if _title_key(one.title) == key
+            and one.date == proposed.start_date
+            and (
+                proposed.end_date is None
+                or (one.end_date or one.date) == proposed.end_date
+            )
+        ]
+        if len(matches) == 1:
+            return Target("update_item", matches[0].id, None, "matched_title_and_day")
+        if matches:
+            return Target("update_item", None, None, "several_items_match")
+
+    day = next((one for one in days if one.date == proposed.start_date), None)
+    if day is not None:
+        return Target("create_item", None, day.id, "new_item_on_day")
+    return Target("create_item", None, None, "no_usable_day")
+
+
+def fallback_title(proposed: ProposalValues, *, subject: str, from_address: str) -> str:
+    """The title a new item gets when the message claims none.
+
+    The subject first — it is usually the vendor's own name for the booking —
+    then the reference, then the sender. Never empty: `item.title` is required.
+    """
+    for candidate in (proposed.title, subject, proposed.confirmation_number, from_address):
+        if candidate and normalise_title(candidate):
+            return normalise_title(candidate)[:TITLE_MAX].rstrip()
+    return "—"

@@ -48,6 +48,7 @@ from trip_planner.config import InboxSettings
 from trip_planner.db.models import (
     Attachment,
     AttachmentBlob,
+    InboundActionItem,
     InboundDeliveryStatus,
     InboundMessage,
     InboundTrustedSender,
@@ -272,10 +273,14 @@ class InboxMessageRow(BaseModel):
 
 
 class InboxMessageDetail(InboxMessageRow):
-    """One message, with its text and its documents."""
+    """One message, with its text, its documents and its action items."""
 
     text_body: str
     attachments: list[InboxAttachmentRead]
+    #: Ids of this message's pending and decided proposals, newest first. Ids
+    #: rather than the full shape: the sheet loads one by id, and the detail
+    #: view only needs to know whether there is one to open.
+    action_item_ids: list[uuid.UUID] = []
 
 
 class QuarantineRead(BaseModel):
@@ -307,13 +312,13 @@ class QuarantineRead(BaseModel):
 class InboxSummary(BaseModel):
     """The badge's query, cheap enough to poll.
 
-    `pending_action_items` is **not** here. Action items arrive with Phase 3, and
-    a field reporting zero for a concept that does not exist yet is a contract
-    that says something false — worse than an absent field, which a consumer can
-    see is absent. It is additive when it arrives.
+    `pending_action_items` arrived with Phase 3, additively, once the concept it
+    counts existed — a field reporting zero for something that did not exist
+    yet would have been a contract saying something false.
     """
 
     inbox_enabled: bool
+    pending_action_items: int
     #: The address to forward to, so the empty state can name it and offer a copy.
     address: str | None
     unrouted: int
@@ -593,6 +598,7 @@ def get_summary(db: DbSession, owner: CurrentOwner, settings: AppSettings) -> In
     if inbox is None:
         return InboxSummary(
             inbox_enabled=False,
+            pending_action_items=0,
             address=None,
             unrouted=0,
             quarantined=0,
@@ -613,8 +619,11 @@ def get_summary(db: DbSession, owner: CurrentOwner, settings: AppSettings) -> In
     )
     status_row = db.get(InboundDeliveryStatus, owner.id)
 
+    from trip_planner.api.action_items import pending_count
+
     return InboxSummary(
         inbox_enabled=True,
+        pending_action_items=pending_count(db, owner),
         address=inbox.recipient,
         unrouted=int(counts.get("unrouted", 0)),
         quarantined=int(counts.get("quarantined", 0)),
@@ -698,12 +707,24 @@ def get_message(
         ).scalars()
     )
 
+    action_item_ids = list(
+        db.execute(
+            sa.select(InboundActionItem.id)
+            .where(
+                InboundActionItem.inbound_message_id == message.id,
+                InboundActionItem.state != "superseded",
+            )
+            .order_by(InboundActionItem.created_at.desc())
+        ).scalars()
+    )
+
     return InboxMessageDetail.model_validate(
         {
             **_row_fields(message),
             "attachment_count": len(attachments),
             "text_body": message.text_body,
             "attachments": [InboxAttachmentRead.model_validate(one) for one in attachments],
+            "action_item_ids": action_item_ids,
         }
     )
 
@@ -738,6 +759,11 @@ def place_message(
     if trip is None:
         raise ApiError(ErrorCode.MESSAGE_NOT_ROUTABLE, field="trip_id")
 
+    if message.trip_id != trip.id:
+        # A proposal aimed at the old trip no longer describes this message.
+        from trip_planner.approvals import supersede_pending
+
+        supersede_pending(db, message)
     message.trip_id = trip.id
     message.state = "routed"
     # A translation key with no arguments, never prose — the same discipline the

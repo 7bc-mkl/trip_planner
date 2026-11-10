@@ -1,6 +1,6 @@
 # The reservation inbox — a forwarded confirmation becomes an action item
 
-- Date: 2026-09-26 · Author: `om-auto-write-spec` (autonomous) · Status: **Phase 1 implemented (PR #19). Q11 confirmed by the owner on 2026-09-26 as D24. The A07/A08 paper check ran on 2026-10-10 against four real confirmations and amended the candidate rule — Phase 2 is unblocked, and step 1 now carries the three date-exclusion rules that check produced.**
+- Date: 2026-09-26 · Author: `om-auto-write-spec` (autonomous) · Status: **Phases 1–3 implemented (PRs #19, #21, #22). Q11 confirmed by the owner on 2026-09-26 as D24. The A07/A08 paper check ran on 2026-10-10 against four real confirmations and amended the candidate rule. Phase 4 — the slippable tail — is not built.**
 - Source brief: `.ai/specs/product-brief.md`, refreshed and re-signed 2026-09-26. Its Definition of Ready addendum says in so many words that *"the reservation inbox is ready to be specified"*, that **Q11 was the one open point and is now closed by D24 before implementation**, and that this spec owes two further accounts: what the app checks about a sender (**A09**), and what an approved-but-wrong action item does to data already in a plan (`BACKWARD_COMPATIBILITY.md` §3). D25 selects AWS SES delivery; all three accounts are answered below.
 - Decisions this spec builds on, all taken by the owner on 2026-09-26 and **not reopened here**: **D20** (one address for the *account*, a model routes to the trip, an unrouted queue behind it), **D21** (every write is an action item he approves — targeted at a matching item, or proposing a new one), **D22** (the inbox goes first), **D25** (AWS SES inbound delivery), **R10** (the widening of R08 that permits exactly one inbound path), and **D16–D18** (attachment storage, formats and limits; an ISO-4217 code per amount; a magic link that exposes no documents).
 - Foundation, shipped and not reopened: `2026-09-05-walking-skeleton.md` (PRs #2, #6) and `2026-09-05-attachments-and-reservation-data.md` (PR #12). Their `/api/v1` conventions, the `ErrorCode` enum, `get_owned_trip`, the `trip` / `trip_stage` / `trip_day` / `item` / `attachment` / `attachment_blob` tables, `domain/uploads.py`'s byte sniffing and `security/quota.py`'s limiters are running code, and this feature is built **out of them** rather than beside them.
@@ -320,6 +320,10 @@ All under `/api/v1`. Owner routes use `get_current_owner` and the shipped CSRF d
 | `POST` | `/inbox/action-items/{id}/approve` | the body is the **selection**, below |
 | `POST` | `/inbox/action-items/{id}/reject` | `204`; the message stays readable |
 | `POST` | `/inbox/action-items/{id}/undo` | restores what `applied` recorded, if nothing has changed since |
+| `GET` | `/inbox/action-items?state=` | *added in Phase 3.* Newest first; `pending` by default — the "awaiting you" region |
+| `GET` | `/inbox/action-items/{id}` | *added in Phase 3.* The proposal with its field rows (current, proposed, default tick), status row, documents and alternatives |
+| `POST` | `/inbox/action-items/{id}/retarget` | *added in Phase 3.* `{target_item_id}` or `{target_trip_day_id}` plus `expected_revision`; re-takes the snapshot against the new target and bumps `revision`. See the note below |
+| `POST` | `/inbox/messages/{id}/action-items` | *added in Phase 3.* The owner's explicit "put this message's documents on…" act for a routed message: zero fields, its documents, a named target. Classification (`place`) still creates nothing |
 
 An inbox document uses the new owner-scoped content route above until approval attaches it to a trip item; after approval the shipped trip-scoped content route serves it. Both reuse the same serving-header helper.
 
@@ -334,6 +338,8 @@ An inbox document uses the new owner-scoped content route above until approval a
 ```
 
 `fields` is an **explicit allow-list**: only what it names is written. An empty `fields` with a non-empty `attachment_ids` is a perfectly normal approval — the document lands on the item and nothing else changes. `target_item_id` is sent back so a re-target chosen in the sheet is part of the same request rather than a second one.
+
+**Implementation note (Phase 3, PR #22): re-targeting is its own request.** The body above still carries `target_item_id`, and a value that differs from the stored target is refused as `409 action_item_conflict`. Applying a re-target inside the approval would write against values for which no snapshot was ever taken — exactly the "overwritten unseen" case the re-diff below exists to prevent — so `retarget` records the new target's values first. `fields` may name `title`, `kind`, `confirmation_number`, `cost` (amount and currency as one fact), `start_time`, `end_time` and `end_date`; `start_date` chooses the day of a new item and is used for matching, and moving an existing item between days stays with the ordinary edit screen. On a conflict the server records the item's current values and bumps `revision` before answering, so the reloaded sheet shows what is true now.
 
 `expected_revision` is checked against the row's `revision`, which is bumped every time the proposal is regenerated — so a sheet opened before a re-route, or before a document read replaced the proposal, is refused rather than applied to values it never showed.
 

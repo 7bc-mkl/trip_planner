@@ -21,7 +21,16 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.exc import OperationalError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from trip_planner.api import attachments, auth, health, inbox, items, stages, trips
+from trip_planner.api import (
+    action_items,
+    attachments,
+    auth,
+    health,
+    inbox,
+    items,
+    stages,
+    trips,
+)
 from trip_planner.api.deps import get_current_session
 from trip_planner.config import Settings, require_settings
 from trip_planner.errors import ApiError, ErrorCode, error_body
@@ -164,6 +173,7 @@ def create_app(
     app.include_router(stages.router, prefix=API_PREFIX, dependencies=AUTHENTICATED)
     app.include_router(attachments.router, prefix=API_PREFIX, dependencies=AUTHENTICATED)
     app.include_router(inbox.owner_router, prefix=API_PREFIX, dependencies=AUTHENTICATED)
+    app.include_router(action_items.router, prefix=API_PREFIX, dependencies=AUTHENTICATED)
 
     # The built SPA, when present. Absent in development and in the test suite,
     # where the Vite dev server serves it instead.

@@ -1098,3 +1098,154 @@ fieldset.field-card {
   letter-spacing: var(--tracking-body-sm);
   color: var(--text-muted);
 }
+
+/* --- The action-item review sheet ----------------------------------------
+ *
+ * Wider than the shipped `.dialog` because it is a comparison: two values per
+ * row side by side, and the source text beside them. Existing tokens only — no
+ * new colour, radius or border — so neither token gate needs a new pair.
+ */
+
+.action-sheet {
+  width: min(48rem, 100%);
+}
+
+.action-sheet__subject {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+/* A fixed layout, so the columns share the dialog's width instead of growing to
+   their content's min-content: with `auto`, a long title or reference made the
+   table 410px wide inside a 358px dialog on a phone and clipped "The message
+   says" — the column the owner decides on (QA, #22). */
+.action-sheet__table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  margin-top: var(--space-md);
+}
+
+.action-sheet__table col.action-sheet__col-field {
+  width: 34%;
+}
+
+.action-sheet__table th,
+.action-sheet__table td {
+  padding: var(--space-xs) var(--space-sm);
+  border-bottom: 1px solid var(--hairline);
+  text-align: left;
+  vertical-align: top;
+  /* `break-word`, not `anywhere`: `anywhere` lowers the cells' min-content
+     width, so on a phone the table squeezed "Confirmation number" and
+     "MYR 90.00" into mid-word breaks. A word now breaks only when it alone
+     cannot fit. */
+  overflow-wrap: break-word;
+}
+
+.action-sheet__table thead th {
+  color: var(--text-muted);
+  font: var(--type-body-sm);
+  letter-spacing: var(--tracking-body-sm);
+}
+
+.action-sheet__choice {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  min-width: 0;
+}
+
+/* A flex item's text does not shrink below its longest word unless it is told
+   it may, so "Confirmation" ran into the next column on a phone. */
+.action-sheet__label {
+  min-width: 0;
+  overflow-wrap: break-word;
+}
+
+.action-sheet__caption {
+  display: none;
+}
+
+.action-sheet__value--money {
+  white-space: nowrap;
+}
+
+/* On a phone the comparison stops being a three-column table: each field is
+   a block — its checkbox and name, then "The item now" and "The message says"
+   each on their own line at the full width of the dialog. Squeezed into
+   columns, ordinary words ("Accomm|odation") and money ("MYR 612.4|0") broke
+   mid-word (QA, #22). The captions carry the column names the hidden header
+   would have. */
+@media (max-width: 767px) {
+  .action-sheet__table,
+  .action-sheet__table tbody,
+  .action-sheet__table tr,
+  .action-sheet__table th,
+  .action-sheet__table td {
+    display: block;
+    width: auto;
+  }
+
+  .action-sheet__table colgroup,
+  .action-sheet__table thead {
+    display: none;
+  }
+
+  .action-sheet__table tr {
+    padding: var(--space-sm) 0;
+    border-bottom: 1px solid var(--hairline);
+  }
+
+  .action-sheet__table th,
+  .action-sheet__table td {
+    border-bottom: 0;
+    padding: var(--space-xs) 0;
+  }
+
+  .action-sheet__caption {
+    display: block;
+    color: var(--text-muted);
+    font: var(--type-body-sm);
+    letter-spacing: var(--tracking-body-sm);
+  }
+}
+
+/* The difference is said in words; weight only reinforces it. Never colour
+   alone, which a person who cannot see the difference would simply miss. */
+.action-sheet__note {
+  color: var(--text-muted);
+  font: var(--type-body-sm);
+  letter-spacing: var(--tracking-body-sm);
+}
+
+.action-sheet__note--differs {
+  font-weight: 600;
+}
+
+.action-sheet__documents {
+  display: grid;
+  gap: var(--space-xs);
+  margin-top: var(--space-md);
+  border: 0;
+  padding: 0;
+}
+
+.action-sheet__retarget,
+.action-sheet__outcome {
+  margin-top: var(--space-md);
+}
+
+.action-sheet__source {
+  margin-top: var(--space-md);
+  padding-top: var(--space-sm);
+  border-top: 1px solid var(--hairline);
+  max-height: 16rem;
+  overflow-y: auto;
+}
+
+.action-sheet__source h3 {
+  font: var(--type-body-sm);
+  letter-spacing: var(--tracking-body-sm);
+  color: var(--text-muted);
+}

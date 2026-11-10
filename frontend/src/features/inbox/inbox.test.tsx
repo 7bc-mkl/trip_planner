@@ -42,6 +42,7 @@ const ADDRESS = 'inbox@mail.planner.example.com'
 
 const SUMMARY = {
   inbox_enabled: true,
+  pending_action_items: 0,
   address: ADDRESS,
   unrouted: 0,
   quarantined: 0,
@@ -65,6 +66,7 @@ const MESSAGE = {
 
 const DETAIL = {
   ...MESSAGE,
+  action_item_ids: [],
   text_body: 'PNR: SX-9912L\nKwota: 249 PLN',
   attachments: [
     {
@@ -128,6 +130,7 @@ function backend(
       return json(200, overrides.messages ?? [])
     if (url.endsWith('/inbox/quarantine') && method === 'GET')
       return json(200, overrides.quarantine ?? [])
+    if (url.endsWith('/inbox/action-items') && method === 'GET') return json(200, [])
     if (/\/inbox\/messages\/[^/]+$/u.test(url) && method === 'GET')
       return json(200, overrides.detail ?? DETAIL)
     if (/\/inbox\/messages\/[^/]+\/place$/u.test(url) && method === 'POST')
