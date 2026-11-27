@@ -1,17 +1,16 @@
 # Handoff — 2026-11-27-scale-to-zero-deployment-lambda-neon
 
-**Last updated:** 2026-11-27T20:46:04Z
+**Last updated:** 2026-11-27T21:08:13Z
 **Branch:** feat/scale-to-zero-deployment-lambda-neon
 **PR:** https://github.com/7bc-mkl/trip_planner/pull/26 (draft)
-**Current phase/step:** Phase 1 Step 1.11
-**Last commit:** 8e1a29a — fix(security): turn uvicorn's proxy headers off explicitly on the Lambda target
+**Current phase/step:** Phase 2 Step 2.1
+**Last commit:** a56aa48 — feat(deploy): the Lambda Web Adapter in the image and a worker entrypoint
 
 ## What just happened
-- Steps 1.6–1.10 landed: NullPool + keepalives, CLIENT_IP_SOURCE, upload limit 4 MiB (D26), header/caching characterization.
-- Checkpoint 2 review found uvicorn's default proxy-header trust of 127.0.0.1; fixed in 1.7-review-fix.
+- Phase 1 complete (1.1–1.13 + 1.7-review-fix); full validation gate green (1328 backend, 0 skipped).
 
 ## Next concrete action
-- Step 1.11: security-headers middleware, immutable /assets, --no-server-header.
+- Step 2.1: deploy/lambda/cert.yaml (ACM cert for trips.botito.app in us-east-1, zone Z06147722TLSJWJZMPBG).
 
 ## Blockers / open questions
 - Step 2.5 needs Neon credentials from the owner.

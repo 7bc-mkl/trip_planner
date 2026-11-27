@@ -18,3 +18,8 @@
 - Targeted validation green (403 backend, 478 frontend, locales, ruff).
 - Step review: 1 major (uvicorn proxy headers default-on, trusting 127.0.0.1) fixed as 1.7-review-fix (8e1a29a); 1 nit deferred (stale "10 MB body" comments in api/attachments.py).
 - Delegations: 1.6, 1.8, 1.10 → standard-tier executors; 1.7, 1.9 → capable-tier executors.
+
+## 2026-11-27T21:08:13Z — checkpoint 3 (steps 1.11..1.13, Phase 1 closed)
+- Full validation gate green: 8/8 commands, 1328 backend tests with 0 skipped; image builds with the adapter.
+- Step review clean. New error code `forbidden_origin` (additive).
+- Delegations: 1.11, 1.13 → standard-tier executors; 1.12 → capable-tier executor.
