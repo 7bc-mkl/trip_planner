@@ -117,20 +117,57 @@ def _parse_ip(value: str) -> str | None:
         return None
 
 
-def client_ip(request: Request) -> str:
+#: Today's rule: the first X-Forwarded-For element, behind Caddy.
+CLIENT_IP_SOURCE_FORWARDED = "x-forwarded-for"
+
+#: The Lambda target: X-Forwarded-For is never read.
+CLIENT_IP_SOURCE_CLOUDFRONT = "cloudfront"
+
+
+def _cloudfront_viewer_ip(request: Request) -> str | None:
+    """The viewer address CloudFront vouches for, or None.
+
+    SEAM (spec Phase 1, step 12): this is where the `CloudFront-Viewer-Address`
+    header is read — and only on a request that passed the `X-Origin-Verify`
+    check, since without that check anyone calling the raw Function URL could
+    set it. Until that middleware exists nothing here is trustworthy, so it
+    returns None and `client_ip` falls back to the socket peer.
+    """
+    del request
+    return None
+
+
+def client_ip(request: Request, source: str = CLIENT_IP_SOURCE_FORWARDED) -> str:
     """The caller's address, always a value the INET column accepts.
 
-    Behind the platform's proxy the socket peer is the proxy, so the leftmost
-    X-Forwarded-For entry is used when present. That header is caller-controlled
-    in general — it is trusted here only because the deployment (A12) puts the app
-    behind exactly one proxy that sets it, and a spoofed value can at worst make an
-    attacker rate-limit himself under someone else's key.
+    `source` is `Settings.client_ip_source` (`CLIENT_IP_SOURCE`):
+
+    - `x-forwarded-for` (default, compose behind Caddy): the socket peer is the
+      proxy, so the leftmost X-Forwarded-For entry is used when present. That is
+      safe only because Caddy *replaces* the header; the app must never be
+      reachable except through it.
+    - `cloudfront` (Lambda behind CloudFront and a Function URL): X-Forwarded-For
+      is **never** read. There a client-supplied header is preserved with AWS's
+      address appended, so its first element is chosen by the viewer — who could
+      rotate it on every attempt and never trip the per-address limit. The
+      address comes from `_cloudfront_viewer_ip`, else the socket peer; uvicorn
+      must then run without `--proxy-headers` (`deploy/entrypoint.sh`), or it
+      rewrites `request.client` from that same header.
+
+    A spoofable source is not harmless: rotating fake addresses bypasses the
+    per-address limit entirely (the per-e-mail limit still holds), which is why
+    the rule is selected per deployment rather than assumed.
     """
-    forwarded = request.headers.get("x-forwarded-for", "")
-    if forwarded:
-        parsed = _parse_ip(forwarded.split(",")[0])
-        if parsed is not None:
-            return parsed
+    if source == CLIENT_IP_SOURCE_CLOUDFRONT:
+        viewer = _cloudfront_viewer_ip(request)
+        if viewer is not None:
+            return viewer
+    else:
+        forwarded = request.headers.get("x-forwarded-for", "")
+        if forwarded:
+            parsed = _parse_ip(forwarded.split(",")[0])
+            if parsed is not None:
+                return parsed
 
     if request.client is not None:
         parsed = _parse_ip(request.client.host or "")

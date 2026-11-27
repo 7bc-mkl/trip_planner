@@ -463,3 +463,41 @@ def test_lambda_mode_with_the_inbox_unset_needs_no_function_name() -> None:
     assert settings.inbox is None
     assert settings.inbox_worker_mode == "lambda"
     assert settings.inbox_worker_function is None
+
+
+# ---------------------------------------------------------------------------
+# Client-IP source for the login rate limit
+# ---------------------------------------------------------------------------
+
+
+def test_client_ip_source_defaults_to_the_forwarded_header_rule() -> None:
+    assert require_settings(COMPLETE_ENV).client_ip_source == "x-forwarded-for"
+
+
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [
+        (" CloudFront ", "cloudfront"),
+        ("X-Forwarded-For", "x-forwarded-for"),
+        ("", "x-forwarded-for"),
+    ],
+)
+def test_client_ip_source_values_resolve(raw: str, expected: str) -> None:
+    assert require_settings(env_with(CLIENT_IP_SOURCE=raw)).client_ip_source == expected
+
+
+def test_an_unknown_client_ip_source_is_refused_naming_the_variable() -> None:
+    """A typo must not quietly fall back to trusting X-Forwarded-For."""
+    with pytest.raises(WeakConfiguration) as caught:
+        require_settings(env_with(CLIENT_IP_SOURCE="cloudfront-viewer-address"))
+
+    message = str(caught.value)
+    assert "CLIENT_IP_SOURCE" in message
+    assert "cloudfront" in message
+    assert "x-forwarded-for" in message
+
+
+def test_client_ip_source_is_documented_as_a_deployment_option() -> None:
+    from trip_planner.config import DEPLOYMENT_OPTIONAL_ENVIRONMENT_VARIABLES
+
+    assert "CLIENT_IP_SOURCE" in DEPLOYMENT_OPTIONAL_ENVIRONMENT_VARIABLES

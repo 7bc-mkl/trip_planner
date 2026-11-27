@@ -8,6 +8,9 @@ that starts with a default, serves wrongly, and is diagnosed hours later.
 from __future__ import annotations
 
 import json
+import os
+import shutil
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -161,6 +164,66 @@ class TestDeploymentArtifacts:
 
         assert "alembic upgrade head" in entrypoint
         assert "--factory" in entrypoint, "startup must validate configuration first"
+
+    @staticmethod
+    def _serve_argv(deploy_dir: Path, tmp_path: Path, **env: str) -> list[str]:
+        """Run `entrypoint.sh serve` against a stub `uvicorn` and return its argv."""
+        sh = shutil.which("sh")
+        if sh is None:
+            pytest.skip("no POSIX sh available")
+        stub = tmp_path / "uvicorn"
+        stub.write_text('#!/bin/sh\nfor a in "$@"; do printf \'%s\\n\' "$a"; done\n')
+        stub.chmod(0o755)
+        base = {"PATH": f"{tmp_path}{os.pathsep}{os.environ.get('PATH', '')}"}
+        result = subprocess.run(
+            [sh, str(deploy_dir / "entrypoint.sh"), "serve"],
+            env=base | env,
+            capture_output=True,
+            text=True,
+            check=True,
+            timeout=10,
+        )
+        return result.stdout.splitlines()
+
+    def test_the_entrypoint_is_valid_posix_sh(self, deploy_dir: Path) -> None:
+        sh = shutil.which("sh")
+        if sh is None:
+            pytest.skip("no POSIX sh available")
+        subprocess.run([sh, "-n", str(deploy_dir / "entrypoint.sh")], check=True, timeout=10)
+
+    def test_serve_trusts_proxy_headers_by_default(self, deploy_dir: Path, tmp_path: Path) -> None:
+        """Behind Caddy, which replaces X-Forwarded-For: today's command line."""
+        argv = self._serve_argv(deploy_dir, tmp_path)
+
+        assert argv == [
+            "trip_planner.app:create_production_app",
+            "--factory",
+            "--host",
+            "0.0.0.0",
+            "--port",
+            "8000",
+            "--proxy-headers",
+            "--forwarded-allow-ips",
+            "*",
+        ]
+
+    @pytest.mark.parametrize("value", ["cloudfront", " CloudFront "])
+    def test_serve_ignores_proxy_headers_on_the_cloudfront_target(
+        self, deploy_dir: Path, tmp_path: Path, value: str
+    ) -> None:
+        """Otherwise uvicorn rewrites `request.client` from a viewer-controlled header."""
+        argv = self._serve_argv(deploy_dir, tmp_path, CLIENT_IP_SOURCE=value, PORT="8080")
+
+        assert argv == [
+            "trip_planner.app:create_production_app",
+            "--factory",
+            "--host",
+            "0.0.0.0",
+            "--port",
+            "8080",
+        ]
+        assert "--proxy-headers" not in argv
+        assert "--forwarded-allow-ips" not in argv
 
     def test_the_compose_file_runs_migrations_before_the_app(self, deploy_dir: Path) -> None:
         compose = (deploy_dir / "compose.yml").read_text()

@@ -72,7 +72,7 @@ def login(
     """
     limiter: RateLimiter = get_rate_limiter()
     email = normalise_email(payload.email)
-    source_ip = client_ip(request)
+    source_ip = client_ip(request, source=settings.client_ip_source)
 
     with response_floor():
         limited = limiter.is_limited(db, email=email, source_ip=source_ip)

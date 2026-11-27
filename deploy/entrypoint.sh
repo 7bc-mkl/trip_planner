@@ -19,6 +19,20 @@ case "${1:-serve}" in
     # --factory: the app is built by a function that validates configuration
     # first, so a missing variable is a startup crash naming it rather than a
     # confusing failure on the first request.
+    #
+    # CLIENT_IP_SOURCE=cloudfront (the Lambda target): no proxy headers. Behind a
+    # Function URL, X-Forwarded-For is viewer-controlled, and --proxy-headers
+    # would rewrite the client address from it; the Lambda Web Adapter connects
+    # from 127.0.0.1, so there is no proxy here to trust anyway. Normalised the
+    # way config.py reads it, so " CloudFront " cannot pick the app's rule while
+    # leaving the proxy headers on.
+    client_ip_source=$(printf '%s' "${CLIENT_IP_SOURCE:-}" | tr -d '[:space:]' | tr '[:upper:]' '[:lower:]')
+    if [ "$client_ip_source" = "cloudfront" ]; then
+      exec uvicorn trip_planner.app:create_production_app \
+        --factory \
+        --host 0.0.0.0 \
+        --port "${PORT:-8000}"
+    fi
     exec uvicorn trip_planner.app:create_production_app \
       --factory \
       --host 0.0.0.0 \

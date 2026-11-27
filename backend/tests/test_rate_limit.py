@@ -19,6 +19,8 @@ from starlette.requests import Request
 from trip_planner.db.models import LoginAttempt, Owner
 from trip_planner.security import rate_limit
 from trip_planner.security.rate_limit import (
+    CLIENT_IP_SOURCE_CLOUDFRONT,
+    CLIENT_IP_SOURCE_FORWARDED,
     RESPONSE_FLOOR_SECONDS,
     UNKNOWN_SOURCE_IP,
     RateLimiter,
@@ -124,6 +126,34 @@ class TestClientIp:
         """
         request = self._request({"x-forwarded-for": garbage}, None)
         assert client_ip(request) == UNKNOWN_SOURCE_IP
+
+    def test_the_default_source_is_todays_forwarded_rule(self) -> None:
+        request = self._request({"x-forwarded-for": "198.51.100.9, 10.0.0.1"}, "10.0.0.1")
+        assert client_ip(request, source=CLIENT_IP_SOURCE_FORWARDED) == "198.51.100.9"
+        assert client_ip(request) == client_ip(request, source=CLIENT_IP_SOURCE_FORWARDED)
+
+    @pytest.mark.parametrize(
+        "spoofed",
+        ["198.51.100.9", "198.51.100.9, 203.0.113.50", "[2001:db8::bad]:1", "garbage"],
+    )
+    def test_cloudfront_never_reads_a_viewer_supplied_forwarded_header(
+        self, spoofed: str
+    ) -> None:
+        """Behind a Function URL the viewer's header survives with AWS's appended.
+
+        Trusting its first element would let a caller rotate a fake address on
+        every attempt and never trip the per-address limit.
+        """
+        request = self._request({"x-forwarded-for": spoofed}, "192.0.2.44")
+        assert client_ip(request, source=CLIENT_IP_SOURCE_CLOUDFRONT) == "192.0.2.44"
+
+    def test_cloudfront_reads_an_ipv6_socket_peer(self) -> None:
+        request = self._request({"x-forwarded-for": "198.51.100.9"}, "2001:db8::7")
+        assert client_ip(request, source=CLIENT_IP_SOURCE_CLOUDFRONT) == "2001:db8::7"
+
+    def test_cloudfront_without_a_socket_peer_shares_the_unknown_bucket(self) -> None:
+        request = self._request({"x-forwarded-for": "198.51.100.9"}, None)
+        assert client_ip(request, source=CLIENT_IP_SOURCE_CLOUDFRONT) == UNKNOWN_SOURCE_IP
 
     def test_a_non_ip_socket_peer_falls_back(self) -> None:
         request = self._request({}, "testclient")

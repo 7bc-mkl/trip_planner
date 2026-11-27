@@ -118,10 +118,18 @@ DEPLOYMENT_OPTIONAL_ENVIRONMENT_VARIABLES: dict[str, str] = {
         "'null' opens a connection per use and keeps none (for a function that scales to "
         "zero); default: unset, SQLAlchemy's QueuePool"
     ),
+    "CLIENT_IP_SOURCE": (
+        "where the login rate limit reads the caller's address: 'x-forwarded-for' trusts "
+        "the first X-Forwarded-For element (behind Caddy, which replaces the header); "
+        "'cloudfront' never reads X-Forwarded-For (behind CloudFront and a Function URL "
+        "the viewer controls it) and must be paired with uvicorn run without proxy "
+        "headers; default: x-forwarded-for"
+    ),
 }
 
 VALID_INBOX_WORKER_MODES = frozenset({"thread", "lambda"})
 VALID_DB_POOLS = frozenset({"null"})
+VALID_CLIENT_IP_SOURCES = frozenset({"x-forwarded-for", "cloudfront"})
 
 #: The providers D24 permits, and the credential each one reads.
 #:
@@ -260,6 +268,9 @@ class Settings:
     inbox_worker_function: str | None = None
     #: `None` is SQLAlchemy's default QueuePool; `"null"` is `NullPool`.
     db_pool: str | None = None
+    #: `x-forwarded-for` (today's rule, behind Caddy) or `cloudfront`. Read by
+    #: `security.rate_limit.client_ip`; `require_settings` has refused anything else.
+    client_ip_source: str = "x-forwarded-for"
 
     @property
     def inbox_enabled(self) -> bool:
@@ -357,6 +368,15 @@ def require_settings(environ: dict[str, str] | None = None) -> Settings:
             f"DB_POOL must be one of {sorted(VALID_DB_POOLS)} or unset; got {db_pool!r}"
         )
 
+    client_ip_source = env.get("CLIENT_IP_SOURCE", "").strip().lower() or "x-forwarded-for"
+    if client_ip_source not in VALID_CLIENT_IP_SOURCES:
+        # A typo must not fall back to the header rule: on the Lambda target that
+        # would hand the login rate limit's key to the viewer.
+        raise WeakConfiguration(
+            f"CLIENT_IP_SOURCE must be one of {sorted(VALID_CLIENT_IP_SOURCES)} or unset; "
+            f"got {client_ip_source!r}"
+        )
+
     return Settings(
         database_url=env["DATABASE_URL"].strip(),
         session_secret=session_secret,
@@ -367,6 +387,7 @@ def require_settings(environ: dict[str, str] | None = None) -> Settings:
         inbox_worker_mode=worker_mode,
         inbox_worker_function=worker_function,
         db_pool=db_pool,
+        client_ip_source=client_ip_source,
     )
 
 
