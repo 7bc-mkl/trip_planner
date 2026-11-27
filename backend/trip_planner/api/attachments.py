@@ -91,7 +91,7 @@ from trip_planner.api.items import find_item, get_day
 from trip_planner.api.schemas import AttachmentRead
 from trip_planner.db.models import Attachment, AttachmentBlob, Item, Owner, Trip, TripDay
 from trip_planner.domain.uploads import (
-    MAX_ATTACHMENT_BYTES,
+    MAX_UPLOAD_BYTES,
     NormalisedFilename,
     UploadRejection,
     inspect_upload,
@@ -131,18 +131,17 @@ MAX_PARTS = 8
 
 #: How much multipart envelope is allowed *on top of* the per-file cap.
 #:
-#: `MAX_ATTACHMENT_BYTES` is a limit on the **file**, but the body carries the
+#: `MAX_UPLOAD_BYTES` is a limit on the **file**, but the body carries the
 #: boundary, the part headers and any small fields as well — 150–250 bytes for a
 #: plain one-part upload. Bounding the body at the file cap therefore refused a
-#: file of exactly 10 MB while telling the client it was over 10 MB, and left
-#: `ck_attachment_byte_size`'s `byte_size <= 10485760` unreachable. The real
+#: file of exactly the limit while telling the client it was over the limit. The real
 #: per-file limit is the **counted length of the `file` part** (`_receive`); this
 #: allowance only keeps the body bound from cutting into it. Sized for
 #: `MAX_PARTS` parts of headers plus a long filename, with room to spare.
 MAX_MULTIPART_ENVELOPE_BYTES = 4096
 
 #: The bound `read_body` applies to the whole body. Not itself a per-file limit.
-MAX_BODY_BYTES = MAX_ATTACHMENT_BYTES + MAX_MULTIPART_ENVELOPE_BYTES
+MAX_BODY_BYTES = MAX_UPLOAD_BYTES + MAX_MULTIPART_ENVELOPE_BYTES
 
 
 def _refuse(rejection: UploadRejection | QuotaRejection) -> ApiError:
@@ -193,7 +192,7 @@ async def read_body(request: Request) -> bytes:
     because a chunked request can lie about or omit its length. Neither check
     alone bounds the memory.
 
-    Both are applied to `MAX_BODY_BYTES`, not to `MAX_ATTACHMENT_BYTES`: what is
+    Both are applied to `MAX_BODY_BYTES`, not to `MAX_UPLOAD_BYTES`: what is
     read is the file **plus its multipart envelope**, and charging the envelope
     to the file's budget would refuse a file of exactly the documented size while
     quoting that size back at the client. The per-file limit is enforced on the
@@ -376,12 +375,13 @@ async def _receive(request: Request, db: OrmSession, owner: Owner) -> UploadedFi
     body = await read_body(request)
     upload = parse_single_file_part(request.headers.get("content-type", ""), body)
 
-    # The per-file cap, on the file: the counted length of the `file` part, with
-    # no envelope charged to it. `read_body` bounded the memory; this is the
-    # limit the error message names and the one `ck_attachment_byte_size`
-    # repeats, which is why a file of exactly `MAX_ATTACHMENT_BYTES` reaches the
-    # database instead of being refused a few hundred bytes early.
-    if len(upload.data) > MAX_ATTACHMENT_BYTES:
+    # The per-file upload limit, on the file: the counted length of the `file`
+    # part, with no envelope charged to it. `read_body` bounded the memory; this
+    # is the limit the error message names, which is why a file of exactly
+    # `MAX_UPLOAD_BYTES` is stored instead of being refused a few hundred bytes
+    # early. It sits below the stored bound `ck_attachment_byte_size` repeats
+    # (`MAX_ATTACHMENT_BYTES`, 10 MiB), which older rows may still reach.
+    if len(upload.data) > MAX_UPLOAD_BYTES:
         raise ApiError(ErrorCode.ATTACHMENT_TOO_LARGE, field="file")
 
     return upload

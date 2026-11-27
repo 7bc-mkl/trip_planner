@@ -43,6 +43,7 @@ __all__ = [
     "MAX_ATTACHMENT_BYTES",
     "MAX_FILENAME_CHARS",
     "MAX_PIXELS",
+    "MAX_UPLOAD_BYTES",
     "SNIFF_HEAD_BYTES",
     "InspectedUpload",
     "NormalisedFilename",
@@ -71,8 +72,23 @@ __all__ = [
 #: issues; HTML and text are the stored-XSS vector a screenshot replaces.
 ATTACHMENT_CONTENT_TYPES = ("application/pdf", "image/jpeg", "image/png")
 
-#: 10 MiB, the per-file cap (A4).
+#: 10 MiB, the **stored** bound on one attachment (A4).
+#:
+#: This is what the `attachment.byte_size` `CHECK` repeats (`db/models.py`) and
+#: what an inbound e-mail's document may weigh (`domain/inbound.py`). It is no
+#: longer the limit a browser upload is held to — see `MAX_UPLOAD_BYTES`. Rows
+#: stored before the upload limit was lowered, up to 10 MiB, remain valid and
+#: readable, which is why this bound did not move and no migration was needed.
 MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024
+
+#: 4 MiB, the per-file limit on a ``POST`` upload (D26, superseding D16's limit).
+#:
+#: On the scale-to-zero target a request reaches the API through AWS Lambda,
+#: whose request payload is capped at ~6 MB *after* base64 encoding — roughly
+#: 4.5 MB of binary. The owner chose lowering the upload limit over moving the
+#: bytes to S3 (assumption A1, 2026-11-27). It must stay at or below
+#: `MAX_ATTACHMENT_BYTES`, so every accepted upload is also storable.
+MAX_UPLOAD_BYTES = 4 * 1024 * 1024
 
 #: The display filename's bound, in characters — not bytes, so the truncation
 #: cannot land inside a character.

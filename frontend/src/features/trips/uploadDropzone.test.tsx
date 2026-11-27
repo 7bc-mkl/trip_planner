@@ -278,10 +278,10 @@ describe('the client-side pre-check', () => {
     expect(precheck(pdf('ticket.pdf'))).toBeNull()
     expect(precheck(pdf('photo.jpg'))).toBeNull()
     expect(precheck(pdf('archive.zip'))).toBe('unsupported_file_type')
-    expect(precheck(pdf('huge.pdf', 10 * 1024 * 1024 + 1))).toBe('attachment_too_large')
+    expect(precheck(pdf('huge.pdf', 4 * 1024 * 1024 + 1))).toBe('attachment_too_large')
     expect(precheck(pdf('empty.pdf', 0))).toBe('malformed_upload')
     // Exactly at the ceiling is the server's to accept, not the client's to refuse.
-    expect(precheck(pdf('atlimit.pdf', 10 * 1024 * 1024))).toBeNull()
+    expect(precheck(pdf('atlimit.pdf', 4 * 1024 * 1024))).toBeNull()
   })
 
   it('issues NO request for a file it refuses, and says why in the reader’s language', async () => {
