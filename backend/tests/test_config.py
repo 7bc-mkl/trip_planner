@@ -402,3 +402,64 @@ def test_the_model_settings_repr_does_not_carry_the_api_key() -> None:
 
     assert "test-key-not-a-real-credential" not in repr(settings.model)
     assert "test-key-not-a-real-credential" not in repr(settings)
+
+
+# ---------------------------------------------------------------------------
+# Deployment-shape settings: worker mode and database pool
+# ---------------------------------------------------------------------------
+
+
+def test_worker_and_pool_settings_default_to_todays_behaviour() -> None:
+    settings = require_settings(COMPLETE_ENV)
+
+    assert settings.inbox_worker_mode == "thread"
+    assert settings.inbox_worker_function is None
+    assert settings.db_pool is None
+
+
+def test_valid_worker_and_pool_values_resolve() -> None:
+    settings = require_settings(
+        COMPLETE_ENV
+        | INBOX_ENV
+        | {
+            "INBOX_WORKER_MODE": " Lambda ",
+            "INBOX_WORKER_FUNCTION": " trip-planner-worker ",
+            "DB_POOL": "NULL",
+        }
+    )
+
+    assert settings.inbox_worker_mode == "lambda"
+    assert settings.inbox_worker_function == "trip-planner-worker"
+    assert settings.db_pool == "null"
+
+
+def test_an_unknown_worker_mode_is_refused_naming_the_variable() -> None:
+    with pytest.raises(WeakConfiguration) as caught:
+        require_settings(env_with(INBOX_WORKER_MODE="process"))
+
+    assert "INBOX_WORKER_MODE" in str(caught.value)
+    assert "thread" in str(caught.value)
+    assert "lambda" in str(caught.value)
+
+
+def test_an_unknown_db_pool_is_refused_naming_the_variable() -> None:
+    with pytest.raises(WeakConfiguration) as caught:
+        require_settings(env_with(DB_POOL="queue"))
+
+    assert "DB_POOL" in str(caught.value)
+    assert "null" in str(caught.value)
+
+
+def test_lambda_mode_with_the_inbox_configured_requires_the_function_name() -> None:
+    with pytest.raises(WeakConfiguration) as caught:
+        require_settings(COMPLETE_ENV | INBOX_ENV | {"INBOX_WORKER_MODE": "lambda"})
+
+    assert "INBOX_WORKER_FUNCTION" in str(caught.value)
+
+
+def test_lambda_mode_with_the_inbox_unset_needs_no_function_name() -> None:
+    settings = require_settings(env_with(INBOX_WORKER_MODE="lambda"))
+
+    assert settings.inbox is None
+    assert settings.inbox_worker_mode == "lambda"
+    assert settings.inbox_worker_function is None

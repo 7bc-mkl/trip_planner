@@ -99,6 +99,30 @@ INBOX_OPTIONAL_ENVIRONMENT_VARIABLES: dict[str, str] = {
     ),
 }
 
+#: Optional deployment-shape settings for the scale-to-zero (Lambda + Neon) target.
+#:
+#: Each default reproduces today's behaviour, so an existing deployment starts
+#: unchanged (§5). Unknown values are refused rather than coerced: a typo in
+#: `DB_POOL` that silently fell back to the pool would defeat the point of
+#: setting it.
+DEPLOYMENT_OPTIONAL_ENVIRONMENT_VARIABLES: dict[str, str] = {
+    "INBOX_WORKER_MODE": (
+        "where inbox work runs: 'thread' runs it in the web process, 'lambda' hands it to "
+        "the worker function; default: thread"
+    ),
+    "INBOX_WORKER_FUNCTION": (
+        "name of the worker Lambda function; required when INBOX_WORKER_MODE=lambda and "
+        "the inbox is configured; default: unset"
+    ),
+    "DB_POOL": (
+        "'null' opens a connection per use and keeps none (for a function that scales to "
+        "zero); default: unset, SQLAlchemy's QueuePool"
+    ),
+}
+
+VALID_INBOX_WORKER_MODES = frozenset({"thread", "lambda"})
+VALID_DB_POOLS = frozenset({"null"})
+
 #: The providers D24 permits, and the credential each one reads.
 #:
 #: **Exactly one is selected per deployment and there is no fallback.** A
@@ -228,6 +252,14 @@ class Settings:
     #: `None` when no model is configured. Also a normal state: the inbox then
     #: behaves exactly as Phase 1 shipped — stored and queued, no egress.
     model: ModelSettings | None = None
+    #: `thread` (today's behaviour) or `lambda`. Only `require_settings` sets it,
+    #: and it has already refused anything else.
+    inbox_worker_mode: str = "thread"
+    #: The worker Lambda's name. Guaranteed set when the mode is `lambda` and the
+    #: inbox is configured; otherwise it may be `None` and is never read.
+    inbox_worker_function: str | None = None
+    #: `None` is SQLAlchemy's default QueuePool; `"null"` is `NullPool`.
+    db_pool: str | None = None
 
     @property
     def inbox_enabled(self) -> bool:
@@ -301,13 +333,40 @@ def require_settings(environ: dict[str, str] | None = None) -> Settings:
             f"got {app_base_url!r}"
         )
 
+    inbox = resolve_inbox_settings(env)
+
+    worker_mode = env.get("INBOX_WORKER_MODE", "").strip().lower() or "thread"
+    if worker_mode not in VALID_INBOX_WORKER_MODES:
+        raise WeakConfiguration(
+            f"INBOX_WORKER_MODE must be one of {sorted(VALID_INBOX_WORKER_MODES)}; "
+            f"got {worker_mode!r}"
+        )
+    worker_function = env.get("INBOX_WORKER_FUNCTION", "").strip() or None
+    if worker_mode == "lambda" and inbox is not None and worker_function is None:
+        # With the inbox off nothing is ever handed to the worker, so the name is
+        # not needed; with it on, a missing name would surface at the first
+        # notification as a failed invoke that names no variable.
+        raise WeakConfiguration(
+            "INBOX_WORKER_MODE=lambda with the inbox configured requires "
+            "INBOX_WORKER_FUNCTION, the name of the worker Lambda function; it is not set."
+        )
+
+    db_pool = env.get("DB_POOL", "").strip().lower() or None
+    if db_pool is not None and db_pool not in VALID_DB_POOLS:
+        raise WeakConfiguration(
+            f"DB_POOL must be one of {sorted(VALID_DB_POOLS)} or unset; got {db_pool!r}"
+        )
+
     return Settings(
         database_url=env["DATABASE_URL"].strip(),
         session_secret=session_secret,
         app_base_url=app_base_url,
         environment=environment,
-        inbox=resolve_inbox_settings(env),
+        inbox=inbox,
         model=resolve_model_settings(env),
+        inbox_worker_mode=worker_mode,
+        inbox_worker_function=worker_function,
+        db_pool=db_pool,
     )
 
 
