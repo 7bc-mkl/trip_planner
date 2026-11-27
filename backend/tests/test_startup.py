@@ -205,6 +205,7 @@ class TestDeploymentArtifacts:
             "--proxy-headers",
             "--forwarded-allow-ips",
             "*",
+            "--no-server-header",
         ]
 
     @pytest.mark.parametrize("value", ["cloudfront", " CloudFront "])
@@ -222,6 +223,7 @@ class TestDeploymentArtifacts:
             "--port",
             "8080",
             "--no-proxy-headers",
+            "--no-server-header",
         ]
         assert "--proxy-headers" not in argv
         assert "--forwarded-allow-ips" not in argv

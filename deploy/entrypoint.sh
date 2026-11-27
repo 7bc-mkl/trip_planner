@@ -34,14 +34,16 @@ case "${1:-serve}" in
         --factory \
         --host 0.0.0.0 \
         --port "${PORT:-8000}" \
-        --no-proxy-headers
+        --no-proxy-headers \
+        --no-server-header
     fi
     exec uvicorn trip_planner.app:create_production_app \
       --factory \
       --host 0.0.0.0 \
       --port "${PORT:-8000}" \
       --proxy-headers \
-      --forwarded-allow-ips '*'
+      --forwarded-allow-ips '*' \
+      --no-server-header
     ;;
 
   migrate-and-serve)

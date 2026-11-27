@@ -26,6 +26,20 @@ from trip_planner.errors import ErrorCode, error_body
 DEFAULT_STATIC_DIR = Path("/srv/static")
 
 
+#: Hashed bundle files never change under the same name, so they cache for a year.
+IMMUTABLE_CACHE_CONTROL = "public, max-age=31536000, immutable"
+
+
+class ImmutableStaticFiles(StaticFiles):
+    """`StaticFiles` that marks every successful file response immutable."""
+
+    def file_response(self, *args, **kwargs) -> Response:
+        response = super().file_response(*args, **kwargs)
+        if response.status_code == 200:
+            response.headers["Cache-Control"] = IMMUTABLE_CACHE_CONTROL
+        return response
+
+
 def static_dir() -> Path | None:
     """The directory holding the built SPA, or None when it is not present."""
     configured = os.environ.get("STATIC_DIR")
@@ -75,7 +89,7 @@ def mount_spa(app: FastAPI, api_prefix: str, directory: Path) -> None:
 
     assets = directory / "assets"
     if assets.is_dir():
-        app.mount("/assets", StaticFiles(directory=assets), name="assets")
+        app.mount("/assets", ImmutableStaticFiles(directory=assets), name="assets")
 
     async def serve_index(request: Request) -> Response:
         if request.url.path.startswith(api_prefix):

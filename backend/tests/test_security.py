@@ -96,36 +96,62 @@ class TestTokens:
         assert generate_csrf_token() != generate_csrf_token()
 
 
-# --- Response headers the app sets today (characterization) -------------------
+# --- Response headers the app sets itself ----------------------------------------
 #
-# Caddy (deploy/Caddyfile) adds these four today; the app sets none of them. The
-# next step moves them into the app, and flips the first test below.
+# These four were Caddy's job; the Lambda target has no Caddy. HSTS is production-only.
 
-CADDY_SECURITY_HEADERS = (
-    "strict-transport-security",
-    "x-content-type-options",
-    "x-frame-options",
-    "referrer-policy",
-)
+ALWAYS_HEADERS = {
+    "x-content-type-options": "nosniff",
+    "x-frame-options": "DENY",
+    "referrer-policy": "strict-origin-when-cross-origin",
+}
+HSTS = "max-age=63072000; includeSubDomains"
 
 
-def test_the_app_sets_no_caddy_security_headers_today() -> None:
+def _production(settings):
+    import dataclasses
+
+    return dataclasses.replace(settings, environment="production")
+
+
+def test_every_response_carries_the_security_headers_and_hsts_only_in_production(
+    settings, tmp_path, monkeypatch
+) -> None:
     from fastapi.testclient import TestClient
 
     from trip_planner.app import create_app
 
-    with TestClient(create_app(check_configuration=False)) as client:
-        response = client.get("/api/v1/health")
+    (tmp_path / "index.html").write_text("<div id=root></div>", encoding="utf-8")
+    (tmp_path / "assets").mkdir()
+    (tmp_path / "assets" / "app-abc.js").write_text("1", encoding="utf-8")
+    monkeypatch.setenv("STATIC_DIR", str(tmp_path))
 
-    assert response.status_code == 200
-    for name in CADDY_SECURITY_HEADERS:
-        assert name not in response.headers, name
+    paths = ("/api/v1/health", "/api/v1/nope", "/trips", "/assets/app-abc.js")
+
+    with TestClient(
+        create_app(check_configuration=False, settings=_production(settings))
+    ) as client:
+        for path in paths:
+            headers = client.get(path).headers
+            for name, value in ALWAYS_HEADERS.items():
+                assert headers[name] == value, (path, name)
+            assert headers["strict-transport-security"] == HSTS, path
+
+    for app in (
+        create_app(check_configuration=False),
+        create_app(check_configuration=False, settings=settings),
+    ):
+        with TestClient(app) as client:
+            for path in paths:
+                headers = client.get(path).headers
+                assert headers["x-frame-options"] == "DENY", path
+                assert "strict-transport-security" not in headers, path
 
 
 def test_the_attachment_content_route_keeps_its_own_nosniff_and_csp(
     signed_in_client,
 ) -> None:
-    """Must stay true after the change: these routes set their own headers."""
+    """These routes set their own headers; the middleware adds the rest without clobbering."""
     from tests.test_attachments_api import attachment_url, stored
     from tests.test_trips_api import create
 
@@ -136,3 +162,7 @@ def test_the_attachment_content_route_keeps_its_own_nosniff_and_csp(
     assert response.status_code == 200
     assert response.headers["x-content-type-options"] == "nosniff"
     assert response.headers["content-security-policy"] == "default-src 'none'; sandbox"
+    assert response.headers["x-frame-options"] == "DENY"
+    # The route's own, stricter Referrer-Policy is kept, not replaced.
+    assert response.headers["referrer-policy"] == "no-referrer"
+    assert response.headers.get_list("x-content-type-options") == ["nosniff"]

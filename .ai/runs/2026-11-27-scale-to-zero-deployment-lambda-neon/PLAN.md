@@ -30,7 +30,7 @@
 | 1 | 1.9 | Upload limit 4 MiB; stored bound stays 10 MiB; frontend and copy (spec step 9) | dispatch:capable | done | 64c3eb7 |
 | 1 | 1.10 | Characterize response headers and `/assets` caching (spec step 10) | dispatch:cheap | done | d23217a |
 | 1 | 1.7-review-fix | `--no-proxy-headers` on the Lambda target (checkpoint 2 review) | inline | done | e3b698b |
-| 1 | 1.11 | Security-headers middleware, immutable `/assets`, `--no-server-header` (spec step 11) | dispatch | todo | — |
+| 1 | 1.11 | Security-headers middleware, immutable `/assets`, `--no-server-header` (spec step 11) | dispatch | done | 54d3625 |
 | 1 | 1.12 | Origin-verify middleware and the `CloudFront-Viewer-Address` source (spec step 12) | dispatch:capable | todo | — |
 | 1 | 1.13 | Lambda Web Adapter in the image; `worker` entrypoint (spec step 13) | dispatch | todo | — |
 | 2 | 2.1 | `deploy/lambda/cert.yaml` — ACM certificate in us-east-1 (spec Phase 2 step 1) | inline | todo | — |
