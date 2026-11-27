@@ -25,6 +25,7 @@ from fastapi import Request
 from sqlalchemy.orm import Session as OrmSession
 
 from trip_planner.db.models import LoginAttempt
+from trip_planner.security.origin import is_origin_verified
 
 #: How long a failed attempt counts against the limit.
 DEFAULT_WINDOW = timedelta(minutes=15)
@@ -127,14 +128,30 @@ CLIENT_IP_SOURCE_CLOUDFRONT = "cloudfront"
 def _cloudfront_viewer_ip(request: Request) -> str | None:
     """The viewer address CloudFront vouches for, or None.
 
-    SEAM (spec Phase 1, step 12): this is where the `CloudFront-Viewer-Address`
-    header is read — and only on a request that passed the `X-Origin-Verify`
-    check, since without that check anyone calling the raw Function URL could
-    set it. Until that middleware exists nothing here is trustworthy, so it
-    returns None and `client_ip` falls back to the socket peer.
+    Read **only** on a request that passed the `X-Origin-Verify` check
+    (`security.origin`): without it anyone calling the raw Function URL could set
+    `CloudFront-Viewer-Address`. On an unverified request — including every
+    request when `ORIGIN_VERIFY_SECRET` is unset — the header is ignored and
+    `client_ip` falls back to the socket peer.
+
+    The format is `ip:port` (`198.51.100.10:46532`). IPv6 comes without
+    brackets (`2001:db8::1:46532`), so the port is split off at the **last**
+    colon; a bracketed `[2001:db8::1]:46532` is tolerated too.
     """
-    del request
-    return None
+    if not is_origin_verified(request.scope):
+        return None
+
+    value = request.headers.get("cloudfront-viewer-address", "").strip()
+    if not value:
+        return None
+    if value.startswith("["):
+        return _parse_ip(value)
+    address, separator, port = value.rpartition(":")
+    # One colon left in the address would be `_parse_ip` stripping a second
+    # "port" — not a shape CloudFront sends, so refuse it rather than guess.
+    if not separator or not port.isdigit() or address.count(":") == 1:
+        return None
+    return _parse_ip(address)
 
 
 def client_ip(request: Request, source: str = CLIENT_IP_SOURCE_FORWARDED) -> str:

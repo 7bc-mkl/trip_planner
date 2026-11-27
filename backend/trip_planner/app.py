@@ -35,6 +35,7 @@ from trip_planner.api.deps import get_current_session
 from trip_planner.config import Settings, require_settings
 from trip_planner.errors import ApiError, ErrorCode, error_body
 from trip_planner.security.headers import SecurityHeadersMiddleware
+from trip_planner.security.origin import OriginVerifyMiddleware
 from trip_planner.spa import mount_spa, static_dir
 
 API_PREFIX = "/api/v1"
@@ -157,6 +158,13 @@ def create_app(
     )
 
     _install_exception_handlers(app)
+
+    # The origin lock, only when ORIGIN_VERIFY_SECRET is set (the Lambda target);
+    # compose behind Caddy runs no check. Added before the security headers so
+    # those wrap it: Starlette runs the last-added middleware outermost, and the
+    # 403 it answers must carry them too.
+    if settings is not None and settings.origin_verify_secret is not None:
+        app.add_middleware(OriginVerifyMiddleware, secret=settings.origin_verify_secret)
 
     # HSTS only when settings are given and say production: a bare
     # `create_app()` (tests, tooling) has no environment to consult, and HSTS

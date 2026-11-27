@@ -33,6 +33,7 @@ export type ErrorCode =
   | 'action_item_already_decided'
   | 'action_item_conflict'
   | 'invalid_action_selection'
+  | 'forbidden_origin'
 
 export const ERROR_CODES: readonly ErrorCode[] = [
   'invalid_credentials',
@@ -66,4 +67,5 @@ export const ERROR_CODES: readonly ErrorCode[] = [
   'action_item_already_decided',
   'action_item_conflict',
   'invalid_action_selection',
+  'forbidden_origin',
 ] as const

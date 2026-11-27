@@ -225,7 +225,8 @@
     "inbox_object_unavailable": "The original message is no longer stored, so it cannot be recovered. It expires 30 days after it arrives.",
     "action_item_already_decided": "This proposal has already been decided. Reload the inbox to see where it stands.",
     "action_item_conflict": "Something changed since you opened this proposal. It has been reloaded with the current values — check it and try again.",
-    "invalid_action_selection": "That selection is not part of this proposal. Reload it and choose again."
+    "invalid_action_selection": "That selection is not part of this proposal. Reload it and choose again.",
+    "forbidden_origin": "This request did not come through the planner's address. Open the planner from its usual link and try again."
   },
   "inbox": {
     "title": "Inbox",

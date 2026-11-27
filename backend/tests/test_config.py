@@ -483,7 +483,8 @@ def test_client_ip_source_defaults_to_the_forwarded_header_rule() -> None:
     ],
 )
 def test_client_ip_source_values_resolve(raw: str, expected: str) -> None:
-    assert require_settings(env_with(CLIENT_IP_SOURCE=raw)).client_ip_source == expected
+    env = env_with(CLIENT_IP_SOURCE=raw, ORIGIN_VERIFY_SECRET=ORIGIN_SECRET)
+    assert require_settings(env).client_ip_source == expected
 
 
 def test_an_unknown_client_ip_source_is_refused_naming_the_variable() -> None:
@@ -501,3 +502,54 @@ def test_client_ip_source_is_documented_as_a_deployment_option() -> None:
     from trip_planner.config import DEPLOYMENT_OPTIONAL_ENVIRONMENT_VARIABLES
 
     assert "CLIENT_IP_SOURCE" in DEPLOYMENT_OPTIONAL_ENVIRONMENT_VARIABLES
+
+
+# ---------------------------------------------------------------------------
+# Origin lock (ORIGIN_VERIFY_SECRET)
+# ---------------------------------------------------------------------------
+
+ORIGIN_SECRET = "o" * 40
+
+
+def test_origin_verify_secret_is_unset_by_default() -> None:
+    """Compose behind Caddy sets nothing and runs no origin check."""
+    assert require_settings(COMPLETE_ENV).origin_verify_secret is None
+    assert require_settings(env_with(ORIGIN_VERIFY_SECRET="   ")).origin_verify_secret is None
+
+
+def test_origin_verify_secret_resolves() -> None:
+    settings = require_settings(env_with(ORIGIN_VERIFY_SECRET=f" {ORIGIN_SECRET} "))
+    assert settings.origin_verify_secret == ORIGIN_SECRET
+
+
+def test_a_short_origin_verify_secret_is_refused() -> None:
+    with pytest.raises(WeakConfiguration) as caught:
+        require_settings(env_with(ORIGIN_VERIFY_SECRET="short-secret"))
+
+    message = str(caught.value)
+    assert "ORIGIN_VERIFY_SECRET" in message
+    assert "short-secret" not in message
+
+
+def test_cloudfront_client_ip_source_requires_the_origin_secret() -> None:
+    """The viewer header is CloudFront's word only after origin verification."""
+    with pytest.raises(WeakConfiguration) as caught:
+        require_settings(env_with(CLIENT_IP_SOURCE="cloudfront"))
+
+    message = str(caught.value)
+    assert "CLIENT_IP_SOURCE" in message
+    assert "ORIGIN_VERIFY_SECRET" in message
+
+
+def test_the_origin_secret_never_appears_in_the_settings_repr() -> None:
+    settings = require_settings(
+        env_with(CLIENT_IP_SOURCE="cloudfront", ORIGIN_VERIFY_SECRET=ORIGIN_SECRET)
+    )
+    assert ORIGIN_SECRET not in repr(settings)
+    assert ORIGIN_SECRET not in str(settings)
+
+
+def test_origin_verify_secret_is_documented_as_a_deployment_option() -> None:
+    from trip_planner.config import DEPLOYMENT_OPTIONAL_ENVIRONMENT_VARIABLES
+
+    assert "ORIGIN_VERIFY_SECRET" in DEPLOYMENT_OPTIONAL_ENVIRONMENT_VARIABLES

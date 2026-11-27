@@ -225,7 +225,8 @@
     "inbox_object_unavailable": "Oryginalna wiadomość nie jest już przechowywana, więc nie da się jej odzyskać. Wygasa 30 dni po otrzymaniu.",
     "action_item_already_decided": "Ta propozycja została już rozpatrzona. Odśwież skrzynkę, żeby zobaczyć jej stan.",
     "action_item_conflict": "Coś się zmieniło od otwarcia tej propozycji. Wczytaliśmy ją ponownie z aktualnymi wartościami — sprawdź i spróbuj jeszcze raz.",
-    "invalid_action_selection": "Ten wybór nie należy do tej propozycji. Wczytaj ją ponownie i wybierz jeszcze raz."
+    "invalid_action_selection": "Ten wybór nie należy do tej propozycji. Wczytaj ją ponownie i wybierz jeszcze raz.",
+    "forbidden_origin": "To żądanie nie przyszło przez adres planera. Otwórz planer ze zwykłego linku i spróbuj ponownie."
   },
   "inbox": {
     "title": "Skrzynka",

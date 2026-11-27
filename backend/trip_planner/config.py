@@ -23,7 +23,7 @@ from __future__ import annotations
 
 import os
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from decimal import Decimal, InvalidOperation
 from functools import lru_cache
 
@@ -122,8 +122,14 @@ DEPLOYMENT_OPTIONAL_ENVIRONMENT_VARIABLES: dict[str, str] = {
         "where the login rate limit reads the caller's address: 'x-forwarded-for' trusts "
         "the first X-Forwarded-For element (behind Caddy, which replaces the header); "
         "'cloudfront' never reads X-Forwarded-For (behind CloudFront and a Function URL "
-        "the viewer controls it) and must be paired with uvicorn run without proxy "
-        "headers; default: x-forwarded-for"
+        "the viewer controls it), reads CloudFront-Viewer-Address on origin-verified "
+        "requests, requires ORIGIN_VERIFY_SECRET and must be paired with uvicorn run "
+        "without proxy headers; default: x-forwarded-for"
+    ),
+    "ORIGIN_VERIFY_SECRET": (
+        "secret (32+ characters) CloudFront sends as the X-Origin-Verify origin header; "
+        "when set, every request without it except GET /api/v1/health is refused with "
+        "403, and CLIENT_IP_SOURCE=cloudfront requires it; default: unset, no check"
     ),
 }
 
@@ -271,6 +277,9 @@ class Settings:
     #: `x-forwarded-for` (today's rule, behind Caddy) or `cloudfront`. Read by
     #: `security.rate_limit.client_ip`; `require_settings` has refused anything else.
     client_ip_source: str = "x-forwarded-for"
+    #: The `X-Origin-Verify` value CloudFront adds; `None` means no origin check
+    #: (compose behind Caddy). A secret, so it is kept out of the repr.
+    origin_verify_secret: str | None = field(default=None, repr=False)
 
     @property
     def inbox_enabled(self) -> bool:
@@ -377,6 +386,26 @@ def require_settings(environ: dict[str, str] | None = None) -> Settings:
             f"got {client_ip_source!r}"
         )
 
+    origin_verify_secret = env.get("ORIGIN_VERIFY_SECRET", "").strip() or None
+    if (
+        origin_verify_secret is not None
+        and len(origin_verify_secret) < MINIMUM_SESSION_SECRET_LENGTH
+    ):
+        # A short origin secret is guessable, and guessing it reopens the raw
+        # Function URL — including the viewer address the rate limit trusts.
+        raise WeakConfiguration(
+            f"ORIGIN_VERIFY_SECRET must be at least {MINIMUM_SESSION_SECRET_LENGTH} "
+            f"characters; got {len(origin_verify_secret)}."
+        )
+    if client_ip_source == "cloudfront" and origin_verify_secret is None:
+        # CloudFront-Viewer-Address is only CloudFront's word on a request that
+        # proved it came through CloudFront. Without the check, anyone calling
+        # the Function URL directly could set it.
+        raise WeakConfiguration(
+            "CLIENT_IP_SOURCE=cloudfront requires ORIGIN_VERIFY_SECRET: the viewer "
+            "address is trusted only on origin-verified requests; it is not set."
+        )
+
     return Settings(
         database_url=env["DATABASE_URL"].strip(),
         session_secret=session_secret,
@@ -388,6 +417,7 @@ def require_settings(environ: dict[str, str] | None = None) -> Settings:
         inbox_worker_function=worker_function,
         db_pool=db_pool,
         client_ip_source=client_ip_source,
+        origin_verify_secret=origin_verify_secret,
     )
 
 
