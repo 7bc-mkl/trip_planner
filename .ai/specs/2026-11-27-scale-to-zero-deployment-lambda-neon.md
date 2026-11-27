@@ -25,7 +25,7 @@ One image, two deployment targets:
 | | Compose (today, unchanged) | Lambda (new) |
 |---|---|---|
 | Compute | `uvicorn` in a long-lived container | Same image; the Lambda Web Adapter (LWA) extension turns invocations into HTTP to `uvicorn` on `localhost:8000` |
-| Ingress / TLS | Caddy + Let's Encrypt | Lambda Function URL (HTTPS on an AWS hostname) |
+| Ingress / TLS | Caddy + Let's Encrypt, sslip.io hostname | `trips.botito.app` (Route 53) → CloudFront (ACM certificate) → Lambda Function URL, locked to CloudFront by a secret origin header |
 | Database | Postgres container | Neon: **pooled** endpoint for the web function, **direct** endpoint for the worker and migrations |
 | Inbox worker | Thread in the app lifespan, every 30 s | A separate **worker function** from the same image, *kicked* after each SNS receipt and run on a low-frequency schedule for retries and cleanup |
 | Release step | `migrate` compose service | `migrate` run from the deploy script against Neon's direct endpoint, before the new version is published |
@@ -125,10 +125,11 @@ Frozen by: `backend/tests/test_attachments_api.py` (`test_a_file_one_byte_over_t
 
 ```mermaid
 flowchart LR
-  U[Browser] -->|HTTPS| FURL[Function URL — NEW]
+  U[Browser] -->|HTTPS trips.botito.app| CF[Route 53 + CloudFront — NEW]
+  CF -->|X-Origin-Verify| FURL[Function URL — NEW]
   FURL --> WEB[web function: image + LWA — NEW]
   WEB -->|pooled| NEON[(Neon — NEW)]
-  SES[SES → S3 → SNS — existing] -->|HTTPS| FURL
+  SES[SES → S3 → SNS — existing] -->|HTTPS| CF
   WEB -.->|async invoke 'kick' — NEW| WK[worker function: same image — NEW]
   EB[EventBridge Scheduler — NEW] -->|every 6 h| WK
   WK -->|direct| NEON
@@ -151,7 +152,7 @@ The frontend is built into the image (`deploy/Dockerfile`, first stage) and serv
 - **Security headers move from Caddy into the app.** Today `deploy/Caddyfile` adds `Strict-Transport-Security`, `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY` and `Referrer-Policy: strict-origin-when-cross-origin`, and strips `Server`. A Function URL adds none of them, so the Lambda target would silently lose clickjacking and MIME-sniffing protection. A middleware in `create_app` sets the same four headers on every response. HSTS is set only when `ENVIRONMENT=production`, because the app refuses to start in production without `https://`. The middleware never overrides a stricter header a route already sets, such as the attachment content routes' own `nosniff` and sandbox CSP. `serve` runs uvicorn with `--no-server-header`. On compose, Caddy's `header` directive replaces rather than appends, so the headers are not duplicated, and the Caddyfile stays as it is.
 - **Hashed assets are cached as immutable.** `StaticFiles` sends only `ETag` / `Last-Modified`, so a browser revalidates every bundle on every visit. Each 304 is a Lambda invocation, and each one waits through a cold start. Files under `/assets` carry a content hash in their name, so they get `Cache-Control: public, max-age=31536000, immutable`; `index.html` keeps `no-store`, which is what makes a new build reach the browser. After the first visit, only `index.html` and API calls invoke the function.
 
-Serving the SPA from S3 + CloudFront was considered and deferred. It only pays off together with a custom domain (A4): CloudFront would then route `/api/*` to the Function URL and everything else to S3, keeping one origin. With immutable caching, the browser makes almost no asset requests anyway.
+CloudFront now sits in front of the app anyway (see "Domain" below) and caches `/assets/*` at the edge, so bundles stop invoking Lambda even on a first visit. Moving the SPA to S3 is therefore not needed. It would add a second build artifact and break the single-image release for no further gain.
 
 ### The web function
 
@@ -181,18 +182,35 @@ All additions are **optional with defaults that reproduce today's behaviour**:
 | `INBOX_WORKER_FUNCTION` | unset | the worker function's name (required when mode is `lambda` and the inbox is configured; startup names it if missing) |
 | `INBOX_WORKER_SCHEDULE` | n/a (SAM parameter) | `rate(6 hours)` |
 | `DB_POOL` | unset (SQLAlchemy `QueuePool`) | `null` on the web function |
+| `ORIGIN_VERIFY_SECRET` | unset (no check) | the secret CloudFront sends, from SSM |
+| `CLIENT_IP_SOURCE` (name fixed at implementation) | `x-forwarded-for` (today's rule) | `cloudfront` |
 
-`DATABASE_URL`, `SESSION_SECRET`, `APP_BASE_URL`, `ENVIRONMENT` and the `INBOX_*` / model blocks keep their names and meaning. Secrets (`SESSION_SECRET`, database URLs, the model API key) live in SSM Parameter Store SecureString and are resolved by SAM at deploy time. They are never written into the template.
+`DATABASE_URL`, `SESSION_SECRET`, `APP_BASE_URL`, `ENVIRONMENT` and the `INBOX_*` / model blocks keep their names and meaning. Secrets (`SESSION_SECRET`, database URLs, the model API key, `ORIGIN_VERIFY_SECRET`) live in SSM Parameter Store SecureString and are resolved by SAM at deploy time. They are never written into the template.
 
 ### Client IP (login rate limit)
 
-`client_ip` (`backend/trip_planner/security/rate_limit.py`) trusts the **first** `X-Forwarded-For` element. Behind Caddy that is safe, because Caddy replaces the header. Behind a Function URL, a client-supplied `X-Forwarded-For` may be preserved with AWS's address appended (verify). Then the first element is attacker-chosen, and the per-IP login limit (R08 posture) could be bypassed by rotating a fake header. Phase 1 adds a test-pinned rule. On the Lambda target, take the client address from the hop AWS appends (the **last** element), selected by a `TRUSTED_PROXY_HOPS`-style setting whose default keeps today's behaviour. The setting name is fixed at implementation.
+`client_ip` (`backend/trip_planner/security/rate_limit.py`) trusts the **first** `X-Forwarded-For` element. Behind Caddy that is safe, because Caddy replaces the header. Behind a Function URL, a client-supplied `X-Forwarded-For` may be preserved with AWS's address appended (verify). Then the first element is attacker-chosen, and the per-IP login limit (R08 posture) could be bypassed by rotating a fake header. With CloudFront in front, the chain becomes viewer → CloudFront → Function URL, and counting `X-Forwarded-For` hops gets fragile. So on the Lambda target the client address comes from **`CloudFront-Viewer-Address`** (`ip:port`, set by CloudFront, not the viewer), trusted **only** on requests that passed the `X-Origin-Verify` check. A setting selects this rule (for example `CLIENT_IP_SOURCE=cloudfront`; the name is fixed at implementation). Its default keeps today's first-element `X-Forwarded-For` behaviour for compose behind Caddy. Phase 1 pins both, including IPv6 addresses and a viewer-supplied fake `CloudFront-Viewer-Address`, which CloudFront overwrites (verify).
 
 The fallback path is affected too. `entrypoint.sh` runs uvicorn with `--proxy-headers --forwarded-allow-ips '*'`, which rewrites `request.client` from the same header. So the `request.client` fallback in `client_ip` is attacker-controlled as well. On the Lambda target, `serve` runs without `--forwarded-allow-ips '*'` (LWA connects from `127.0.0.1`). The test pins both paths. The `client_ip` docstring's "at worst rate-limit himself" no longer holds once the header can be rotated, so it is corrected in the same change.
 
-### Hostname
+### Domain: `trips.botito.app` on Route 53 (owner decision, 2026-11-27)
 
-Phase 1 uses the Function URL hostname (`https://<id>.lambda-url.<region>.on.aws`) as `APP_BASE_URL`, which `ENVIRONMENT=production` accepts. A custom domain needs CloudFront in front of the Function URL. That is deferred until a domain is registered; it is the same trigger `deploy/README.md` already names for leaving sslip.io.
+A Function URL cannot carry a custom domain, so **CloudFront** sits in front of it. It adds no standing cost (billed per request and per GB), so scale-to-zero holds.
+
+```
+browser ──HTTPS──▶ trips.botito.app (Route 53 alias A/AAAA)
+                     ──▶ CloudFront (ACM cert, us-east-1)
+                           ├─ /assets/*  cached at the edge (CachingOptimized)
+                           └─ everything else, uncached ──▶ Function URL ──▶ web function
+                                   + X-Origin-Verify: <secret>
+```
+
+- **DNS.** Route 53 serves the `botito.app` hosted zone; Phase 0 confirms the zone exists in this AWS account, or delegates `botito.app` to it. The SAM template creates `A` and `AAAA` alias records for `trips.botito.app` pointing at the distribution. The hosted zone id is a stack parameter.
+- **Certificate.** CloudFront only accepts ACM certificates from `us-east-1`, while the app stack lives in `INBOX_AWS_REGION`. A second small stack, `deploy/lambda/cert.yaml`, deployed to `us-east-1`, issues the certificate for `trips.botito.app` with DNS validation in the same hosted zone; its ARN is passed to the main stack. `deploy.sh` deploys it first and only when it is missing.
+- **Distribution.** Alias `trips.botito.app`; HTTP redirected to HTTPS; compression on; price class covering Europe and North America. Default behaviour: all methods, **caching disabled**, an origin request policy forwarding every viewer header, cookie and query string except `Host` (the Function URL routes on its own host), plus `CloudFront-Viewer-Address`. `/assets/*`: GET/HEAD, cached according to the origin's `Cache-Control`. With the `immutable` header from "The SPA and the headers Caddy adds today", bundles are then served from the edge and never invoke Lambda.
+- **Origin lock.** The Function URL stays `AuthType: NONE`. CloudFront Origin Access Control for Lambda URLs signs requests, but POST/PUT bodies then need a client-computed `x-amz-content-sha256` (verify), which SNS and browser uploads do not send. Instead, CloudFront adds a custom origin header, `X-Origin-Verify`, carrying a secret from SSM. When `ORIGIN_VERIFY_SECRET` is set, a middleware answers **403** to any request without the matching header. The only exemption is `/api/v1/health`, because LWA's readiness probe comes from `localhost` without the header. Bypassing CloudFront by calling the raw Function URL therefore gets nowhere. This matters most for the client IP below.
+- **`APP_BASE_URL=https://trips.botito.app`.** The app uses it only for the production `https://` check (`config.py`). No absolute links are built from it today, and the trip-sharing spec is not implemented yet, so no links already sent out carry the old host. The SNS HTTPS subscription points at `https://trips.botito.app/api/v1/inbox/receipts/sns` and goes through CloudFront uncached.
+- **When.** The domain is new and nobody uses it yet, so it goes live in **Phase 2**. Cutover (Phase 3) then moves data and the SNS subscription, with no DNS change on the critical path. The Hetzner deployment keeps its sslip.io hostname for the rollback window.
 
 ### Region
 
@@ -227,16 +245,18 @@ The worker app's `POST /events` is not a public contract. It is reachable only t
 | Upload between 4 MiB and the platform cap | The app refuses it with `attachment_too_large`; the frontend pre-check stops it first | The existing "file too large" message, now saying 4 MB |
 | Upload above ~4.5 MB that bypasses the frontend | Function URL rejects the payload before the app sees it | A generic error instead of `attachment_too_large`. Only a hand-crafted request can get here |
 | Downloading a 10 MB attachment stored before the change | Streamed response | The file, as today |
+| A request to the raw Function URL, bypassing CloudFront | The origin-verify middleware answers `403` | Nothing reachable; only `/api/v1/health` answers |
+| CloudFront serves a stale `index.html` | It cannot: the default behaviour does not cache, and `index.html` is `no-store` | A new build is visible on the next load |
 | Request flood | Reserved concurrency 10 → throttled `429`s from AWS | Errors under abuse instead of an unbounded bill |
 | A lambda environment frozen mid-connection | Neon closes the idle server connection; `pool_pre_ping` replaces it | Nothing |
-| Rollback | Compose host kept for 14 days after cutover, `app` stopped and `db` intact; DNS is not involved because the hostnames differ | A switch back via the previous URL. Writes made on Lambda after cutover would need a reverse dump; stated in the runbook |
+| Rollback | Compose host kept for 14 days after cutover, `app` stopped and `db` intact; it keeps its sslip.io hostname, and `trips.botito.app` is not repointed (Caddy would need its own certificate for it) | A switch back via the previous URL. Writes made on Lambda after cutover would need a reverse dump; stated in the runbook |
 
 ## 📝 Security
 
-- **The Function URL is public with `AuthType: NONE`.** That is equivalent to today's open 443: the app's own session, CSRF and rate limiting are the controls (R08). No new unauthenticated route: `/events` exists only in the worker app.
+- **Public entry is `trips.botito.app` through CloudFront.** The Function URL is `AuthType: NONE`, but the `X-Origin-Verify` middleware refuses anything that did not come through CloudFront; the secret lives in SSM and can be rotated by redeploying. Behind that, the app's own session, CSRF and rate limiting remain the controls (R08). No new unauthenticated route: `/events` exists only in the worker app.
 - **IAM.** The web function may `lambda:InvokeFunction` on the worker only. The worker gets `s3:GetObject` / `s3:DeleteObject` on the inbox bucket prefix only. Neither gets wildcard resources.
 - **Secrets** in SSM SecureString, resolved at deploy time; nothing in the template or the repo.
-- **Client IP** rule above, test-pinned, before the Lambda target takes real logins.
+- **Client IP** from `CloudFront-Viewer-Address` on origin-verified requests only, test-pinned, before the Lambda target takes real logins.
 - **Response headers** (HSTS, `nosniff`, `X-Frame-Options`, `Referrer-Policy`) move from Caddy into the app, test-pinned, so the Lambda target does not lose them (see "The SPA and the headers Caddy adds today").
 - **Neon network.** Neon is reachable from the internet, with access controlled by credentials and TLS (`sslmode=require`). If Neon's IP allow-list is available on the chosen plan, it cannot be used with Lambda (no stable egress IP without a NAT). This is accepted and stated, not hidden.
 
@@ -263,7 +283,7 @@ The worker app's `POST /events` is not a public contract. It is reachable only t
 | A1 | Lambda caps buffered payloads at ~6 MB (≈4.5 MB of binary upload), while attachments allow 10 MiB. Lower the limit, or move attachment bytes to S3 via presigned URLs? | **Lower the per-file upload limit to 4 MiB, in this spec, on both targets.** Stored attachments and inbound documents keep their 10 MiB bound, and downloads stream so files already stored stay readable. **Confirmed by the owner on 2026-11-27 (PR #25); supersedes the limit half of D16.** | The owner chose the quick option over moving bytes to S3. 4 MiB leaves room under the ~4.5 MB base64 ceiling for the multipart envelope and the event's headers. Reversible: raising it later is the same constant, once the bytes leave the request path |
 | A2 | How does the inbox worker run without a long-lived process? | **A worker function from the same image, kicked asynchronously after each receipt and scheduled every 6 h**; the compose target keeps the thread. **Confirmed by the owner on 2026-11-27 (PR #25).** | Reading the inbox spec as "no second process" would make Lambda impossible. A minute-level schedule would keep Neon awake 24/7. Inline processing risks SNS redelivery |
 | A3 | Infrastructure-as-code tool? | **AWS SAM** (`deploy/lambda/template.yaml`); Neon set up by hand and documented | Native Function URL, schedule and IAM in one YAML file. No state backend to host (Terraform) and no app to maintain (CDK). Reversible: the template is small |
-| A4 | Hostname? | **The Function URL hostname**; custom domain + CloudFront deferred until a domain exists | Same trigger the README already uses for leaving sslip.io; no new paid component |
+| A4 | Hostname? | **`trips.botito.app` on Route 53, through CloudFront** with an ACM certificate in `us-east-1` and an `X-Origin-Verify` origin lock. **Owner decision, 2026-11-27.** | A Function URL cannot carry a custom domain; CloudFront adds no standing cost and caches the hashed bundles at the edge |
 | A5 | What happens to the Hetzner deployment? | **Kept supported in the repo; the host is kept, app stopped, for 14 days after cutover, then decommissioned by the owner** | Rollback path; the compose target is also the local stand-up |
 | A6 | Which region? | **`INBOX_AWS_REGION`** for Lambda and the worker; Neon in the matching region | Keeps S3 reads in-region; one region to reason about |
 | A7 | Reserved concurrency? | **Web 10, worker 1** | Caps cost and Neon connections; the worker count matches the advisory-lock design |
@@ -281,9 +301,10 @@ The worker app's `POST /events` is not a public contract. It is reachable only t
 
 ### Phase 0 — Verify and measure
 
-1. Verify against current AWS, LWA and Neon documentation and record the findings in the implementation PR: Function URL buffered request and response limits and base64 handling; response-streaming limit; LWA version, `AWS_LWA_PORT` / `AWS_LWA_READINESS_CHECK_PATH` / the pass-through path and its variable; how Function URLs set `X-Forwarded-For`; Neon pooler support for psycopg 3 prepared statements; Neon autosuspend delay and storage tier for 2 GiB. Correct this spec's assumptions in the PR body where they differ.
+1. Verify against current AWS, LWA and Neon documentation and record the findings in the implementation PR: Function URL buffered request and response limits and base64 handling; response-streaming limit; LWA version, `AWS_LWA_PORT` / `AWS_LWA_READINESS_CHECK_PATH` / the pass-through path and its variable; how Function URLs set `X-Forwarded-For`; Neon pooler support for psycopg 3 prepared statements; Neon autosuspend delay and storage tier for 2 GiB; CloudFront OAC body-hash requirement for Lambda URLs, the `CloudFront-Viewer-Address` format and whether a viewer can set it, and response streaming through CloudFront. Correct this spec's assumptions in the PR body where they differ.
 2. Confirm the inbox SNS subscription has its dead-letter queue configured (Phase 3 relies on it).
-3. Measure the production database size (`pg_database_size`) and the `attachment_blob` share on the Hetzner host.
+3. Confirm the `botito.app` hosted zone is in Route 53 in this AWS account (or delegate it) and that nothing already answers on `trips.botito.app`.
+4. Measure the production database size (`pg_database_size`) and the `attachment_blob` share on the Hetzner host.
 
 ### Phase 1 — Lambda-ready image and app (compose unchanged)
 
@@ -298,15 +319,16 @@ The worker app's `POST /events` is not a public contract. It is reachable only t
 9. **Change** the limit: add the 4 MiB upload limit in `domain/uploads.py`, keep the 10 MiB stored bound for the model `CHECK` and `domain/inbound.py`, and gate `api/attachments.py` (`MAX_BODY_BYTES` and the post-parse check) on the upload limit. Update the two characterization tests to 4 MiB, and keep the stored-row test at 10 MiB. Frontend: `MAX_UPLOAD_BYTES`, `uploadDropzone.test.tsx`, `api/attachments.test.ts`, and the `hint` / `attachment_too_large` strings in `en.json` and `pl.json`. Add the D16-superseding row to `.ai/specs/product-brief.md`.
 10. **Characterize** the response headers on the compose target: a test in `backend/tests/test_security.py` records that the app itself sets none of the four Caddy headers today, and a test in `backend/tests/test_spa.py` records `/assets` without a long-lived `Cache-Control`. Commit alone.
 11. **Change:** add the security-headers middleware (HSTS only in production, never overriding a route's own stricter header) and immutable caching for `/assets` in `spa.py`; `index.html` keeps `no-store`. Add `--no-server-header` to `serve` in `entrypoint.sh`. Update both tests to the new scenarios, and assert that the attachment content routes keep their sandbox CSP.
-12. `deploy/Dockerfile`: pinned LWA binary, `AWS_LWA_*` variables; `entrypoint.sh` gains `worker`. `backend/tests/test_startup.py` stays green. A new test asserts the extension file is present and `serve` is unchanged.
-13. Full validation gate.
+12. Origin-verify middleware (`ORIGIN_VERIFY_SECRET`; `403` without the header; `/api/v1/health` exempt) and the `CloudFront-Viewer-Address` client-IP source, trusted only after origin verification. Tests: missing or wrong secret → 403; health exempt; unset secret → no check (compose unchanged); IPv4 and IPv6 viewer addresses parsed; the header ignored on unverified requests.
+13. `deploy/Dockerfile`: pinned LWA binary, `AWS_LWA_*` variables; `entrypoint.sh` gains `worker`. `backend/tests/test_startup.py` stays green. A new test asserts the extension file is present and `serve` is unchanged.
+14. Full validation gate.
 
 ### Phase 2 — Stand up the Lambda target (no real users)
 
-1. `deploy/lambda/template.yaml` (SAM): ECR image; web function with Function URL (`AuthType: NONE`, `InvokeMode: RESPONSE_STREAM`, and `AWS_LWA_INVOKE_MODE=response_stream`), reserved concurrency 10 and the env from SSM; worker function (no URL, reserved concurrency 1, timeout 5 min, async retries 0); EventBridge schedule `rate(6 hours)` on the worker; least-privilege IAM as in Security. `sam validate` runs in a backend test or a CI step (the CI workflow changes in the same PR, per AGENTS.md).
-2. `deploy/lambda/deploy.sh`: refuses a dirty tree (as `deploy/deploy.sh` does), builds and pushes, runs `migrate` against `DATABASE_URL_DIRECT`, then `sam deploy`.
+1. `deploy/lambda/cert.yaml`, deployed to `us-east-1`: the ACM certificate for `trips.botito.app` with DNS validation in the Route 53 zone. Then `deploy/lambda/template.yaml` (SAM): the CloudFront distribution (alias, certificate ARN parameter, the two behaviours, the origin request policy including `CloudFront-Viewer-Address`, the `X-Origin-Verify` custom header from SSM), the Route 53 `A`/`AAAA` alias records, an ECR image; web function with Function URL (`AuthType: NONE`, `InvokeMode: RESPONSE_STREAM`, and `AWS_LWA_INVOKE_MODE=response_stream`), reserved concurrency 10 and the env from SSM; worker function (no URL, reserved concurrency 1, timeout 5 min, async retries 0); EventBridge schedule `rate(6 hours)` on the worker; least-privilege IAM as in Security. `sam validate` runs in a backend test or a CI step (the CI workflow changes in the same PR, per AGENTS.md).
+2. `deploy/lambda/deploy.sh`: refuses a dirty tree (as `deploy/deploy.sh` does), deploys the certificate stack when missing, builds and pushes, runs `migrate` against `DATABASE_URL_DIRECT`, then `sam deploy`.
 3. Create the Neon project in the matching region, with pooled and direct connection strings in SSM. Deploy against an empty database and create a test owner with `trip-planner create-owner`.
-4. Smoke probes, recorded on the PR: `GET /login` → 200; unauthenticated `GET /api/v1/trips` → 401; a login, a trip created, a 4 MiB attachment round-trip, a 4 MiB + 1 byte upload refused with `attachment_too_large`, a 10 MiB attachment (restored from a dump) downloaded through the stream; the four security headers present on `/login`, an API response and an asset; a second page load that fetches no `/assets` file from the network; a cold-start timing after 15 idle minutes. Screenshots of the live login and trip screens.
+4. Smoke probes on `https://trips.botito.app`, recorded on the PR: the certificate is valid for the name; `http://` redirects to `https://`; the raw Function URL answers `403` (and `/api/v1/health` `200`); `GET /login` → 200; unauthenticated `GET /api/v1/trips` → 401; a login, a trip created, a 4 MiB attachment round-trip, a 4 MiB + 1 byte upload refused with `attachment_too_large`, a 10 MiB attachment (restored from a dump) downloaded through the stream; the four security headers present on `/login`, an API response and an asset; a second page load that fetches no `/assets` file from the network; a cold-start timing after 15 idle minutes. Screenshots of the live login and trip screens.
 5. **The inbox stays isolated from production in Phase 2.** The Lambda stack gets its **own** SES receipt rule, recipient address, SNS topic and S3 prefix. It must never subscribe to the production topic or be able to delete under the production prefix: its worker would ingest the owner's real mail into the empty Neon database and then delete the S3 object, and the compose worker would find it gone. A test confirmation sent to the Phase-2 address reaches `/inbox` via the kick. The IAM policy is scoped to the Phase-2 prefix; switching it is part of Phase 3.
 6. `deploy/lambda/README.md`: provisioning, variables, release, rollback, cost notes; a link from `deploy/README.md` and the root `README.md`.
 7. **Archive the Delta** into `.ai/specs/capabilities/inbox-ingestion.md`, `.ai/specs/capabilities/attachments.md` and `.ai/specs/capabilities/http-delivery.md`.
@@ -314,7 +336,7 @@ The worker app's `POST /events` is not a public contract. It is reachable only t
 ### Phase 3 — Cutover
 
 1. Confirm Phase 1 (including the 4 MiB limit) is deployed on the Lambda target, and the Phase 2 probes, including a 10 MiB streamed download, passed.
-2. Runbook, executed and recorded, in this order so no receipt is lost: **stop compose `app` first** (keep `db`). SNS deliveries to it now fail and are retried, then land in the dead-letter queue the inbox spec requires (Phase 0 confirms it is configured). → `pg_dump` from compose → `pg_restore` into Neon (direct URL) → `migrate` (a no-op if at head) → switch the Lambda stack's IAM scope and SES/SNS wiring to the production topic and prefix, and point the HTTPS subscription at the Function URL → **redrive the DLQ** to the new endpoint → probes from Phase 2 step 4 on the real data. A write freeze is implicit, because the compose app is down for the whole window.
+2. Runbook, executed and recorded, in this order so no receipt is lost: **stop compose `app` first** (keep `db`). SNS deliveries to it now fail and are retried, then land in the dead-letter queue the inbox spec requires (Phase 0 confirms it is configured). → `pg_dump` from compose → `pg_restore` into Neon (direct URL) → `migrate` (a no-op if at head) → switch the Lambda stack's IAM scope and SES/SNS wiring to the production topic and prefix, and point the HTTPS subscription at `https://trips.botito.app/api/v1/inbox/receipts/sns` → **redrive the DLQ** to the new endpoint → probes from Phase 2 step 4 on the real data. A write freeze is implicit, because the compose app is down for the whole window.
 3. Owner sign-in and an end-to-end forwarded confirmation on the Lambda target, recorded on the PR.
 
 ### Phase 4 — Decommission and measure
