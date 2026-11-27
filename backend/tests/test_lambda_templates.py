@@ -229,3 +229,34 @@ class TestInboxWiring:
         inbox_keys = {k for k in web if k.startswith("INBOX_") or k.endswith("_API_KEY")}
         assert {k: web[k] for k in inbox_keys} == {k: worker[k] for k in inbox_keys}
         assert {"INBOX_RECIPIENT", "INBOX_SNS_TOPIC_ARN", "INBOX_S3_BUCKET"} <= inbox_keys
+
+
+class TestDeployScript:
+    @pytest.fixture
+    def script(self) -> str:
+        return (LAMBDA_DIR / "deploy.sh").read_text()
+
+    def test_is_valid_bash(self) -> None:
+        import subprocess
+
+        subprocess.run(["bash", "-n", str(LAMBDA_DIR / "deploy.sh")], check=True)
+
+    def test_refuses_a_dirty_tree_before_touching_aws(self, script: str) -> None:
+        assert script.index("Refusing to deploy: the working tree") < script.index("aws sts")
+
+    def test_migrates_the_pushed_image_before_the_functions_move_to_it(self, script: str) -> None:
+        push = script.index('docker push "$IMAGE"')
+        migrate = script.index('"$IMAGE" migrate')
+        deploy = script.index("sam deploy \\")
+        assert push < migrate < deploy
+
+    def test_migrates_through_the_direct_endpoint(self, script: str) -> None:
+        assert "DATABASE_URL=${DATABASE_URL_DIRECT}" in script
+
+    def test_no_secret_reaches_a_command_line(self, script: str) -> None:
+        """Secrets go through 0600 files; argv is readable by every local process."""
+        for line in script.splitlines():
+            stripped = line.strip()
+            if stripped.startswith(("docker run", "sam deploy", "aws cloudformation deploy")):
+                for name in ("SESSION_SECRET", "ORIGIN_VERIFY_SECRET", "DATABASE_URL_"):
+                    assert name not in stripped, stripped
