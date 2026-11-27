@@ -218,6 +218,88 @@ def test_a_genuine_notification_records_that_mail_arrived(
     assert stored[0].from_address == "owner@example.com"
 
 
+def test_an_accepted_notification_is_committed_before_the_request_ends_and_calls_nothing_else(
+    inbox_app: FastAPI,
+    engine: sa.Engine,
+    verifier: _OfflineVerifier,
+    signing_key: rsa.RSAPrivateKey,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Characterization: the row is durable when the response is, and nothing else is reached.
+
+    The shared `db_session` fixture hides commits inside an outer transaction, so
+    this test uses the real `get_db` against the throwaway database and then reads
+    the row from a **separate connection** — visible only if it was committed.
+    The outbound side is pinned the same way: the one certificate fetch the
+    verifier makes (faked), no S3 / boto3 client, no redirect-free fetch, and no
+    new Python-level socket.
+    """
+    import socket
+    import urllib.request
+
+    import boto3
+
+    from trip_planner.api import deps
+    from trip_planner.inbound import ses as ses_module
+
+    committed = sa.orm.sessionmaker(bind=engine, expire_on_commit=False, future=True)
+    monkeypatch.setattr(deps, "get_sessionmaker", lambda: committed)
+    inbox_app.dependency_overrides.pop(deps.get_db, None)
+
+    outbound: list[str] = []
+
+    def _no_socket(self: socket.socket, address: Any) -> None:
+        outbound.append(f"socket {address!r}")
+        raise AssertionError(f"unexpected outbound connection to {address!r}")
+
+    def _no_fetch(url: str, **_: object) -> bytes:
+        outbound.append(f"fetch {url}")
+        raise AssertionError(f"unexpected outbound fetch of {url}")
+
+    def _no_boto(*args: object, **_: object) -> None:
+        outbound.append(f"boto3 {args!r}")
+        raise AssertionError("unexpected AWS client")
+
+    monkeypatch.setattr(socket.socket, "connect", _no_socket)
+    monkeypatch.setattr(ses_module, "open_without_redirects", _no_fetch)
+    monkeypatch.setattr(urllib.request, "urlopen", _no_fetch)
+    monkeypatch.setattr(boto3, "client", _no_boto)
+
+    with engine.begin() as connection:
+        owner_id = connection.execute(
+            sa.insert(Owner)
+            .values(email="receipt-owner@example.com", password_hash="x")
+            .returning(Owner.id)
+        ).scalar_one()
+
+    try:
+        with TestClient(inbox_app, base_url="http://testserver") as client:
+            response = client.post(RECEIPTS, json=notification(signing_key))
+
+        assert response.status_code == 200, response.text
+
+        # A different connection, with no access to the request's transaction.
+        with engine.connect() as other:
+            rows = other.execute(
+                sa.select(InboundMessage.ses_message_id, InboundMessage.owner_id)
+            ).all()
+            stamped = other.execute(
+                sa.select(InboundDeliveryStatus.last_received_at).where(
+                    InboundDeliveryStatus.owner_id == owner_id
+                )
+            ).scalar_one_or_none()
+        assert [tuple(row) for row in rows] == [("ses-message-0001", owner_id)]
+        assert stamped is not None
+
+        assert verifier.fetches == [CERT_URL]
+        assert outbound == []
+    finally:
+        with engine.begin() as connection:
+            connection.execute(sa.delete(InboundMessage))
+            connection.execute(sa.delete(InboundDeliveryStatus))
+            connection.execute(sa.delete(Owner).where(Owner.id == owner_id))
+
+
 def test_a_recorded_delivery_carries_no_body_and_no_document(
     sns: TestClient, db_session: OrmSession, signing_key: rsa.RSAPrivateKey
 ) -> None:
