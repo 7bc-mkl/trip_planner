@@ -221,9 +221,24 @@ class TestDeploymentArtifacts:
             "0.0.0.0",
             "--port",
             "8080",
+            "--no-proxy-headers",
         ]
         assert "--proxy-headers" not in argv
         assert "--forwarded-allow-ips" not in argv
+
+    def test_uvicorn_would_trust_the_adapter_without_the_explicit_off_switch(self) -> None:
+        """Why `--no-proxy-headers` is spelled out rather than the flags merely omitted.
+
+        uvicorn's defaults enable proxy headers and trust 127.0.0.1 — the address
+        the Lambda Web Adapter connects from — so omitting the flags would still
+        let a viewer's X-Forwarded-For become `request.client`.
+        """
+        import uvicorn
+
+        defaults = uvicorn.Config(app=None)
+        assert defaults.proxy_headers is True
+        assert "127.0.0.1" in str(defaults.forwarded_allow_ips)
+        assert uvicorn.Config(app=None, proxy_headers=False).proxy_headers is False
 
     def test_the_compose_file_runs_migrations_before_the_app(self, deploy_dir: Path) -> None:
         compose = (deploy_dir / "compose.yml").read_text()

@@ -29,6 +29,7 @@
 | 1 | 1.8 | Characterize the upload limit and the stored 10 MiB row (spec step 8) | dispatch | done | 2bb2712 |
 | 1 | 1.9 | Upload limit 4 MiB; stored bound stays 10 MiB; frontend and copy (spec step 9) | dispatch:capable | done | 64c3eb7 |
 | 1 | 1.10 | Characterize response headers and `/assets` caching (spec step 10) | dispatch:cheap | done | d23217a |
+| 1 | 1.7-review-fix | `--no-proxy-headers` on the Lambda target (checkpoint 2 review) | inline | done | e3b698b |
 | 1 | 1.11 | Security-headers middleware, immutable `/assets`, `--no-server-header` (spec step 11) | dispatch | todo | — |
 | 1 | 1.12 | Origin-verify middleware and the `CloudFront-Viewer-Address` source (spec step 12) | dispatch:capable | todo | — |
 | 1 | 1.13 | Lambda Web Adapter in the image; `worker` entrypoint (spec step 13) | dispatch | todo | — |
@@ -78,6 +79,9 @@ Spec Phases 0–2: verify the platform facts, make the image and the app Lambda-
 Steps 1.1–1.13 are spec Phase 1 steps 1–13, verbatim in scope; see the spec's Implementation Plan for each Step's bullets. Spec step 14 (full validation gate) is the checkpoint that closes the Phase, not a commit.
 
 ### Phase 2 — Stand up the Lambda target (no real users)
+
+#### 1.7-review-fix `--no-proxy-headers` on the Lambda target (checkpoint 2 review)
+- uvicorn enables proxy headers by default and trusts 127.0.0.1, where LWA connects from; omitting the flags left `request.client` spoofable. `serve` passes `--no-proxy-headers` when `CLIENT_IP_SOURCE=cloudfront`.
 
 #### 2.1 `deploy/lambda/cert.yaml`
 - CloudFormation stack for us-east-1: ACM certificate for `trips.botito.app`, DNS validation in the `botito.app` hosted zone (zone id parameter). Output the ARN.
