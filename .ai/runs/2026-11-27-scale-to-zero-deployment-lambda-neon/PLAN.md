@@ -33,7 +33,7 @@
 | 1 | 1.11 | Security-headers middleware, immutable `/assets`, `--no-server-header` (spec step 11) | dispatch | done | 54d3625 |
 | 1 | 1.12 | Origin-verify middleware and the `CloudFront-Viewer-Address` source (spec step 12) | dispatch:capable | done | 706ee28 |
 | 1 | 1.13 | Lambda Web Adapter in the image; `worker` entrypoint (spec step 13) | dispatch | done | 344db3a |
-| 2 | 2.1 | `deploy/lambda/cert.yaml` — ACM certificate in us-east-1 (spec Phase 2 step 1) | inline | todo | — |
+| 2 | 2.1 | `deploy/lambda/cert.yaml` — ACM certificate in us-east-1 (spec Phase 2 step 1) | inline | done | 2977d09 |
 | 2 | 2.2 | `deploy/lambda/template.yaml` — functions, URL, schedule, CloudFront, DNS, IAM (spec Phase 2 step 1) | inline | todo | — |
 | 2 | 2.3 | Inbox wiring for the Lambda stack — bucket, topic, SES receipt rule (spec Phase 2 step 5) | inline | todo | — |
 | 2 | 2.4 | `deploy/lambda/deploy.sh` — the release script (spec Phase 2 step 2) | inline | todo | — |
