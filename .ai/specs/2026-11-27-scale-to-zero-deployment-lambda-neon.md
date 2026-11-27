@@ -73,6 +73,34 @@ The system SHALL run an ingestion and cleanup pass on a schedule of `INBOX_WORKE
 
 The compose target keeps today's 30 s in-process loop unchanged; `backend/tests/test_scheduler.py` keeps pinning it.
 
+### Capability: http-delivery
+
+#### MODIFIED Requirement: Security headers on every response
+The system SHALL set `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY` and `Referrer-Policy: strict-origin-when-cross-origin` on every response, plus `Strict-Transport-Security` when `ENVIRONMENT=production`, from the application itself rather than from the reverse proxy, without weakening a stricter header a route sets.
+
+##### Scenario: The Lambda target, with no proxy in front
+- WHEN a browser requests `/login` through the Function URL
+- THEN the response carries all four headers
+
+##### Scenario: A route with its own stricter policy
+- WHEN an attachment's content is served
+- THEN its sandbox CSP and its own headers are unchanged
+
+Frozen by: `backend/tests/test_security.py` (characterization added in Phase 1 step 10)
+
+#### MODIFIED Requirement: Hashed assets are cached as immutable
+The system SHALL serve files under `/assets` with `Cache-Control: public, max-age=31536000, immutable`, and SHALL keep serving `index.html` with `Cache-Control: no-store`.
+
+##### Scenario: A returning visit
+- WHEN the owner opens the app a second time after the same build
+- THEN the browser loads the bundles from its cache and requests only `index.html` and API calls
+
+##### Scenario: A new build
+- WHEN a new image is deployed
+- THEN the next page load fetches the new `index.html`, which names the new hashed bundles
+
+Frozen by: `backend/tests/test_spa.py` (characterization added in Phase 1 step 10)
+
 ### Capability: attachments
 
 #### MODIFIED Requirement: Per-file upload limit
@@ -115,6 +143,15 @@ The inbox's ingestion path stays as it is. What is new is how the worker gets in
 - Add the LWA binary at `/opt/extensions/lambda-adapter`, pinned to a version, not `latest`. Outside Lambda the extension directory is inert, so `compose.yml` and `compose.prod.yml` run the identical image. The compose-shape tests in `backend/tests/test_startup.py` keep pinning that target.
 - Set `AWS_LWA_PORT=8000` and `AWS_LWA_READINESS_CHECK_PATH=/api/v1/health`.
 - **Worker mode.** The worker function uses the same image with `command: ["worker"]`, a new `entrypoint.sh` case. It starts `uvicorn` on a **separate ASGI app** (`trip_planner.worker_app:create_worker_app`). That app exposes only `POST /events`, the LWA pass-through path for non-HTTP events (verify the default path and the `AWS_LWA_PASS_THROUGH_PATH` name), plus health. It never mounts the public API. The web function never mounts `/events`. So a request to `/events` through the public Function URL gets a 404 from the router, not a drain.
+
+### The SPA and the headers Caddy adds today
+
+The frontend is built into the image (`deploy/Dockerfile`, first stage) and served by FastAPI from one origin (`backend/trip_planner/spa.py`): hashed bundles under `/assets` through `StaticFiles`, and `index.html` with `Cache-Control: no-store` for every non-API path. On Lambda this does not change: every request, including asset requests, goes through the web function. That raises two problems, and both are fixed in the app so they hold on both targets:
+
+- **Security headers move from Caddy into the app.** Today `deploy/Caddyfile` adds `Strict-Transport-Security`, `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY` and `Referrer-Policy: strict-origin-when-cross-origin`, and strips `Server`. A Function URL adds none of them, so the Lambda target would silently lose clickjacking and MIME-sniffing protection. A middleware in `create_app` sets the same four headers on every response. HSTS is set only when `ENVIRONMENT=production`, because the app refuses to start in production without `https://`. The middleware never overrides a stricter header a route already sets, such as the attachment content routes' own `nosniff` and sandbox CSP. `serve` runs uvicorn with `--no-server-header`. On compose, Caddy's `header` directive replaces rather than appends, so the headers are not duplicated, and the Caddyfile stays as it is.
+- **Hashed assets are cached as immutable.** `StaticFiles` sends only `ETag` / `Last-Modified`, so a browser revalidates every bundle on every visit. Each 304 is a Lambda invocation, and each one waits through a cold start. Files under `/assets` carry a content hash in their name, so they get `Cache-Control: public, max-age=31536000, immutable`; `index.html` keeps `no-store`, which is what makes a new build reach the browser. After the first visit, only `index.html` and API calls invoke the function.
+
+Serving the SPA from S3 + CloudFront was considered and deferred. It only pays off together with a custom domain (A4): CloudFront would then route `/api/*` to the Function URL and everything else to S3, keeping one origin. With immutable caching, the browser makes almost no asset requests anyway.
 
 ### The web function
 
@@ -200,6 +237,7 @@ The worker app's `POST /events` is not a public contract. It is reachable only t
 - **IAM.** The web function may `lambda:InvokeFunction` on the worker only. The worker gets `s3:GetObject` / `s3:DeleteObject` on the inbox bucket prefix only. Neither gets wildcard resources.
 - **Secrets** in SSM SecureString, resolved at deploy time; nothing in the template or the repo.
 - **Client IP** rule above, test-pinned, before the Lambda target takes real logins.
+- **Response headers** (HSTS, `nosniff`, `X-Frame-Options`, `Referrer-Policy`) move from Caddy into the app, test-pinned, so the Lambda target does not lose them (see "The SPA and the headers Caddy adds today").
 - **Neon network.** Neon is reachable from the internet, with access controlled by credentials and TLS (`sslmode=require`). If Neon's IP allow-list is available on the chosen plan, it cannot be used with Lambda (no stable egress IP without a NAT). This is accepted and stated, not hidden.
 
 ## 📝 Risks & Impact Review
@@ -258,18 +296,20 @@ The worker app's `POST /events` is not a public contract. It is reachable only t
 7. Client-IP hop rule in `security/rate_limit.py`, behind a setting whose default keeps today's first-element behaviour; `entrypoint.sh` `serve` drops `--forwarded-allow-ips '*'` when that setting selects the Lambda rule. Tests for a spoofed header with each setting, covering both the header path and the `request.client` fallback (extends `backend/tests/test_rate_limit.py`).
 8. **Characterize** the upload limit: `test_a_file_one_byte_over_the_cap_is_refused` and `test_a_file_of_exactly_the_cap_is_stored` in `backend/tests/test_attachments_api.py` already pin 10 MiB; confirm they are green, plus a test that a stored 10 MiB row stays readable. Commit alone.
 9. **Change** the limit: add the 4 MiB upload limit in `domain/uploads.py`, keep the 10 MiB stored bound for the model `CHECK` and `domain/inbound.py`, and gate `api/attachments.py` (`MAX_BODY_BYTES` and the post-parse check) on the upload limit. Update the two characterization tests to 4 MiB, and keep the stored-row test at 10 MiB. Frontend: `MAX_UPLOAD_BYTES`, `uploadDropzone.test.tsx`, `api/attachments.test.ts`, and the `hint` / `attachment_too_large` strings in `en.json` and `pl.json`. Add the D16-superseding row to `.ai/specs/product-brief.md`.
-10. `deploy/Dockerfile`: pinned LWA binary, `AWS_LWA_*` variables; `entrypoint.sh` gains `worker`. `backend/tests/test_startup.py` stays green. A new test asserts the extension file is present and `serve` is unchanged.
-11. Full validation gate.
+10. **Characterize** the response headers on the compose target: a test in `backend/tests/test_security.py` records that the app itself sets none of the four Caddy headers today, and a test in `backend/tests/test_spa.py` records `/assets` without a long-lived `Cache-Control`. Commit alone.
+11. **Change:** add the security-headers middleware (HSTS only in production, never overriding a route's own stricter header) and immutable caching for `/assets` in `spa.py`; `index.html` keeps `no-store`. Add `--no-server-header` to `serve` in `entrypoint.sh`. Update both tests to the new scenarios, and assert that the attachment content routes keep their sandbox CSP.
+12. `deploy/Dockerfile`: pinned LWA binary, `AWS_LWA_*` variables; `entrypoint.sh` gains `worker`. `backend/tests/test_startup.py` stays green. A new test asserts the extension file is present and `serve` is unchanged.
+13. Full validation gate.
 
 ### Phase 2 — Stand up the Lambda target (no real users)
 
 1. `deploy/lambda/template.yaml` (SAM): ECR image; web function with Function URL (`AuthType: NONE`, `InvokeMode: RESPONSE_STREAM`, and `AWS_LWA_INVOKE_MODE=response_stream`), reserved concurrency 10 and the env from SSM; worker function (no URL, reserved concurrency 1, timeout 5 min, async retries 0); EventBridge schedule `rate(6 hours)` on the worker; least-privilege IAM as in Security. `sam validate` runs in a backend test or a CI step (the CI workflow changes in the same PR, per AGENTS.md).
 2. `deploy/lambda/deploy.sh`: refuses a dirty tree (as `deploy/deploy.sh` does), builds and pushes, runs `migrate` against `DATABASE_URL_DIRECT`, then `sam deploy`.
 3. Create the Neon project in the matching region, with pooled and direct connection strings in SSM. Deploy against an empty database and create a test owner with `trip-planner create-owner`.
-4. Smoke probes, recorded on the PR: `GET /login` → 200; unauthenticated `GET /api/v1/trips` → 401; a login, a trip created, a 4 MiB attachment round-trip, a 4 MiB + 1 byte upload refused with `attachment_too_large`, a 10 MiB attachment (restored from a dump) downloaded through the stream; a cold-start timing after 15 idle minutes. Screenshots of the live login and trip screens.
+4. Smoke probes, recorded on the PR: `GET /login` → 200; unauthenticated `GET /api/v1/trips` → 401; a login, a trip created, a 4 MiB attachment round-trip, a 4 MiB + 1 byte upload refused with `attachment_too_large`, a 10 MiB attachment (restored from a dump) downloaded through the stream; the four security headers present on `/login`, an API response and an asset; a second page load that fetches no `/assets` file from the network; a cold-start timing after 15 idle minutes. Screenshots of the live login and trip screens.
 5. **The inbox stays isolated from production in Phase 2.** The Lambda stack gets its **own** SES receipt rule, recipient address, SNS topic and S3 prefix. It must never subscribe to the production topic or be able to delete under the production prefix: its worker would ingest the owner's real mail into the empty Neon database and then delete the S3 object, and the compose worker would find it gone. A test confirmation sent to the Phase-2 address reaches `/inbox` via the kick. The IAM policy is scoped to the Phase-2 prefix; switching it is part of Phase 3.
 6. `deploy/lambda/README.md`: provisioning, variables, release, rollback, cost notes; a link from `deploy/README.md` and the root `README.md`.
-7. **Archive the Delta** into `.ai/specs/capabilities/inbox-ingestion.md` and `.ai/specs/capabilities/attachments.md`.
+7. **Archive the Delta** into `.ai/specs/capabilities/inbox-ingestion.md`, `.ai/specs/capabilities/attachments.md` and `.ai/specs/capabilities/http-delivery.md`.
 
 ### Phase 3 — Cutover
 
