@@ -26,7 +26,7 @@
 | 1 | 1.5 | `worker_app.py` — `POST /events` drains under a 4-minute budget (spec step 5) | dispatch:capable | done | d671b86 |
 | 1 | 1.6 | `DB_POOL=null` → `NullPool`, and worker keepalives (spec step 6) | dispatch | done | 6191301 |
 | 1 | 1.7 | Client-IP hop rule behind a setting (spec step 7) | dispatch:capable | done | 74e6c08 |
-| 1 | 1.8 | Characterize the upload limit and the stored 10 MiB row (spec step 8) | dispatch | todo | — |
+| 1 | 1.8 | Characterize the upload limit and the stored 10 MiB row (spec step 8) | dispatch | done | 2bb2712 |
 | 1 | 1.9 | Upload limit 4 MiB; stored bound stays 10 MiB; frontend and copy (spec step 9) | dispatch:capable | todo | — |
 | 1 | 1.10 | Characterize response headers and `/assets` caching (spec step 10) | dispatch:cheap | todo | — |
 | 1 | 1.11 | Security-headers middleware, immutable `/assets`, `--no-server-header` (spec step 11) | dispatch | todo | — |

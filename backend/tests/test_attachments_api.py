@@ -895,6 +895,40 @@ class TestServingTheContent:
         assert response.status_code == 200
         assert response.content == make_png()
 
+    def test_a_stored_ten_mib_attachment_downloads_in_full(
+        self, signed_in_client: TestClient, trip: dict, db_session: OrmSession
+    ) -> None:
+        """Characterization: a row of exactly 10 MiB stays readable.
+
+        The rows are inserted through the ORM rather than uploaded, so the test
+        does not depend on the upload limit — which may be lowered below 10 MiB
+        while rows already stored at the old limit must still be served.
+        """
+        import hashlib
+
+        from trip_planner.db.models import TripDay
+
+        size = 10 * 1024 * 1024
+        data = pdf_of_exactly(size)
+        day = db_session.query(TripDay).filter(TripDay.trip_id == uuid.UUID(trip["id"])).first()
+        assert day is not None
+        attachment = Attachment(
+            trip_day_id=day.id,
+            filename="big.pdf",
+            content_type="application/pdf",
+            byte_size=size,
+            sha256=hashlib.sha256(data).hexdigest(),
+        )
+        attachment.blob = AttachmentBlob(data=data)
+        db_session.add(attachment)
+        db_session.flush()
+
+        response = signed_in_client.get(f"{attachment_url(trip, str(attachment.id))}/content")
+
+        assert response.status_code == 200, response.text
+        assert len(response.content) == size
+        assert response.content == data
+
     def test_every_revalidation_still_passes_the_session_check(
         self, signed_in_client: TestClient, trip: dict
     ) -> None:
