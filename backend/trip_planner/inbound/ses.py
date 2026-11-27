@@ -63,6 +63,7 @@ __all__ = [
     "ObjectGone",
     "S3Fetcher",
     "SignatureVerifier",
+    "WorkerKick",
     "host_is_aws_sns",
     "open_without_redirects",
     "verify_event",
@@ -130,6 +131,18 @@ CERTIFICATE_TIMEOUT_SECONDS = 5.0
 
 S3_CONNECT_TIMEOUT_SECONDS = 5.0
 S3_READ_TIMEOUT_SECONDS = 20.0
+
+#: The kick is on the path of an SNS delivery, so it is bounded tightly: an
+#: asynchronous `Invoke` answers `202` as soon as Lambda has queued the event,
+#: and a kick that cannot do that quickly is better abandoned to the schedule
+#: than allowed to hold the receipt open.
+KICK_CONNECT_TIMEOUT_SECONDS = 2.0
+KICK_READ_TIMEOUT_SECONDS = 5.0
+
+#: What the worker function is invoked with. Carries no message data on
+#: purpose: the worker reads the queue from the database, so a kick is only
+#: "there may be work", and a duplicated or stray kick costs one empty pass.
+KICK_PAYLOAD = b'{"source":"trip-planner.kick"}'
 
 #: The fields that go into the canonical string, per envelope type, **in this
 #: order**. Straight from AWS's own specification; the order is part of the
@@ -423,3 +436,60 @@ class S3Fetcher:
         if not self._settings.owns_object_key(key):
             return
         self._s3().delete_object(Bucket=self._settings.s3_bucket, Key=key)
+
+
+class WorkerKick:
+    """Wakes the worker function after a receipt commits, on the Lambda target.
+
+    Follows `S3Fetcher`'s pattern: the `boto3` client is built on the first
+    kick, never on import or construction, with connect and read timeouts and
+    bounded retries. In `thread` mode — the compose target, where the lifespan
+    worker polls — `kick()` is a no-op and no client is ever built.
+
+    The invoke is asynchronous (`InvocationType="Event"`), so the receipt does
+    not wait for the worker to run. A failure **raises**; deciding that a failed
+    kick is not an error for SNS is the caller's job, because only the caller
+    knows the row is already durable.
+    """
+
+    def __init__(self, *, mode: str, function_name: str | None, region: str | None) -> None:
+        self._mode = mode
+        self._function_name = function_name
+        self._region = region
+        self._client: Any | None = None
+        self._lock = threading.Lock()
+
+    @property
+    def enabled(self) -> bool:
+        return self._mode == "lambda"
+
+    def _lambda(self) -> Any:
+        if self._client is None:
+            with self._lock:
+                if self._client is None:
+                    import boto3
+                    from botocore.config import Config
+
+                    self._client = boto3.client(
+                        "lambda",
+                        region_name=self._region,
+                        config=Config(
+                            connect_timeout=KICK_CONNECT_TIMEOUT_SECONDS,
+                            read_timeout=KICK_READ_TIMEOUT_SECONDS,
+                            # One retry at most: the schedule is the real retry.
+                            retries={"max_attempts": 2, "mode": "standard"},
+                        ),
+                    )
+        return self._client
+
+    def kick(self) -> None:
+        """Queue one asynchronous run of the worker function. No-op in `thread` mode."""
+        if not self.enabled:
+            return
+        if not self._function_name:
+            raise RuntimeError("INBOX_WORKER_FUNCTION is not set; cannot kick the worker")
+        self._lambda().invoke(
+            FunctionName=self._function_name,
+            InvocationType="Event",
+            Payload=KICK_PAYLOAD,
+        )
