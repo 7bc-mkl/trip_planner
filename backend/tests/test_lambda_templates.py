@@ -71,3 +71,100 @@ class TestCertificateStack:
 
     def test_exports_the_arn_the_application_stack_needs(self, template: dict[str, Any]) -> None:
         assert template["Outputs"]["CertificateArn"]["Value"] == {"Ref": "Certificate"}
+
+
+def iam_statements(function: dict[str, Any]) -> list[dict[str, Any]]:
+    return [
+        statement
+        for policy in function["Properties"].get("Policies", [])
+        if isinstance(policy, dict)
+        for statement in policy.get("Statement", [])
+    ]
+
+
+class TestApplicationStack:
+    @pytest.fixture
+    def template(self) -> dict[str, Any]:
+        return load("template.yaml")
+
+    @pytest.fixture
+    def web(self, template: dict[str, Any]) -> dict[str, Any]:
+        return template["Resources"]["WebFunction"]["Properties"]
+
+    @pytest.fixture
+    def worker(self, template: dict[str, Any]) -> dict[str, Any]:
+        return template["Resources"]["WorkerFunction"]["Properties"]
+
+    def test_one_image_two_commands(self, web: dict[str, Any], worker: dict[str, Any]) -> None:
+        assert web["ImageUri"] == worker["ImageUri"] == {"Ref": "ImageUri"}
+        assert web["ImageConfig"]["Command"] == ["serve"]
+        assert worker["ImageConfig"]["Command"] == ["worker"]
+
+    def test_the_web_function_streams_through_a_locked_origin(
+        self, template: dict[str, Any], web: dict[str, Any]
+    ) -> None:
+        assert web["FunctionUrlConfig"] == {"AuthType": "NONE", "InvokeMode": "RESPONSE_STREAM"}
+        env = web["Environment"]["Variables"]
+        assert env["AWS_LWA_INVOKE_MODE"] == "response_stream"
+        assert env["ORIGIN_VERIFY_SECRET"] == {"Ref": "OriginVerifySecret"}
+        assert env["CLIENT_IP_SOURCE"] == "cloudfront"
+
+        (origin,) = template["Resources"]["Distribution"]["Properties"]["DistributionConfig"][
+            "Origins"
+        ]
+        assert origin["OriginCustomHeaders"] == [
+            {"HeaderName": "X-Origin-Verify", "HeaderValue": {"Ref": "OriginVerifySecret"}}
+        ]
+        assert origin["CustomOriginConfig"]["OriginProtocolPolicy"] == "https-only"
+
+    def test_the_web_function_uses_the_pooler_without_a_client_pool(
+        self, web: dict[str, Any]
+    ) -> None:
+        env = web["Environment"]["Variables"]
+        assert env["DATABASE_URL"] == {"Ref": "DatabaseUrlPooled"}
+        assert env["DB_POOL"] == "null"
+        assert env["INBOX_WORKER_MODE"] == "lambda"
+
+    def test_the_worker_has_no_url_one_instance_the_direct_endpoint_and_no_retries(
+        self, template: dict[str, Any], worker: dict[str, Any]
+    ) -> None:
+        assert "FunctionUrlConfig" not in worker
+        assert worker["ReservedConcurrentExecutions"] == 1
+        assert worker["Timeout"] == 300
+        assert worker["EventInvokeConfig"]["MaximumRetryAttempts"] == 0
+        assert worker["Environment"]["Variables"]["DATABASE_URL"] == {"Ref": "DatabaseUrlDirect"}
+        assert worker["Events"]["Drain"]["Type"] == "ScheduleV2"
+        assert template["Parameters"]["WorkerSchedule"]["Default"] == "rate(6 hours)"
+
+    def test_secrets_are_no_echo_parameters(self, template: dict[str, Any]) -> None:
+        for name in (
+            "DatabaseUrlPooled",
+            "DatabaseUrlDirect",
+            "SessionSecret",
+            "OriginVerifySecret",
+        ):
+            assert template["Parameters"][name]["NoEcho"] is True, name
+
+    def test_no_iam_statement_grants_a_wildcard_resource(self, template: dict[str, Any]) -> None:
+        functions = resources_of_type(template, "AWS::Serverless::Function")
+        for logical_id, function in functions.items():
+            for statement in iam_statements(function):
+                resources = statement["Resource"]
+                for resource in resources if isinstance(resources, list) else [resources]:
+                    assert resource != "*", f"{logical_id} grants {statement['Action']} on *"
+
+    def test_the_web_function_may_invoke_only_the_worker(self, web: dict[str, Any]) -> None:
+        (statement,) = iam_statements({"Properties": web})
+        assert statement["Action"] == "lambda:InvokeFunction"
+        assert str(statement["Resource"]["Fn::Sub"]).endswith(":function:${AWS::StackName}-worker")
+
+    def test_only_hashed_assets_are_cached_at_the_edge(self, template: dict[str, Any]) -> None:
+        config = template["Resources"]["Distribution"]["Properties"]["DistributionConfig"]
+        caching_disabled = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad"
+        caching_optimized = "658327ea-f89d-4fab-a63d-7e88639e58f6"
+
+        assert config["DefaultCacheBehavior"]["CachePolicyId"] == caching_disabled
+        assert config["DefaultCacheBehavior"]["ViewerProtocolPolicy"] == "redirect-to-https"
+        (assets,) = config["CacheBehaviors"]
+        assert assets["PathPattern"] == "/assets/*"
+        assert assets["CachePolicyId"] == caching_optimized

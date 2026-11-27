@@ -1,0 +1,247 @@
+# The scale-to-zero target: one image, two functions, CloudFront in front.
+#
+#   browser ──HTTPS──▶ trips.botito.app (Route 53 alias)
+#             ──▶ CloudFront (ACM cert from cert.yaml, us-east-1)
+#                   ├─ /assets/*      cached at the edge
+#                   └─ everything else, uncached, + X-Origin-Verify
+#                         ──▶ Function URL ──▶ web function ──▶ Neon (pooled)
+#   kick (async invoke) / EventBridge schedule ──▶ worker function ──▶ Neon (direct)
+#
+# Spec: .ai/specs/2026-11-27-scale-to-zero-deployment-lambda-neon.md. Deployed by
+# deploy.sh, which builds and pushes the image, migrates, then runs `sam deploy`.
+#
+# Secrets arrive as NoEcho parameters. deploy.sh reads them from SSM Parameter
+# Store (SecureString) at deploy time: CloudFormation cannot resolve an
+# `ssm-secure` reference into a Lambda environment variable, and Secrets Manager
+# would be the one standing cost of an idle deployment. Nothing secret is written
+# into this file or the repository.
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: trip-planner — scale-to-zero target (Lambda + Lambda Web Adapter + Neon + CloudFront)
+
+Parameters:
+  ImageUri:
+    Type: String
+    Description: The ECR image both functions run, pinned by digest or revision tag.
+  DomainName:
+    Type: String
+    Default: trips.botito.app
+  HostedZoneId:
+    Type: AWS::Route53::HostedZone::Id
+    Description: The Route 53 zone that owns DomainName.
+  CertificateArn:
+    Type: String
+    Description: The us-east-1 ACM certificate from cert.yaml.
+  DatabaseUrlPooled:
+    Type: String
+    NoEcho: true
+    Description: Neon's pooled endpoint, for the web function (transaction-safe use only).
+  DatabaseUrlDirect:
+    Type: String
+    NoEcho: true
+    Description: >-
+      Neon's direct endpoint, for the worker. Required: the worker's session-level
+      advisory lock leaks behind a transaction-mode pooler.
+  SessionSecret:
+    Type: String
+    NoEcho: true
+    MinLength: 32
+  OriginVerifySecret:
+    Type: String
+    NoEcho: true
+    MinLength: 32
+    Description: The X-Origin-Verify value CloudFront sends and the web function requires.
+  WebReservedConcurrency:
+    Type: Number
+    Default: 10
+    MinValue: 1
+    Description: Caps cost under a request flood and the number of Neon connections (A7).
+  WorkerSchedule:
+    Type: String
+    Default: rate(6 hours)
+    Description: >-
+      INBOX_WORKER_SCHEDULE. Every run wakes Neon, so this is the idle deployment's
+      only standing cost; retries and cleanup wait for it.
+
+Globals:
+  Function:
+    Architectures: [x86_64]
+    MemorySize: 1024
+
+Resources:
+  # ------------------------------------------------------------------ web
+  WebFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${AWS::StackName}-web
+      PackageType: Image
+      ImageUri: !Ref ImageUri
+      ImageConfig:
+        Command: [serve]
+      Timeout: 30
+      ReservedConcurrentExecutions: !Ref WebReservedConcurrency
+      LoggingConfig:
+        LogGroup: !Ref WebLogGroup
+      Environment:
+        Variables:
+          DATABASE_URL: !Ref DatabaseUrlPooled
+          DB_POOL: "null"
+          SESSION_SECRET: !Ref SessionSecret
+          APP_BASE_URL: !Sub https://${DomainName}
+          ENVIRONMENT: production
+          ORIGIN_VERIFY_SECRET: !Ref OriginVerifySecret
+          CLIENT_IP_SOURCE: cloudfront
+          INBOX_WORKER_MODE: lambda
+          INBOX_WORKER_FUNCTION: !Sub ${AWS::StackName}-worker
+          # Streamed responses: an attachment stored under the old 10 MiB limit
+          # is larger than a buffered response may be.
+          AWS_LWA_INVOKE_MODE: response_stream
+      FunctionUrlConfig:
+        # The origin is locked by X-Origin-Verify rather than OAC: OAC needs the
+        # client to hash every POST body, which SNS and browsers do not.
+        AuthType: NONE
+        InvokeMode: RESPONSE_STREAM
+      Policies:
+        - Statement:
+            - Sid: KickTheWorker
+              Effect: Allow
+              Action: lambda:InvokeFunction
+              Resource: !Sub arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${AWS::StackName}-worker
+
+  # Function URLs created since October 2025 need lambda:InvokeFunction granted
+  # alongside the lambda:InvokeFunctionUrl permission SAM adds.
+  WebFunctionUrlInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref WebFunction
+      Action: lambda:InvokeFunction
+      Principal: "*"
+      InvokedViaFunctionUrl: true
+
+  WebLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${AWS::StackName}-web
+      RetentionInDays: 30
+
+  # --------------------------------------------------------------- worker
+  WorkerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${AWS::StackName}-worker
+      PackageType: Image
+      ImageUri: !Ref ImageUri
+      ImageConfig:
+        Command: [worker]
+      # The drain stops itself after four minutes (worker_app.WORKER_BUDGET).
+      Timeout: 300
+      # One at a time; the advisory lock is the backstop, not the plan.
+      ReservedConcurrentExecutions: 1
+      LoggingConfig:
+        LogGroup: !Ref WorkerLogGroup
+      # The schedule is the retry. No Function URL: the worker is reachable only
+      # by invoke, and its app serves nothing but /events and health.
+      EventInvokeConfig:
+        MaximumRetryAttempts: 0
+      Environment:
+        Variables:
+          DATABASE_URL: !Ref DatabaseUrlDirect
+          SESSION_SECRET: !Ref SessionSecret
+          APP_BASE_URL: !Sub https://${DomainName}
+          ENVIRONMENT: production
+          INBOX_WORKER_MODE: lambda
+          INBOX_WORKER_FUNCTION: !Sub ${AWS::StackName}-worker
+      Events:
+        Drain:
+          Type: ScheduleV2
+          Properties:
+            ScheduleExpression: !Ref WorkerSchedule
+            Input: '{"source":"trip-planner.schedule"}'
+
+  WorkerLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${AWS::StackName}-worker
+      RetentionInDays: 30
+
+  # ------------------------------------------------------------ CloudFront
+  Distribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        Comment: !Sub ${AWS::StackName} — ${DomainName}
+        Aliases: [!Ref DomainName]
+        HttpVersion: http2and3
+        IPV6Enabled: true
+        PriceClass: PriceClass_100
+        ViewerCertificate:
+          AcmCertificateArn: !Ref CertificateArn
+          SslSupportMethod: sni-only
+          MinimumProtocolVersion: TLSv1.2_2021
+        Origins:
+          - Id: web
+            DomainName: !Select [2, !Split ["/", !GetAtt WebFunctionUrl.FunctionUrl]]
+            CustomOriginConfig:
+              OriginProtocolPolicy: https-only
+              OriginSSLProtocols: [TLSv1.2]
+            OriginCustomHeaders:
+              - HeaderName: X-Origin-Verify
+                HeaderValue: !Ref OriginVerifySecret
+        DefaultCacheBehavior:
+          TargetOriginId: web
+          ViewerProtocolPolicy: redirect-to-https
+          AllowedMethods: [GET, HEAD, OPTIONS, PUT, POST, PATCH, DELETE]
+          CachedMethods: [GET, HEAD]
+          Compress: true
+          # Managed-CachingDisabled: pages, API calls and index.html are never
+          # cached, so a new build is visible on the next load.
+          CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad
+          # Managed-AllViewerExceptHostHeader: everything the viewer sent except
+          # Host (the Function URL routes on its own), plus CloudFront's viewer
+          # location headers, which carry CloudFront-Viewer-Address.
+          OriginRequestPolicyId: b689b0a8-53d0-40ab-baf2-68738e2966ac
+        CacheBehaviors:
+          - PathPattern: /assets/*
+            TargetOriginId: web
+            ViewerProtocolPolicy: redirect-to-https
+            AllowedMethods: [GET, HEAD]
+            CachedMethods: [GET, HEAD]
+            Compress: true
+            # Managed-CachingOptimized honours the origin's
+            # `Cache-Control: public, max-age=31536000, immutable`.
+            CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6
+
+  AliasA:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneId: !Ref HostedZoneId
+      Name: !Ref DomainName
+      Type: A
+      AliasTarget:
+        DNSName: !GetAtt Distribution.DomainName
+        # CloudFront's fixed hosted zone id for alias records.
+        HostedZoneId: Z2FDTNDATAQYW2
+
+  AliasAAAA:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneId: !Ref HostedZoneId
+      Name: !Ref DomainName
+      Type: AAAA
+      AliasTarget:
+        DNSName: !GetAtt Distribution.DomainName
+        HostedZoneId: Z2FDTNDATAQYW2
+
+Outputs:
+  Url:
+    Value: !Sub https://${DomainName}
+  DistributionDomainName:
+    Value: !GetAtt Distribution.DomainName
+  FunctionUrl:
+    Description: The raw origin. Answers 403 to anything but /api/v1/health.
+    Value: !GetAtt WebFunctionUrl.FunctionUrl
+  WebFunctionName:
+    Value: !Ref WebFunction
+  WorkerFunctionName:
+    Value: !Ref WorkerFunction
