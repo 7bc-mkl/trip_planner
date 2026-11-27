@@ -137,8 +137,14 @@ class InboxWorker:
 
     # ------------------------------------------------------------- one pass
 
-    def run_once(self) -> int:
+    def run_once(self, *, should_continue: Callable[[], bool] | None = None) -> int:
         """Ingest up to `BATCH_SIZE` messages. Returns how many were processed.
+
+        `should_continue`, when given, is asked **between messages** alongside
+        the stop event; once it answers false the pass stops taking new ones.
+        The worker function passes its time budget here, so a batch of slow
+        model calls cannot run past the Lambda timeout. Omitted, a pass behaves
+        exactly as the thread's always has.
 
         **The lock is held on a session of its own, and that is not tidiness.**
         A session-level advisory lock belongs to the *connection* that took it,
@@ -163,7 +169,7 @@ class InboxWorker:
                 return 0
             try:
                 with self._session_factory() as db:
-                    return self._drain(db)
+                    return self._drain(db, should_continue)
             finally:
                 self._release_lock(lock_session)
 
@@ -179,7 +185,10 @@ class InboxWorker:
             sa.select(sa.func.pg_advisory_unlock(sa.literal(INBOX_WORKER_LOCK_KEY)))
         ).scalar_one()
 
-    def _drain(self, db: OrmSession) -> int:
+    def _drain(self, db: OrmSession, should_continue: Callable[[], bool] | None = None) -> int:
+        def halted() -> bool:
+            return self._stop.is_set() or (should_continue is not None and not should_continue())
+
         owner = db.execute(
             sa.select(Owner).order_by(Owner.created_at).limit(1)
         ).scalar_one_or_none()
@@ -188,7 +197,7 @@ class InboxWorker:
 
         processed = 0
         for message in claim_pending(db, limit=BATCH_SIZE):
-            if self._stop.is_set():
+            if halted():
                 break
 
             outcome = ingest_message(
@@ -222,7 +231,7 @@ class InboxWorker:
                 )
             )
             for message in pending:
-                if self._stop.is_set():
+                if halted():
                     break
                 self._route(db, message, owner)
 
