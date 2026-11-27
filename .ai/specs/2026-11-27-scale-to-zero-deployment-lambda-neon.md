@@ -5,7 +5,7 @@ Extends: .ai/specs/2026-09-26-reservation-inbox.md
 
 ## 📝 TLDR
 
-The app is used now and then, but the server hosting it runs (and costs money) all the time. Today it runs on an always-on Hetzner host: Caddy, the app and Postgres under `deploy/compose.prod.yml`. **Proposed:** add a second deployment target where the same image runs on AWS Lambda through the Lambda Web Adapter, and the database is Neon serverless Postgres. When nobody uses the app, both scale to zero. The compose deployment stays supported. Two parts of the current app do not survive Lambda unchanged: the inbox's background thread and attachments larger than Lambda's payload limit. This spec redesigns the first and splits the second into its own prerequisite spec.
+The app is used now and then, but the server hosting it runs (and costs money) all the time. Today it runs on an always-on Hetzner host: Caddy, the app and Postgres under `deploy/compose.prod.yml`. **Proposed:** add a second deployment target where the same image runs on AWS Lambda through the Lambda Web Adapter, and the database is Neon serverless Postgres. When nobody uses the app, both scale to zero. The compose deployment stays supported. Two parts of the current app do not survive Lambda unchanged: the inbox's background thread and attachments larger than Lambda's payload limit. This spec moves the worker into a second function from the same image, and lowers the per-file upload limit from 10 MB to **4 MB**, on the owner's decision of 2026-11-27.
 
 ## 📝 Problem Statement
 
@@ -42,7 +42,7 @@ Lambda freezes an execution environment between requests and removes it when idl
 ### Alternatives considered, and why they lost
 
 - **AWS App Runner / ECS Fargate.** Neither truly scales to zero: App Runner bills memory for idle provisioned instances, and Fargate services have no native zero. ECS also needs a load balancer that costs money while idle.
-- **Cloud Run + Neon.** This needs no worker redesign beyond the kick (Cloud Run can also throttle CPU after responses) and has no 6 MB payload limit. It lost only because the inbox is already built on AWS SES/SNS/S3 (`.ai/specs/2026-09-26-reservation-inbox.md`). Keeping compute in the same cloud avoids cross-cloud credentials for the S3 fetch. **It remains the cheapest pivot if the attachments prerequisite turns out expensive.**
+- **Cloud Run + Neon.** This needs no worker redesign beyond the kick (Cloud Run can also throttle CPU after responses) and has no 6 MB payload limit. It lost only because the inbox is already built on AWS SES/SNS/S3 (`.ai/specs/2026-09-26-reservation-inbox.md`). Keeping compute in the same cloud avoids cross-cloud credentials for the S3 fetch. **It remains the pivot if the 4 MB upload limit proves too tight.**
 - **Aurora Serverless v2 with 0 minimum capacity.** It stays inside AWS, but resume time (seconds to tens of seconds, verify) lands on the first request after idle, and it adds VPC networking. Lambda would then need a VPC, and the SNS certificate fetch, the model provider calls and S3 would need a NAT gateway or endpoints. A NAT gateway is a standing hourly cost, which defeats the purpose. Neon is on the public internet, so the functions stay outside a VPC.
 - **Run the drain inline in the SNS request.** The model call has a 30 s timeout with retries (`backend/trip_planner/integrations/model.py`, `TIMEOUT_SECONDS`). Holding SNS's HTTPS delivery that long risks SNS timing out and redelivering. The durable-row-then-acknowledge contract from the inbox spec would also blur.
 - **API Gateway instead of a Function URL.** HTTP APIs cap integrations at about 30 s (verify) and add a per-request cost. A Function URL has neither, and supports response streaming.
@@ -72,6 +72,26 @@ The system SHALL run an ingestion and cleanup pass on a schedule of `INBOX_WORKE
 - THEN the next scheduled pass retries it
 
 The compose target keeps today's 30 s in-process loop unchanged; `backend/tests/test_scheduler.py` keeps pinning it.
+
+### Capability: attachments
+
+#### MODIFIED Requirement: Per-file upload limit
+The system SHALL refuse an uploaded attachment larger than **4 MiB** with `attachment_too_large`, and SHALL keep serving stored attachments up to 10 MiB.
+
+##### Scenario: A file just over the limit
+- WHEN the owner uploads a PDF of 4 MiB + 1 byte
+- THEN the upload is refused with `attachment_too_large` and nothing is stored
+- AND the frontend tells the user before sending, in the user's language, that the limit is 4 MB
+
+##### Scenario: A file at the limit
+- WHEN the owner uploads a PDF of exactly 4 MiB
+- THEN it is stored
+
+##### Scenario: An attachment stored before the change
+- WHEN the owner opens a 9 MB attachment uploaded under the old limit
+- THEN it downloads in full, on both targets
+
+Frozen by: `backend/tests/test_attachments_api.py` (`test_a_file_one_byte_over_the_cap_is_refused`, `test_a_file_of_exactly_the_cap_is_stored`)
 
 ## 📝 Architecture
 
@@ -151,7 +171,11 @@ No route, request or response shape changes on the web app. `POST /api/v1/inbox/
 
 The worker app's `POST /events` is not a public contract. It is reachable only through the LWA pass-through on a function that has no Function URL.
 
-**Attachments.** `POST` upload and the content download routes (`backend/trip_planner/api/attachments.py`, `api/inbox.py`) accept and return up to 10 MiB (`MAX_ATTACHMENT_BYTES`). Through a buffered Function URL the request and response payload cap is ~6 MB, and binary bodies travel base64-encoded (×4/3). So the effective upload ceiling is about **4.5 MB** (verify both figures). Response streaming lifts the download side only. This spec **does not change these contracts**. Cutting over (Phase 3) is gated on the attachments prerequisite (see Resolved assumptions A1).
+**Attachments — the one contract change (§1 HTTP API, owner decision A1).** Through a buffered Function URL the request payload cap is ~6 MB and binary bodies travel base64-encoded (×4/3), so the effective upload ceiling is about **4.5 MB** (verify both figures). Therefore:
+
+- **Upload:** the per-file limit drops from 10 MiB to **4 MiB** on both targets. The error code (`attachment_too_large`), its status and the response shape stay the same; only the threshold moves. The frontend pre-check (`MAX_UPLOAD_BYTES` in `frontend/src/features/trips/UploadDropzone.tsx`) and the copy in `en.json` / `pl.json` (`hint`, `attachment_too_large`) say 4 MB. Translation keys do not change, so §4 is untouched.
+- **Stored bound stays 10 MiB.** Attachments uploaded before this change can be up to 10 MiB, and the database `CHECK` (`byte_size <= 10485760`, migration `0005_attachment.py`) must keep accepting them. So `MAX_ATTACHMENT_BYTES` is split: a new **upload limit** (4 MiB) gates `POST`, and the existing constant becomes the **stored bound** (10 MiB) used by the model's `CHECK` and by inbound documents (`domain/inbound.py`). Inbound documents arrive through the worker, not through a request, so they keep 10 MiB. No migration.
+- **Download:** files up to 10 MiB must stay readable, which exceeds a buffered response. The web function's Function URL uses **response streaming** (`InvokeMode: RESPONSE_STREAM`, LWA `AWS_LWA_INVOKE_MODE=response_stream`); the streamed-response limit is above 10 MiB (verify). Nothing changes on the compose target.
 
 ## 📝 Edge Cases & Failure Scenarios
 
@@ -163,7 +187,9 @@ The worker app's `POST /events` is not a public contract. It is reachable only t
 | Worker kick fails | Logged; SNS gets `200`; the schedule picks it up | Mail appears in `/inbox` up to 6 h later instead of seconds |
 | Two kicks at once | Reserved concurrency 1 throttles the second; async invoke retries it later, and the advisory lock is the backstop | Nothing |
 | Worker times out mid-batch | The 4-minute budget stops between messages, so the 5-minute timeout should not fire. If it does, committed rows stay, and TCP keepalives free the advisory lock within about a minute | Nothing |
-| Upload > ~4.5 MB before the prerequisite | Function URL rejects the payload before the app sees it | A generic error, not `attachment_too_large`. **This is why cutover waits for A1.** |
+| Upload between 4 MiB and the platform cap | The app refuses it with `attachment_too_large`; the frontend pre-check stops it first | The existing "file too large" message, now saying 4 MB |
+| Upload above ~4.5 MB that bypasses the frontend | Function URL rejects the payload before the app sees it | A generic error instead of `attachment_too_large`. Only a hand-crafted request can get here |
+| Downloading a 10 MB attachment stored before the change | Streamed response | The file, as today |
 | Request flood | Reserved concurrency 10 → throttled `429`s from AWS | Errors under abuse instead of an unbounded bill |
 | A lambda environment frozen mid-connection | Neon closes the idle server connection; `pool_pre_ping` replaces it | Nothing |
 | Rollback | Compose host kept for 14 days after cutover, `app` stopped and `db` intact; DNS is not involved because the hostnames differ | A switch back via the previous URL. Writes made on Lambda after cutover would need a reverse dump; stated in the runbook |
@@ -178,7 +204,7 @@ The worker app's `POST /events` is not a public contract. It is reachable only t
 
 ## 📝 Risks & Impact Review
 
-- **Attachments contract (§1 HTTP API).** See A1. This is the one hard-to-reverse product call in play, and it is deliberately **not** made here.
+- **Attachments contract (§1 HTTP API).** Lowering the upload limit is user-visible: a 5–10 MB PDF that uploads today will be refused. It is easy to reverse (one constant and two strings). Stored data is untouched because the stored bound stays 10 MiB. The owner accepted this on 2026-11-27.
 - **Two deployment targets to keep working.** The compose target stays tested (the compose-shape tests in `backend/tests/test_startup.py`). The Lambda target gets a template-validation test (`sam validate`) and a smoke probe in the runbook. Dropping compose later is a separate decision.
 - **Vendor coupling.** LWA is open source and a single file in the image; removing it reverts the image. Neon is plain Postgres; `pg_dump` moves the data out.
 - **Cost shape.** Idle cost is close to zero, plus Neon storage, the S3 bucket and the 6-hourly wake-ups. A traffic spike costs per request, capped by reserved concurrency.
@@ -188,15 +214,16 @@ The worker app's `POST /events` is not a public contract. It is reachable only t
 
 - **D14 / R08** (public from day one, nothing reachable without a session or magic link): unchanged. The Function URL is public just as Caddy's 443 is, and no route is added to the web app.
 - **A12** of the walking-skeleton spec (one image, managed Postgres, migrations before traffic, TLS at the proxy): honoured. Still one image; the worker function is a second *configuration* of it, not a second deployable artifact.
-- **Reservation-inbox spec, "no separate worker process or queue"**: honoured in substance. There is no new queue, and the worker is the same code on the same image. It rejected a second container because A12 fixed one image, and that still holds. Owner confirmation is requested anyway (A2), because a second function could be read as the thing that spec rejected.
+- **Reservation-inbox spec, "no separate worker process or queue"**: honoured in substance. There is no new queue, and the worker is the same code on the same image. It rejected a second container because A12 fixed one image, and that still holds. The owner confirmed this reading on 2026-11-27 (A2).
+- **D16** (attachments in PostgreSQL; PDF/JPEG/PNG; **10 MB per file**): **superseded in part.** The per-file upload limit becomes 4 MB; storage and formats are unchanged. The owner approved this on 2026-11-27. The implementation PR adds the superseding decision row to `.ai/specs/product-brief.md` and updates the two brief lines that say "up to 10 MB".
 - **D24** (one explicitly configured model provider): unchanged; the worker reads the same variables.
 
 ## Resolved assumptions (autonomous defaults)
 
 | # | Question | Default applied | Why |
 |---|---|---|---|
-| A1 | Lambda caps buffered payloads at ~6 MB (≈4.5 MB of binary upload), while attachments allow 10 MiB. Lower the limit, or move attachment bytes to S3 via presigned URLs? | **Neither in this spec. Split it out:** a separate spec, "attachment bytes outside the request path", is a **prerequisite for cutover (Phase 3)**. Phases 0–2 stand the Lambda target up beside compose without serving real users. ⚠ **NEEDS HUMAN CONFIRMATION** | The choice changes a §1 API contract and the attachments spec's storage design (`BYTEA` in Postgres). Lowering the limit is quick but user-visible; S3 is larger and moves data out of the one-database backup. Each works on its own, so per the scope-cohesion rule they are a separate spec. The owner may instead accept a lowered limit as a stopgap; that is a one-constant change plus copy |
-| A2 | How does the inbox worker run without a long-lived process? | **A worker function from the same image, kicked asynchronously after each receipt and scheduled every 6 h**; the compose target keeps the thread. ⚠ **NEEDS HUMAN CONFIRMATION** | Reading the inbox spec as "no second process" would make Lambda impossible. A minute-level schedule would keep Neon awake 24/7. Inline processing risks SNS redelivery |
+| A1 | Lambda caps buffered payloads at ~6 MB (≈4.5 MB of binary upload), while attachments allow 10 MiB. Lower the limit, or move attachment bytes to S3 via presigned URLs? | **Lower the per-file upload limit to 4 MiB, in this spec, on both targets.** Stored attachments and inbound documents keep their 10 MiB bound, and downloads stream so files already stored stay readable. **Confirmed by the owner on 2026-11-27 (PR #25); supersedes the limit half of D16.** | The owner chose the quick option over moving bytes to S3. 4 MiB leaves room under the ~4.5 MB base64 ceiling for the multipart envelope and the event's headers. Reversible: raising it later is the same constant, once the bytes leave the request path |
+| A2 | How does the inbox worker run without a long-lived process? | **A worker function from the same image, kicked asynchronously after each receipt and scheduled every 6 h**; the compose target keeps the thread. **Confirmed by the owner on 2026-11-27 (PR #25).** | Reading the inbox spec as "no second process" would make Lambda impossible. A minute-level schedule would keep Neon awake 24/7. Inline processing risks SNS redelivery |
 | A3 | Infrastructure-as-code tool? | **AWS SAM** (`deploy/lambda/template.yaml`); Neon set up by hand and documented | Native Function URL, schedule and IAM in one YAML file. No state backend to host (Terraform) and no app to maintain (CDK). Reversible: the template is small |
 | A4 | Hostname? | **The Function URL hostname**; custom domain + CloudFront deferred until a domain exists | Same trigger the README already uses for leaving sslip.io; no new paid component |
 | A5 | What happens to the Hetzner deployment? | **Kept supported in the repo; the host is kept, app stopped, for 14 days after cutover, then decommissioned by the owner** | Rollback path; the compose target is also the local stand-up |
@@ -209,14 +236,14 @@ The worker app's `POST /events` is not a public contract. It is reachable only t
 - **Phase 0 — Verify and measure.** No code. Confirms the platform facts this spec takes from memory and measures the database.
 - **Phase 1 — Lambda-ready image and app.** Mergeable on its own; the compose deployment behaves exactly as today.
 - **Phase 2 — Stand up the Lambda target** beside compose, against an empty Neon database, with smoke probes. No real users.
-- **Phase 3 — Cutover.** **Gated on A1's prerequisite** (or the owner's stopgap decision). Moves the data, switches `APP_BASE_URL` and the SNS subscription, and keeps the rollback window.
+- **Phase 3 — Cutover.** Needs Phases 1–2 merged and probed, including the 4 MB limit and streamed downloads. Moves the data, switches `APP_BASE_URL` and the SNS subscription, and keeps the rollback window.
 - **Phase 4 — Decommission and measure.** Hetzner off after the window; one month's cost compared.
 
 ## 📋 Implementation Plan
 
 ### Phase 0 — Verify and measure
 
-1. Verify against current AWS, LWA and Neon documentation, and record the findings in the implementation PR: Function URL buffered request and response limits and base64 handling; response-streaming limit; LWA version, `AWS_LWA_PORT` / `AWS_LWA_READINESS_CHECK_PATH` / the pass-through path and its variable; how Function URLs set `X-Forwarded-For`; Neon pooler support for psycopg 3 prepared statements; Neon autosuspend delay and storage tier for 2 GiB. Correct this spec's assumptions in the PR body where they differ.
+1. Verify against current AWS, LWA and Neon documentation and record the findings in the implementation PR: Function URL buffered request and response limits and base64 handling; response-streaming limit; LWA version, `AWS_LWA_PORT` / `AWS_LWA_READINESS_CHECK_PATH` / the pass-through path and its variable; how Function URLs set `X-Forwarded-For`; Neon pooler support for psycopg 3 prepared statements; Neon autosuspend delay and storage tier for 2 GiB. Correct this spec's assumptions in the PR body where they differ.
 2. Confirm the inbox SNS subscription has its dead-letter queue configured (Phase 3 relies on it).
 3. Measure the production database size (`pg_database_size`) and the `attachment_blob` share on the Hetzner host.
 
@@ -229,21 +256,24 @@ The worker app's `POST /events` is not a public contract. It is reachable only t
 5. `trip_planner/worker_app.py`: an ASGI app with only `POST /events` → `run_once()` looped under the 4-minute budget, and health. Tests: a backlog of 25 drains in one event; the budget stops between messages. A test asserts the web app's route table has no `/events` and the worker app's has nothing else (extends the route-enumeration test in `backend/tests/test_route_protection.py`).
 6. `DB_POOL=null` → `NullPool` in `db/session.py`. If Phase 0 found the pooler unsafe for prepared statements, set `prepare_threshold=None` for the web engine. Test on the engine's configuration.
 7. Client-IP hop rule in `security/rate_limit.py`, behind a setting whose default keeps today's first-element behaviour; `entrypoint.sh` `serve` drops `--forwarded-allow-ips '*'` when that setting selects the Lambda rule. Tests for a spoofed header with each setting, covering both the header path and the `request.client` fallback (extends `backend/tests/test_rate_limit.py`).
-8. `deploy/Dockerfile`: pinned LWA binary, `AWS_LWA_*` variables; `entrypoint.sh` gains `worker`. `backend/tests/test_startup.py` stays green. A new test asserts the extension file is present and `serve` is unchanged.
-9. Full validation gate.
+8. **Characterize** the upload limit: `test_a_file_one_byte_over_the_cap_is_refused` and `test_a_file_of_exactly_the_cap_is_stored` in `backend/tests/test_attachments_api.py` already pin 10 MiB; confirm they are green, plus a test that a stored 10 MiB row stays readable. Commit alone.
+9. **Change** the limit: add the 4 MiB upload limit in `domain/uploads.py`, keep the 10 MiB stored bound for the model `CHECK` and `domain/inbound.py`, and gate `api/attachments.py` (`MAX_BODY_BYTES` and the post-parse check) on the upload limit. Update the two characterization tests to 4 MiB, and keep the stored-row test at 10 MiB. Frontend: `MAX_UPLOAD_BYTES`, `uploadDropzone.test.tsx`, `api/attachments.test.ts`, and the `hint` / `attachment_too_large` strings in `en.json` and `pl.json`. Add the D16-superseding row to `.ai/specs/product-brief.md`.
+10. `deploy/Dockerfile`: pinned LWA binary, `AWS_LWA_*` variables; `entrypoint.sh` gains `worker`. `backend/tests/test_startup.py` stays green. A new test asserts the extension file is present and `serve` is unchanged.
+11. Full validation gate.
 
 ### Phase 2 — Stand up the Lambda target (no real users)
 
-1. `deploy/lambda/template.yaml` (SAM): ECR image; web function with Function URL (`AuthType: NONE`), reserved concurrency 10 and the env from SSM; worker function (no URL, reserved concurrency 1, timeout 5 min, async retries 0); EventBridge schedule `rate(6 hours)` on the worker; least-privilege IAM as in Security. `sam validate` runs in a backend test or a CI step (the CI workflow changes in the same PR, per AGENTS.md).
+1. `deploy/lambda/template.yaml` (SAM): ECR image; web function with Function URL (`AuthType: NONE`, `InvokeMode: RESPONSE_STREAM`, and `AWS_LWA_INVOKE_MODE=response_stream`), reserved concurrency 10 and the env from SSM; worker function (no URL, reserved concurrency 1, timeout 5 min, async retries 0); EventBridge schedule `rate(6 hours)` on the worker; least-privilege IAM as in Security. `sam validate` runs in a backend test or a CI step (the CI workflow changes in the same PR, per AGENTS.md).
 2. `deploy/lambda/deploy.sh`: refuses a dirty tree (as `deploy/deploy.sh` does), builds and pushes, runs `migrate` against `DATABASE_URL_DIRECT`, then `sam deploy`.
 3. Create the Neon project in the matching region, with pooled and direct connection strings in SSM. Deploy against an empty database and create a test owner with `trip-planner create-owner`.
-4. Smoke probes, recorded on the PR: `GET /login` → 200; unauthenticated `GET /api/v1/trips` → 401; a login, a trip created, a 4 MB attachment round-trip; a cold-start timing after 15 idle minutes. Screenshots of the live login and trip screens.
+4. Smoke probes, recorded on the PR: `GET /login` → 200; unauthenticated `GET /api/v1/trips` → 401; a login, a trip created, a 4 MiB attachment round-trip, a 4 MiB + 1 byte upload refused with `attachment_too_large`, a 10 MiB attachment (restored from a dump) downloaded through the stream; a cold-start timing after 15 idle minutes. Screenshots of the live login and trip screens.
 5. **The inbox stays isolated from production in Phase 2.** The Lambda stack gets its **own** SES receipt rule, recipient address, SNS topic and S3 prefix. It must never subscribe to the production topic or be able to delete under the production prefix: its worker would ingest the owner's real mail into the empty Neon database and then delete the S3 object, and the compose worker would find it gone. A test confirmation sent to the Phase-2 address reaches `/inbox` via the kick. The IAM policy is scoped to the Phase-2 prefix; switching it is part of Phase 3.
 6. `deploy/lambda/README.md`: provisioning, variables, release, rollback, cost notes; a link from `deploy/README.md` and the root `README.md`.
+7. **Archive the Delta** into `.ai/specs/capabilities/inbox-ingestion.md` and `.ai/specs/capabilities/attachments.md`.
 
-### Phase 3 — Cutover (gated on A1)
+### Phase 3 — Cutover
 
-1. Confirm the A1 prerequisite has merged, or the owner's stopgap decision is recorded on #24.
+1. Confirm Phase 1 (including the 4 MiB limit) is deployed on the Lambda target, and the Phase 2 probes, including a 10 MiB streamed download, passed.
 2. Runbook, executed and recorded, in this order so no receipt is lost: **stop compose `app` first** (keep `db`). SNS deliveries to it now fail and are retried, then land in the dead-letter queue the inbox spec requires (Phase 0 confirms it is configured). → `pg_dump` from compose → `pg_restore` into Neon (direct URL) → `migrate` (a no-op if at head) → switch the Lambda stack's IAM scope and SES/SNS wiring to the production topic and prefix, and point the HTTPS subscription at the Function URL → **redrive the DLQ** to the new endpoint → probes from Phase 2 step 4 on the real data. A write freeze is implicit, because the compose app is down for the whole window.
 3. Owner sign-in and an end-to-end forwarded confirmation on the Lambda target, recorded on the PR.
 
