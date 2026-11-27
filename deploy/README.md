@@ -9,6 +9,10 @@ internet ──443──▶ caddy ──▶ app ──▶ db
                   TLS       :8000   (no published port)
 ```
 
+This is the always-on target. The same image also runs **scaled to zero** on AWS
+Lambda with Neon Postgres — no compute while idle — documented in
+[`lambda/README.md`](lambda/README.md). Both targets stay supported.
+
 Files in this directory:
 
 | File | What it is |
@@ -19,6 +23,7 @@ Files in this directory:
 | `compose.prod.yml` | The deployment. TLS in front, database private, restarts. |
 | `Caddyfile` | TLS, the HTTP redirect, HSTS. |
 | `deploy.sh` | The repeatable release. |
+| `lambda/` | The scale-to-zero target (AWS Lambda + Neon); see its README. |
 
 ## Provisioning a host
 
