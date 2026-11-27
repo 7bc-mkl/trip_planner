@@ -23,3 +23,10 @@
 - Full validation gate green: 8/8 commands, 1328 backend tests with 0 skipped; image builds with the adapter.
 - Step review clean. New error code `forbidden_origin` (additive).
 - Delegations: 1.11, 1.13 → standard-tier executors; 1.12 → capable-tier executor.
+
+## 2026-11-27T21:17:08Z — checkpoint 4 (steps 2.1..2.4, 2.7..2.9)
+- SAM validate --lint, cfn-lint, shellcheck, 56 targeted tests green. Self-review clean.
+- Decision: secrets reach Lambda as NoEcho parameters read from SSM by deploy.sh (CloudFormation cannot resolve ssm-secure into Lambda env).
+- Decision: step 2.9 records spec corrections in the run folder + PR body instead of editing the merged spec (delta-archive rule).
+- Live AWS: trip-planner-cert stack (us-east-1) created; two generated secrets put into SSM.
+- **Blocker:** step 2.5 needs Neon credentials (no Neon account access here). Steps 2.7–2.9 were done ahead of 2.5–2.6 so the blocker costs no idle time.
