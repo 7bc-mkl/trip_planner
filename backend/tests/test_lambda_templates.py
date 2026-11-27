@@ -168,3 +168,64 @@ class TestApplicationStack:
         (assets,) = config["CacheBehaviors"]
         assert assets["PathPattern"] == "/assets/*"
         assert assets["CachePolicyId"] == caching_optimized
+
+
+class TestInboxWiring:
+    @pytest.fixture
+    def template(self) -> dict[str, Any]:
+        return load("template.yaml")
+
+    def test_every_inbox_resource_is_conditional(self, template: dict[str, Any]) -> None:
+        inbox = {k: v for k, v in template["Resources"].items() if k.startswith("Inbox")}
+        assert inbox, "the inbox resources are missing"
+        for logical_id, resource in inbox.items():
+            assert resource.get("Condition") in {"HasInbox", "HasAlarmEmail"}, logical_id
+
+    def test_the_receipt_rule_scans_and_stores_then_notifies(
+        self, template: dict[str, Any]
+    ) -> None:
+        rule = template["Resources"]["InboxReceiptRule"]["Properties"]["Rule"]
+        assert rule["ScanEnabled"] is True
+        (action,) = rule["Actions"]
+        assert set(action) == {"S3Action"}, "an SNS action would carry the raw MIME and bounce"
+        assert action["S3Action"]["ObjectKeyPrefix"] == "inbound/"
+        assert action["S3Action"]["TopicArn"] == {"Ref": "InboxTopic"}
+
+    def test_the_bucket_is_private_encrypted_and_expires_raw_mime(
+        self, template: dict[str, Any]
+    ) -> None:
+        bucket = template["Resources"]["InboxBucket"]["Properties"]
+        assert all(bucket["PublicAccessBlockConfiguration"].values())
+        assert bucket["BucketEncryption"]["ServerSideEncryptionConfiguration"]
+        (rule,) = bucket["LifecycleConfiguration"]["Rules"]
+        assert rule["ExpirationInDays"] == 30
+
+    def test_object_access_is_read_and_delete_on_the_prefix_only(
+        self, template: dict[str, Any]
+    ) -> None:
+        policy = template["Resources"]["InboxObjectAccess"]["Properties"]["PolicyDocument"]
+        (statement,) = policy["Statement"]
+        assert statement["Action"] == ["s3:GetObject", "s3:DeleteObject"]
+        assert statement["Resource"] == {"Fn::Sub": "${InboxBucket.Arn}/inbound/*"}
+
+    def test_the_subscription_keeps_the_signed_envelope_and_has_a_dead_letter_queue(
+        self, template: dict[str, Any]
+    ) -> None:
+        subscription = template["Resources"]["InboxSubscription"]["Properties"]
+        assert subscription["Protocol"] == "https"
+        assert subscription["RawMessageDelivery"] is False
+        assert subscription["Endpoint"] == {
+            "Fn::Sub": "https://${DomainName}/api/v1/inbox/receipts/sns"
+        }
+        assert subscription["RedrivePolicy"]["deadLetterTargetArn"] == {
+            "Fn::GetAtt": "InboxDeadLetterQueue.Arn"
+        }
+
+    def test_both_functions_get_the_same_inbox_configuration(
+        self, template: dict[str, Any]
+    ) -> None:
+        web = template["Resources"]["WebFunction"]["Properties"]["Environment"]["Variables"]
+        worker = template["Resources"]["WorkerFunction"]["Properties"]["Environment"]["Variables"]
+        inbox_keys = {k for k in web if k.startswith("INBOX_") or k.endswith("_API_KEY")}
+        assert {k: web[k] for k in inbox_keys} == {k: worker[k] for k in inbox_keys}
+        assert {"INBOX_RECIPIENT", "INBOX_SNS_TOPIC_ARN", "INBOX_S3_BUCKET"} <= inbox_keys

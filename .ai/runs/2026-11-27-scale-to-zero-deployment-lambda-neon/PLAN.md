@@ -35,7 +35,7 @@
 | 1 | 1.13 | Lambda Web Adapter in the image; `worker` entrypoint (spec step 13) | dispatch | done | 344db3a |
 | 2 | 2.1 | `deploy/lambda/cert.yaml` — ACM certificate in us-east-1 (spec Phase 2 step 1) | inline | done | 2977d09 |
 | 2 | 2.2 | `deploy/lambda/template.yaml` — functions, URL, schedule, CloudFront, DNS, IAM (spec Phase 2 step 1) | inline | done | 0018ed3 |
-| 2 | 2.3 | Inbox wiring for the Lambda stack — bucket, topic, SES receipt rule (spec Phase 2 step 5) | inline | todo | — |
+| 2 | 2.3 | Inbox wiring for the Lambda stack — bucket, topic, SES receipt rule (spec Phase 2 step 5) | inline | done | 64f55e4 |
 | 2 | 2.4 | `deploy/lambda/deploy.sh` — the release script (spec Phase 2 step 2) | inline | todo | — |
 | 2 | 2.5 | Neon project and first deploy against an empty database (spec Phase 2 step 3) | inline | todo | — |
 | 2 | 2.6 | Smoke probes on `https://trips.botito.app`, recorded (spec Phase 2 steps 4–5) | inline | todo | — |
