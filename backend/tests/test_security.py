@@ -94,3 +94,45 @@ class TestTokens:
 
     def test_csrf_tokens_are_random_and_distinct_from_session_tokens(self) -> None:
         assert generate_csrf_token() != generate_csrf_token()
+
+
+# --- Response headers the app sets today (characterization) -------------------
+#
+# Caddy (deploy/Caddyfile) adds these four today; the app sets none of them. The
+# next step moves them into the app, and flips the first test below.
+
+CADDY_SECURITY_HEADERS = (
+    "strict-transport-security",
+    "x-content-type-options",
+    "x-frame-options",
+    "referrer-policy",
+)
+
+
+def test_the_app_sets_no_caddy_security_headers_today() -> None:
+    from fastapi.testclient import TestClient
+
+    from trip_planner.app import create_app
+
+    with TestClient(create_app(check_configuration=False)) as client:
+        response = client.get("/api/v1/health")
+
+    assert response.status_code == 200
+    for name in CADDY_SECURITY_HEADERS:
+        assert name not in response.headers, name
+
+
+def test_the_attachment_content_route_keeps_its_own_nosniff_and_csp(
+    signed_in_client,
+) -> None:
+    """Must stay true after the change: these routes set their own headers."""
+    from tests.test_attachments_api import attachment_url, stored
+    from tests.test_trips_api import create
+
+    trip = create(signed_in_client)
+    created = stored(signed_in_client, trip)
+    response = signed_in_client.get(f"{attachment_url(trip, created['id'])}/content")
+
+    assert response.status_code == 200
+    assert response.headers["x-content-type-options"] == "nosniff"
+    assert response.headers["content-security-policy"] == "default-src 'none'; sandbox"

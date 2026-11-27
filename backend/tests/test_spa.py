@@ -87,3 +87,19 @@ class TestTheClientRoutingFallback:
 
         assert response.status_code == 404
         assert response.json() == {"error": {"code": "not_found", "field": None}}
+
+
+class TestAssetCachingToday:
+    """Characterization: flipped by the step that gives `/assets` a long-lived policy."""
+
+    def test_a_hashed_asset_has_no_long_lived_cache_control_today(self, client: TestClient) -> None:
+        response = client.get("/assets/index-abc123.js")
+
+        assert response.status_code == 200
+        assert "cache-control" not in response.headers
+        assert "etag" in response.headers
+        assert "last-modified" in response.headers
+
+    def test_the_index_routes_answer_no_store_today(self, client: TestClient) -> None:
+        for path in ("/", "/trips", "/index.html"):
+            assert client.get(path).headers["cache-control"] == "no-store", path
