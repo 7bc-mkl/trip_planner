@@ -22,7 +22,7 @@
 | 1 | 1.1 | Characterize the receipt path (spec step 1) | dispatch | done | 01e9201 |
 | 1 | 1.2 | `INBOX_WORKER_MODE`, `INBOX_WORKER_FUNCTION`, `DB_POOL` settings (spec step 2) | dispatch | done | 2c1427a |
 | 1 | 1.3 | `WorkerKick` port and commit-then-kick in the receipt endpoint (spec step 3) | dispatch:capable | done | ba46cd9 |
-| 1 | 1.4 | Lifespan skips the worker thread in `lambda` mode (spec step 4) | dispatch:cheap | todo | — |
+| 1 | 1.4 | Lifespan skips the worker thread in `lambda` mode (spec step 4) | dispatch:cheap | done | 3cacfff |
 | 1 | 1.5 | `worker_app.py` — `POST /events` drains under a 4-minute budget (spec step 5) | dispatch:capable | todo | — |
 | 1 | 1.6 | `DB_POOL=null` → `NullPool`, and worker keepalives (spec step 6) | dispatch | todo | — |
 | 1 | 1.7 | Client-IP hop rule behind a setting (spec step 7) | dispatch:capable | todo | — |

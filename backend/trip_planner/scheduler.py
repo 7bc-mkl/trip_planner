@@ -317,6 +317,10 @@ def start_inbox_worker(settings: Settings) -> InboxWorker | None:
     """
     if settings.inbox is None:
         return None
+    # Lambda freezes the environment between requests, so a thread would stall;
+    # the worker runs as its own function there.
+    if settings.inbox_worker_mode == "lambda":
+        return None
 
     from trip_planner.db.session import get_sessionmaker
 

@@ -14,6 +14,7 @@ the session would assert that mocks work.
 
 from __future__ import annotations
 
+import dataclasses
 import threading
 import uuid
 from collections.abc import Iterator
@@ -278,6 +279,19 @@ def test_concurrent_passes_process_a_message_exactly_once(
 def test_an_unconfigured_deployment_starts_no_worker(plain_settings: Settings) -> None:
     """No thread, no connection, no AWS client — "off" is genuinely inert."""
     assert start_inbox_worker(plain_settings) is None
+
+
+def test_lambda_mode_starts_no_in_process_worker(
+    inbox_settings: Settings, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The Lambda target runs the worker as a separate function, not a thread."""
+    started: list[object] = []
+    monkeypatch.setattr(InboxWorker, "start", lambda self: started.append(self))
+
+    lambda_settings = dataclasses.replace(inbox_settings, inbox_worker_mode="lambda")
+
+    assert start_inbox_worker(lambda_settings) is None
+    assert started == []
 
 
 def test_a_worker_cannot_be_constructed_without_inbox_settings(
