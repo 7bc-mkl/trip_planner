@@ -1,0 +1,25 @@
+# Phase 0 findings
+
+## Platform facts (Step 0.1, verified 2026-11-27)
+
+Checked against AWS documentation (docs.aws.amazon.com), the Lambda Web Adapter repository (now `github.com/aws/aws-lambda-web-adapter`; the awslabs URL redirects) and the Neon docs source. "Spec" = what `.ai/specs/2026-11-27-scale-to-zero-deployment-lambda-neon.md` assumed.
+
+| # | Fact | Source | Spec |
+|---|---|---|---|
+| 1 | Synchronous invoke payload: 6 MB request, 6 MB response. A Function URL base64-encodes binary bodies (`isBase64Encoded`), so a usable binary upload is ≈4.4–4.5 MB | lambda/latest/dg/gettingstarted-limits.html, urls-invocation.html | ✅ matches |
+| 2 | `RESPONSE_STREAM` maximum response is **200 MB** (first 6 MB uncapped, then 2 MB/s). The request stays under the 6 MB synchronous quota | lambda/latest/dg/config-rs-invoke-furls.html, configuration-response-streaming.html | ✅ "above 10 MiB" holds |
+| 3a | LWA latest release **v1.1.0** (2026-09-18): `COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:1.1.0 /lambda-adapter /opt/extensions/lambda-adapter` | LWA README, releases | ✅ |
+| 3b | Variables: `AWS_LWA_PORT` (default 8080, falls back to `PORT`), `AWS_LWA_READINESS_CHECK_PATH` (default `/`), `AWS_LWA_INVOKE_MODE` (`buffered` \| `response_stream`), `AWS_LWA_PASS_THROUGH_PATH` (default **`/events`**), `AWS_LWA_ASYNC_INIT` | LWA docs/guide/configuration | ✅ names and `/events` confirmed |
+| 3c | Readiness: GET every 10 ms; ready when status is 100–499 (`AWS_LWA_READINESS_CHECK_HEALTHY_STATUS`) | LWA readiness-check.md | ✅ |
+| 3d | Non-HTTP events (async invoke payloads, Scheduler events): LWA POSTs the event JSON to `http://127.0.0.1:{port}/events` | LWA non-http-events.md, src/lib.rs | ✅ |
+| 4 | How a Function URL treats a client-supplied `X-Forwarded-For` is **not documented**. The only documented trustworthy source is `requestContext.http.sourceIp`, which is a CloudFront edge IP behind CloudFront | lambda urls-invocation.html | ⚠️ unverified — the design does not depend on it: client IP comes from `CloudFront-Viewer-Address` on origin-verified requests |
+| 5a | `CloudFront-Viewer-Address` = `ip:port` (e.g. `198.51.100.10:46532`); addable in an origin request policy, not a cache policy. IPv6 format and overwrite of a viewer-sent header are not documented. CloudFront *appends* to a viewer-sent `X-Forwarded-For` | CloudFront adding-cloudfront-headers.html, RequestAndResponseBehaviorCustomOrigin.html | ⚠️ parse by splitting on the **last** `:`; the header is trusted only after origin verification, and tests pin IPv6 |
+| 5b | OAC with a Lambda URL origin requires clients to send `x-amz-content-sha256` on PUT/POST ("Lambda doesn't support unsigned payloads") and `AuthType: AWS_IAM` | CloudFront private-content-restricting-access-to-lambda.html | ✅ confirms the custom-header origin lock |
+| 5c | CloudFront relays chunked responses as received; Function URL streaming through CloudFront is not called out explicitly | RequestAndResponseBehaviorCustomOrigin.html | ⚠️ likely; probed in Step 2.6 with a 10 MiB download |
+| 5d | Managed policies: CachingDisabled `4135ea2d-6df8-44a3-9df3-4b5a84be39ad`; CachingOptimized `658327ea-f89d-4fab-a63d-7e88639e58f6`; AllViewerExceptHostHeader `b689b0a8-53d0-40ab-baf2-68738e2966ac` (meant for Function URL origins; includes viewer-location headers) | CloudFront using-managed-*-policies.html | — used in the template; a custom origin request policy names `CloudFront-Viewer-Address` explicitly rather than relying on "probably included" |
+| 6a | Neon pooler (PgBouncer ≥ 1.22) supports **protocol-level** prepared statements (`max_prepared_statements=1000`); SQL-level `PREPARE` is not supported | Neon connect/connection-pooling.md | ✅ psycopg 3 prepares at protocol level; `prepare_threshold=None` is still set for the pooled web engine as belt and braces (no measurable cost at this traffic) |
+| 6b | Neon Free: scale to zero after **5 min, fixed**; **1 GB** storage per project; 100 CU-hours/project/month | Neon introduction/plans.md, scale-to-zero.md | ⚠️ 1 GB is below the 2 GiB installation quota; the database is 8 MB today (Step 0.2), so Free fits now and a paid plan is needed only past 1 GB |
+| 6c | Neon AWS regions: us-east-1, us-east-2, us-west-2, **eu-central-1**, eu-west-2, ap-southeast-1, ap-southeast-2, sa-east-1 — **no eu-west-1** | Neon introduction/regions.md | ⚠️ region must be one Neon offers — eu-central-1 chosen |
+| 7 | SES email receiving is available in 22 regions **including eu-central-1**; receipt rule set, SNS topic and Lambda in one region | general/latest/gr/ses.html | ✅ |
+| 8 | API Gateway HTTP API integration timeout 30 s (fixed) | apigateway http-api-quotas.html | ✅ |
+| 9 | SAM: `FunctionUrlConfig.InvokeMode: RESPONSE_STREAM`; event `Type: ScheduleV2`; `ReservedConcurrentExecutions`; `EventInvokeConfig.MaximumRetryAttempts` 0–2. Reserved concurrency is capped at unreserved account concurrency minus 100 | SAM function properties; lambda configuration-concurrency.html | ✅ |
