@@ -18,7 +18,7 @@
 | Phase | Step | Title | Exec | Status | Commit |
 |-------|------|-------|------|--------|--------|
 | 0 | 0.1 | Record verified platform facts (spec Phase 0 step 1) | inline | done | 3fac4d9 |
-| 0 | 0.2 | Record the AWS account and production measurements (spec Phase 0 steps 2–4) | inline | todo | — |
+| 0 | 0.2 | Record the AWS account and production measurements (spec Phase 0 steps 2–4) | inline | done | b694c17 |
 | 1 | 1.1 | Characterize the receipt path (spec step 1) | dispatch | todo | — |
 | 1 | 1.2 | `INBOX_WORKER_MODE`, `INBOX_WORKER_FUNCTION`, `DB_POOL` settings (spec step 2) | dispatch | todo | — |
 | 1 | 1.3 | `WorkerKick` port and commit-then-kick in the receipt endpoint (spec step 3) | dispatch:capable | todo | — |

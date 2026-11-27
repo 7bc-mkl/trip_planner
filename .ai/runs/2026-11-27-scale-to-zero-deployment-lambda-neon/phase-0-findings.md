@@ -23,3 +23,13 @@ Checked against AWS documentation (docs.aws.amazon.com), the Lambda Web Adapter 
 | 7 | SES email receiving is available in 22 regions **including eu-central-1**; receipt rule set, SNS topic and Lambda in one region | general/latest/gr/ses.html | ✅ |
 | 8 | API Gateway HTTP API integration timeout 30 s (fixed) | apigateway http-api-quotas.html | ✅ |
 | 9 | SAM: `FunctionUrlConfig.InvokeMode: RESPONSE_STREAM`; event `Type: ScheduleV2`; `ReservedConcurrentExecutions`; `EventInvokeConfig.MaximumRetryAttempts` 0–2. Reserved concurrency is capped at unreserved account concurrency minus 100 | SAM function properties; lambda configuration-concurrency.html | ✅ |
+
+## AWS account and production (Step 0.2, measured 2026-11-27, profile `mkl`, account 919747048193)
+
+| Spec Phase 0 step | Finding | Consequence |
+|---|---|---|
+| 2 — inbox SNS dead-letter queue | **Production has no inbox.** The Hetzner `.env` sets no `INBOX_*` variable, and no SES receipt rule set is active in eu-central-1, eu-west-1 or us-east-1. The host runs revision `eaaddcb` (migration head `0006_item_reservation`), which predates the inbox | No production mail can be lost at cutover, and the Phase 2 isolation concern (a Lambda worker eating production mail) cannot arise. The Lambda stack's inbox is the first inbox deployment. The DLQ is still configured on the new subscription |
+| 3 — `botito.app` hosted zone | Hosted zone `Z06147722TLSJWJZMPBG` exists in this account, and the registrar delegates to its four `awsdns` name servers. `trips.botito.app` has no record; no MX exists on the zone | No delegation work; the stack owns `trips.botito.app` |
+| 4 — database size | `pg_database_size` = **8.2 MB**; one trip | Neon Free (1 GB) holds it with room; `pg_dump` takes seconds |
+| Region (A6) | `INBOX_AWS_REGION` is unset, so A6 has no value to inherit. **eu-central-1** is the one region where Neon (Frankfurt) and SES receiving both exist and that is closest to the owner | Lambda, worker, SES, SNS, bucket and Neon all in eu-central-1 |
+| Concurrency quota | Lambda `ConcurrentExecutions` = 1000 in eu-central-1 (not the reduced new-account quota) | Reserved concurrency 10 + 1 is settable |
