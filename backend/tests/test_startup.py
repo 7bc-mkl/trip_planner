@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import subprocess
 from pathlib import Path
@@ -158,6 +159,26 @@ class TestDeploymentArtifacts:
         assert "COPY --from=frontend" in dockerfile, "one image must carry both"
         assert "USER planner" in dockerfile, "the runtime must not be root"
 
+    def test_the_dockerfile_carries_the_pinned_lambda_web_adapter(self, deploy_dir: Path) -> None:
+        dockerfile = (deploy_dir / "Dockerfile").read_text()
+
+        copy = next(
+            line
+            for line in dockerfile.splitlines()
+            if line.endswith("/opt/extensions/lambda-adapter")
+        )
+        assert copy.startswith("COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:")
+        tag = copy.split("aws-lambda-adapter:")[1].split()[0]
+        assert tag != "latest"
+        assert re.fullmatch(r"\d+\.\d+\.\d+", tag), "pin a release, not a floating tag"
+        assert "/lambda-adapter /opt/extensions/lambda-adapter" in copy
+        assert "AWS_LWA_PORT=8000" in dockerfile
+        assert "AWS_LWA_READINESS_CHECK_PATH=/api/v1/health" in dockerfile
+        env_lines = [ln for ln in dockerfile.splitlines() if not ln.lstrip().startswith("#")]
+        assert "AWS_LWA_INVOKE_MODE" not in "\n".join(env_lines), (
+            "the web function sets response_stream; the worker stays buffered"
+        )
+
     def test_the_entrypoint_offers_a_migrate_release_step(self, deploy_dir: Path) -> None:
         """Migrations run before the new image takes traffic, so they need a hook."""
         entrypoint = (deploy_dir / "entrypoint.sh").read_text()
@@ -166,8 +187,10 @@ class TestDeploymentArtifacts:
         assert "--factory" in entrypoint, "startup must validate configuration first"
 
     @staticmethod
-    def _serve_argv(deploy_dir: Path, tmp_path: Path, **env: str) -> list[str]:
-        """Run `entrypoint.sh serve` against a stub `uvicorn` and return its argv."""
+    def _serve_argv(
+        deploy_dir: Path, tmp_path: Path, command: str = "serve", **env: str
+    ) -> list[str]:
+        """Run `entrypoint.sh <command>` against a stub `uvicorn` and return its argv."""
         sh = shutil.which("sh")
         if sh is None:
             pytest.skip("no POSIX sh available")
@@ -176,7 +199,7 @@ class TestDeploymentArtifacts:
         stub.chmod(0o755)
         base = {"PATH": f"{tmp_path}{os.pathsep}{os.environ.get('PATH', '')}"}
         result = subprocess.run(
-            [sh, str(deploy_dir / "entrypoint.sh"), "serve"],
+            [sh, str(deploy_dir / "entrypoint.sh"), command],
             env=base | env,
             capture_output=True,
             text=True,
@@ -227,6 +250,22 @@ class TestDeploymentArtifacts:
         ]
         assert "--proxy-headers" not in argv
         assert "--forwarded-allow-ips" not in argv
+
+    def test_worker_runs_the_worker_app_for_the_adapter_on_localhost(
+        self, deploy_dir: Path, tmp_path: Path
+    ) -> None:
+        argv = self._serve_argv(deploy_dir, tmp_path, "worker", PORT="8080")
+
+        assert argv == [
+            "trip_planner.worker_app:create_worker_app",
+            "--factory",
+            "--host",
+            "127.0.0.1",
+            "--port",
+            "8080",
+            "--no-server-header",
+            "--no-proxy-headers",
+        ]
 
     def test_uvicorn_would_trust_the_adapter_without_the_explicit_off_switch(self) -> None:
         """Why `--no-proxy-headers` is spelled out rather than the flags merely omitted.
@@ -334,9 +373,7 @@ class TestProductionDeploymentShape:
 
     def test_the_proxy_waits_for_the_app_to_be_healthy(self, compose: dict) -> None:
         """Otherwise the proxy answers 502 for the seconds the app spends booting."""
-        assert compose["services"]["caddy"]["depends_on"]["app"] == {
-            "condition": "service_healthy"
-        }
+        assert compose["services"]["caddy"]["depends_on"]["app"] == {"condition": "service_healthy"}
         assert "healthcheck" in compose["services"]["app"], "…which needs something to wait on"
 
     def test_the_proxy_sends_hsts(self, deploy_dir: Path) -> None:

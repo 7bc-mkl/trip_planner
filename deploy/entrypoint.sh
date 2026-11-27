@@ -46,6 +46,17 @@ case "${1:-serve}" in
       --no-server-header
     ;;
 
+  worker)
+    # The queue worker on Lambda. The adapter is the only caller, from localhost,
+    # so it binds loopback only; there are no viewers and no proxy headers to read.
+    exec uvicorn trip_planner.worker_app:create_worker_app \
+      --factory \
+      --host 127.0.0.1 \
+      --port "${PORT:-8000}" \
+      --no-server-header \
+      --no-proxy-headers
+    ;;
+
   migrate-and-serve)
     alembic upgrade head
     exec "$0" serve

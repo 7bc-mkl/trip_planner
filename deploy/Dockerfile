@@ -31,6 +31,19 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 # Pinned to a release, not a floating major, so a rebuild is reproducible.
 COPY --from=ghcr.io/astral-sh/uv:0.5.11 /uv /usr/local/bin/uv
 
+# The Lambda Web Adapter, pinned to a release so a rebuild is reproducible. It is a
+# Lambda extension: outside Lambda /opt/extensions is never read, so compose runs
+# this identical image with the adapter inert. Root-owned and executable, which is
+# all Lambda needs of it.
+COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:1.1.0 /lambda-adapter /opt/extensions/lambda-adapter
+
+# Where the adapter forwards invocations and which path it polls before it does.
+# AWS_LWA_INVOKE_MODE is deliberately not set here: the web function sets
+# response_stream in its own environment (SAM template) and the worker stays
+# buffered, so one image serves both.
+ENV AWS_LWA_PORT=8000 \
+    AWS_LWA_READINESS_CHECK_PATH=/api/v1/health
+
 WORKDIR /srv/app
 
 # Dependencies first, from the lockfile, so the layer caches independently of source.
