@@ -33,3 +33,20 @@ Checked against AWS documentation (docs.aws.amazon.com), the Lambda Web Adapter 
 | 4 — database size | `pg_database_size` = **8.2 MB**; one trip | Neon Free (1 GB) holds it with room; `pg_dump` takes seconds |
 | Region (A6) | `INBOX_AWS_REGION` is unset, so A6 has no value to inherit. **eu-central-1** is the one region where Neon (Frankfurt) and SES receiving both exist and that is closest to the owner | Lambda, worker, SES, SNS, bucket and Neon all in eu-central-1 |
 | Concurrency quota | Lambda `ConcurrentExecutions` = 1000 in eu-central-1 (not the reduced new-account quota) | Reserved concurrency 10 + 1 is settable |
+
+## Where the implementation differs from the spec (Step 2.9)
+
+The spec stays as merged: its Delta is the record of this change, and the archive rules say not to edit it. These are the corrections, carried into the PR body.
+
+| Spec said | What was built, and why |
+|---|---|
+| Secrets in SSM SecureString, "resolved by SAM at deploy time" | CloudFormation cannot resolve `ssm-secure` into a Lambda environment variable. `deploy.sh` reads the SecureStrings and passes them as `NoEcho` template parameters, through a 0600 `samconfig.toml` in a private temp directory, never on a command line. SSM stays the store; Secrets Manager was avoided because it is a standing cost |
+| `serve` drops `--forwarded-allow-ips '*'` on the Lambda target | Not enough: uvicorn turns proxy headers on by default and trusts 127.0.0.1, which is where LWA connects from. `serve` passes `--no-proxy-headers` (checkpoint 2 review, step 1.7-review-fix) |
+| Streamed-response limit "above 10 MiB (verify)" | 200 MB. Holds |
+| Region = `INBOX_AWS_REGION` (A6) | Unset in production, which has no inbox. **eu-central-1**: Neon has no eu-west-1, and SES receiving exists in eu-central-1 |
+| Phase 2: the Lambda inbox is isolated from the production topic and prefix | Moot: production has no inbox. The Lambda stack's inbox, `inbox@trips.botito.app`, is the first one, so Phase 3 has no SNS switch-over or DLQ redrive to do |
+| Neon storage for 2 GiB "likely above the free tier (verify)" | The Free tier is 1 GB per project; the database is 8.2 MB. Free fits; a paid plan is needed only past 1 GB |
+| HSTS from the app | The value is Caddy's, `max-age=63072000; includeSubDomains`, so the two targets agree |
+| Function URL `AuthType: NONE` | Function URLs created since October 2025 need `lambda:InvokeFunction` granted alongside `lambda:InvokeFunctionUrl`; the template grants it, restricted by `InvokedViaFunctionUrl` |
+| `CloudFront-Viewer-Address` added in an origin request policy | The managed `AllViewerExceptHostHeader` policy (`allExcept: host`) is used; whether it includes the viewer-address header is not documented, so Step 2.6 probes it |
+| A test owner is created in Phase 2 | The owner is created from the built image against the direct endpoint (`deploy/lambda/README.md`) |
