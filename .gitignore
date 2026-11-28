@@ -43,3 +43,4 @@ coverage/
 .idea/
 .vscode/
 *.swp
+.neon

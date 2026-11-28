@@ -37,6 +37,7 @@
 | 2 | 2.2 | `deploy/lambda/template.yaml` — functions, URL, schedule, CloudFront, DNS, IAM (spec Phase 2 step 1) | inline | done | 0018ed3 |
 | 2 | 2.3 | Inbox wiring for the Lambda stack — bucket, topic, SES receipt rule (spec Phase 2 step 5) | inline | done | 64f55e4 |
 | 2 | 2.4 | `deploy/lambda/deploy.sh` — the release script (spec Phase 2 step 2) | inline | done | 6c76d61 |
+| 2 | 2.4-neon | Link the Neon project (`neon init`, `neon.ts`) | inline | done | 873bcb1 |
 | 2 | 2.5 | Neon project and first deploy against an empty database (spec Phase 2 step 3) | inline | todo | — |
 | 2 | 2.6 | Smoke probes on `https://trips.botito.app`, recorded (spec Phase 2 steps 4–5) | inline | todo | — |
 | 2 | 2.7 | `deploy/lambda/README.md` and links (spec Phase 2 step 6) | inline | done | 2fc0aaa |
@@ -95,6 +96,9 @@ Steps 1.1–1.13 are spec Phase 1 steps 1–13, verbatim in scope; see the spec'
 
 #### 2.4 `deploy/lambda/deploy.sh`
 - Refuses a dirty tree; deploys `cert.yaml` when missing; builds and pushes the image to ECR; runs `migrate` in the built image against `DATABASE_URL_DIRECT`; `sam deploy`. Uses `AWS_PROFILE` from the caller.
+
+#### 2.4-neon Link the Neon project
+- `neon init` against the owner's project `broad-darkness-02702202` (aws-eu-central-1, branch `production`): `neon.ts` policy, `@neon/config` + `@neon/env` in a root `package.json`, `.neon` link file ignored. `neon deploy` pulls `DATABASE_URL` (pooled) and `DATABASE_URL_UNPOOLED` (direct) into `.env.local` (ignored); both go to SSM.
 
 #### 2.5 Neon project and first deploy
 - Neon project in the matching region, pooled and direct URLs into SSM SecureString; deploy; create a test owner. Record the outcome (no secrets) in the run folder.
