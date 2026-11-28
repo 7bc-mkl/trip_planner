@@ -42,7 +42,7 @@
 | 2 | 2.4-review-fix-2 | `deploy.sh` omits empty optional parameters | inline | done | 5862e0d |
 | 2 | 2.4-review-fix-3 | `deploy.sh` names the image repository for `sam deploy` | inline | done | 0830dd6 |
 | 2 | 2.5 | Neon project and first deploy against an empty database (spec Phase 2 step 3) | inline | done | 2689651 |
-| 2 | 2.6 | Smoke probes on `https://trips.botito.app`, recorded (spec Phase 2 steps 4–5) | inline | todo | — |
+| 2 | 2.6 | Smoke probes on `https://trips.botito.app`, recorded (spec Phase 2 steps 4–5) | inline | done | d6df898 |
 | 2 | 2.7 | `deploy/lambda/README.md` and links (spec Phase 2 step 6) | inline | done | 2fc0aaa |
 | 2 | 2.8 | Archive the Delta into the living capability specs (spec Phase 2 step 7) | dispatch:cheap | done | bc5213f |
 | 2 | 2.9 | Correct the spec's unverified assumptions from Phase 0 | inline | done | f5280fc |
