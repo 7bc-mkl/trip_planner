@@ -1,6 +1,6 @@
 # Handoff — 2026-11-27-scale-to-zero-deployment-lambda-neon
 
-**Last updated:** 2026-11-28T06:54:38Z
+**Last updated:** 2026-11-28T09:58:14Z
 **Branch:** feat/scale-to-zero-deployment-lambda-neon
 **PR:** https://github.com/7bc-mkl/trip_planner/pull/26 (ready for review; merge-queue + needs-qa)
 **Current phase/step:** complete — every Tasks row done
@@ -12,13 +12,13 @@
 
 ## Next concrete action
 - Owner: manual QA per the PR's QA instructions, then merge.
-- Then spec Phase 3 cutover (`deploy/lambda/README.md`, "Cutover from Hetzner") — needs the owner's go-ahead; it replaces the probe account with the real data.
+- Spec Phase 3 cutover is moot: Hetzner held no real data. Phase 4 (stop the Hetzner host, compare the month's cost) remains the owner's.
 
 ## Blockers / open questions
 - none for this PR. Phase 3/4 are owner-gated follow-ups.
 
 ## Environment caveats
-- Live: Lambda target deployed at b35e83f; probe owner `probe@trips.botito.app` (password in SSM `/trip-planner/probe-owner-password`), plus two probe trips — replaced by the cutover's `pg_restore --clean`.
+- Live: Lambda target deployed at b35e83f; owner `michal.klosinski@gmail.com` (password in SSM `/trip-planner/owner-password`); test data wiped.
 - Database/migration state: Neon at head (0009).
 
 ## Worktree

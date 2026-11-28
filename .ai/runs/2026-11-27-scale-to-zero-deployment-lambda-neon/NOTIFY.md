@@ -40,3 +40,6 @@
 - Review: independent reviewer found 1 major (drain spun on no-progress passes), 2 minor, 3 nits — all fixed (dee968e, b35e83f); re-review approved.
 - Decision: Phase 3 cutover left for the owner's go-ahead after merge.
 - PR: https://github.com/7bc-mkl/trip_planner/pull/26
+
+## 2026-11-28T09:58:14Z — owner account
+- The owner said Hetzner holds no real data, so the cutover is moot. The Neon test data was wiped, and owner `michal.klosinski@gmail.com` was created (password in SSM). Sign-in was verified.

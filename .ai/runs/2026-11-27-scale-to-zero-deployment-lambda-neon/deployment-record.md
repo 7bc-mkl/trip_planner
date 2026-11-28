@@ -49,3 +49,9 @@ Idle from 06:20:04 to 06:41:04 UTC (21 minutes); the probe ran at 06:41:04.
 **Zero compute while idle.** Neon's operation log shows `suspend_compute` at 06:25:45 and the next `start_compute` at 06:41:13, which was the probe. The probe's Lambda request paid a fresh init, so no instance was left running.
 
 During the idle window, internet scanners sent 277 requests for paths like `/.env` and `phpinfo.php`, presumably after finding the new hostname in certificate-transparency logs. Each got the SPA's `index.html` (not any real file), and none touched the database, so Neon stayed suspended. This is the cost floor of any public hostname: it wakes Lambda for milliseconds, not the database.
+
+## Owner account and cutover (2026-11-28)
+
+- **No cutover needed.** The owner confirmed the Hetzner deployment holds no real data, so spec Phase 3's dump and restore are moot.
+- **Test data wiped.** All application tables on Neon were truncated: the probe owner, the probe trips, the test attachments and the test inbox messages. The schema stays at head (`0009`), and the leftover test MIME objects were removed from the inbox bucket.
+- **Owner account.** `michal.klosinski@gmail.com` (locale `pl`) was created from the deployed image. Its generated password is in SSM `/trip-planner/owner-password` (SecureString). Sign-in was verified (204), and `/me` returned the new owner. `/trip-planner/probe-owner-password` was deleted.
