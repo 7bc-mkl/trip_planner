@@ -150,6 +150,9 @@ toml_string() {
 		"InboxModelMonthlyBudget=${INBOX_MODEL_MONTHLY_BUDGET}" \
 		"InboxModelInputPrice=${INBOX_MODEL_INPUT_PRICE}" \
 		"InboxModelOutputPrice=${INBOX_MODEL_OUTPUT_PRICE}"; do
+		# SAM rejects an empty `Key=`; an unset optional keeps the template's
+		# default, which is the same empty string.
+		[ -n "${pair#*=}" ] || continue
 		echo "  $(toml_string "$pair"),"
 	done
 	echo ']'

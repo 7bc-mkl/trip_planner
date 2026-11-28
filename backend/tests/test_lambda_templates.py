@@ -260,3 +260,10 @@ class TestDeployScript:
             if stripped.startswith(("docker run", "sam deploy", "aws cloudformation deploy")):
                 for name in ("SESSION_SECRET", "ORIGIN_VERIFY_SECRET", "DATABASE_URL_"):
                     assert name not in stripped, stripped
+
+
+def test_deploy_script_omits_empty_parameter_overrides() -> None:
+    """SAM refuses `Key=` with no value, so unset optionals must be left out."""
+    script = (LAMBDA_DIR / "deploy.sh").read_text()
+    loop = script[script.index('"ImageUri=${IMAGE}"') :]
+    assert '[ -n "${pair#*=}" ] || continue' in loop.split("done", 1)[0]
