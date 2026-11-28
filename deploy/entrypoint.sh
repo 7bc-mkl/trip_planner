@@ -19,12 +19,42 @@ case "${1:-serve}" in
     # --factory: the app is built by a function that validates configuration
     # first, so a missing variable is a startup crash naming it rather than a
     # confusing failure on the first request.
+    #
+    # CLIENT_IP_SOURCE=cloudfront (the Lambda target): no proxy headers. Behind a
+    # Function URL, X-Forwarded-For is viewer-controlled, and proxy headers
+    # would rewrite the client address from it. Omitting --proxy-headers is not
+    # enough: uvicorn enables them by default and trusts 127.0.0.1, which is
+    # exactly where the Lambda Web Adapter connects from — so they are turned
+    # off explicitly. Normalised the
+    # way config.py reads it, so " CloudFront " cannot pick the app's rule while
+    # leaving the proxy headers on.
+    client_ip_source=$(printf '%s' "${CLIENT_IP_SOURCE:-}" | tr -d '[:space:]' | tr '[:upper:]' '[:lower:]')
+    if [ "$client_ip_source" = "cloudfront" ]; then
+      exec uvicorn trip_planner.app:create_production_app \
+        --factory \
+        --host 0.0.0.0 \
+        --port "${PORT:-8000}" \
+        --no-proxy-headers \
+        --no-server-header
+    fi
     exec uvicorn trip_planner.app:create_production_app \
       --factory \
       --host 0.0.0.0 \
       --port "${PORT:-8000}" \
       --proxy-headers \
-      --forwarded-allow-ips '*'
+      --forwarded-allow-ips '*' \
+      --no-server-header
+    ;;
+
+  worker)
+    # The queue worker on Lambda. The adapter is the only caller, from localhost,
+    # so it binds loopback only; there are no viewers and no proxy headers to read.
+    exec uvicorn trip_planner.worker_app:create_worker_app \
+      --factory \
+      --host 127.0.0.1 \
+      --port "${PORT:-8000}" \
+      --no-server-header \
+      --no-proxy-headers
     ;;
 
   migrate-and-serve)

@@ -1,0 +1,35 @@
+# The TLS certificate for the Lambda target's hostname.
+#
+# A stack of its own because CloudFront accepts ACM certificates from us-east-1
+# only, while the application stack lives in the inbox's region (eu-central-1).
+# deploy.sh deploys this first, and only when it is missing; its output ARN is
+# passed to template.yaml as a parameter.
+#
+# DNS validation writes its CNAME into the same Route 53 zone that later carries
+# the A/AAAA aliases, so the certificate renews without anyone touching it.
+AWSTemplateFormatVersion: "2010-09-09"
+Description: trip-planner — ACM certificate for the Lambda target (us-east-1, for CloudFront)
+
+Parameters:
+  DomainName:
+    Type: String
+    Default: trips.botito.app
+    Description: The public hostname CloudFront serves.
+  HostedZoneId:
+    Type: AWS::Route53::HostedZone::Id
+    Description: The Route 53 zone that owns DomainName (botito.app).
+
+Resources:
+  Certificate:
+    Type: AWS::CertificateManager::Certificate
+    Properties:
+      DomainName: !Ref DomainName
+      ValidationMethod: DNS
+      DomainValidationOptions:
+        - DomainName: !Ref DomainName
+          HostedZoneId: !Ref HostedZoneId
+
+Outputs:
+  CertificateArn:
+    Description: Pass to template.yaml as CertificateArn.
+    Value: !Ref Certificate

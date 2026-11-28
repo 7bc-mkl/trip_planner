@@ -113,8 +113,8 @@ import { ApiError } from '../../api/client'
  * ever being in both at once, and why both read the same key.
  */
 
-/** The server's per-attachment ceiling, mirrored for the pre-check only. */
-export const MAX_UPLOAD_BYTES = 10 * 1024 * 1024
+/** The server's per-file upload limit (4 MiB, D26), mirrored for the pre-check only. */
+export const MAX_UPLOAD_BYTES = 4 * 1024 * 1024
 
 /** Mirrored for the pre-check and for the picker's `accept`, in that order of importance. */
 export const ACCEPTED_EXTENSIONS = ['.pdf', '.jpg', '.jpeg', '.png'] as const

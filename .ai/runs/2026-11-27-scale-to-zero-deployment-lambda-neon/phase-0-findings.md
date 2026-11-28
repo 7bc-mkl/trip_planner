@@ -1,0 +1,52 @@
+# Phase 0 findings
+
+## Platform facts (Step 0.1, verified 2026-11-27)
+
+Checked against AWS documentation (docs.aws.amazon.com), the Lambda Web Adapter repository (now `github.com/aws/aws-lambda-web-adapter`; the awslabs URL redirects) and the Neon docs source. "Spec" = what `.ai/specs/2026-11-27-scale-to-zero-deployment-lambda-neon.md` assumed.
+
+| # | Fact | Source | Spec |
+|---|---|---|---|
+| 1 | Synchronous invoke payload: 6 MB request, 6 MB response. A Function URL base64-encodes binary bodies (`isBase64Encoded`), so a usable binary upload is ≈4.4–4.5 MB | lambda/latest/dg/gettingstarted-limits.html, urls-invocation.html | ✅ matches |
+| 2 | `RESPONSE_STREAM` maximum response is **200 MB** (first 6 MB uncapped, then 2 MB/s). The request stays under the 6 MB synchronous quota | lambda/latest/dg/config-rs-invoke-furls.html, configuration-response-streaming.html | ✅ "above 10 MiB" holds |
+| 3a | LWA latest release **v1.1.0** (2026-09-18): `COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:1.1.0 /lambda-adapter /opt/extensions/lambda-adapter` | LWA README, releases | ✅ |
+| 3b | Variables: `AWS_LWA_PORT` (default 8080, falls back to `PORT`), `AWS_LWA_READINESS_CHECK_PATH` (default `/`), `AWS_LWA_INVOKE_MODE` (`buffered` \| `response_stream`), `AWS_LWA_PASS_THROUGH_PATH` (default **`/events`**), `AWS_LWA_ASYNC_INIT` | LWA docs/guide/configuration | ✅ names and `/events` confirmed |
+| 3c | Readiness: GET every 10 ms; ready when status is 100–499 (`AWS_LWA_READINESS_CHECK_HEALTHY_STATUS`) | LWA readiness-check.md | ✅ |
+| 3d | Non-HTTP events (async invoke payloads, Scheduler events): LWA POSTs the event JSON to `http://127.0.0.1:{port}/events` | LWA non-http-events.md, src/lib.rs | ✅ |
+| 4 | How a Function URL treats a client-supplied `X-Forwarded-For` is **not documented**. The only documented trustworthy source is `requestContext.http.sourceIp`, which is a CloudFront edge IP behind CloudFront | lambda urls-invocation.html | ⚠️ unverified — the design does not depend on it: client IP comes from `CloudFront-Viewer-Address` on origin-verified requests |
+| 5a | `CloudFront-Viewer-Address` = `ip:port` (e.g. `198.51.100.10:46532`); addable in an origin request policy, not a cache policy. IPv6 format and overwrite of a viewer-sent header are not documented. CloudFront *appends* to a viewer-sent `X-Forwarded-For` | CloudFront adding-cloudfront-headers.html, RequestAndResponseBehaviorCustomOrigin.html | ⚠️ parse by splitting on the **last** `:`; the header is trusted only after origin verification, and tests pin IPv6 |
+| 5b | OAC with a Lambda URL origin requires clients to send `x-amz-content-sha256` on PUT/POST ("Lambda doesn't support unsigned payloads") and `AuthType: AWS_IAM` | CloudFront private-content-restricting-access-to-lambda.html | ✅ confirms the custom-header origin lock |
+| 5c | CloudFront relays chunked responses as received; Function URL streaming through CloudFront is not called out explicitly | RequestAndResponseBehaviorCustomOrigin.html | ⚠️ likely; probed in Step 2.6 with a 10 MiB download |
+| 5d | Managed policies: CachingDisabled `4135ea2d-6df8-44a3-9df3-4b5a84be39ad`; CachingOptimized `658327ea-f89d-4fab-a63d-7e88639e58f6`; AllViewerExceptHostHeader `b689b0a8-53d0-40ab-baf2-68738e2966ac` (meant for Function URL origins; includes viewer-location headers) | CloudFront using-managed-*-policies.html | — used in the template; a custom origin request policy names `CloudFront-Viewer-Address` explicitly rather than relying on "probably included" |
+| 6a | Neon pooler (PgBouncer ≥ 1.22) supports **protocol-level** prepared statements (`max_prepared_statements=1000`); SQL-level `PREPARE` is not supported | Neon connect/connection-pooling.md | ✅ psycopg 3 prepares at protocol level; `prepare_threshold=None` is still set for the pooled web engine as belt and braces (no measurable cost at this traffic) |
+| 6b | Neon Free: scale to zero after **5 min, fixed**; **1 GB** storage per project; 100 CU-hours/project/month | Neon introduction/plans.md, scale-to-zero.md | ⚠️ 1 GB is below the 2 GiB installation quota; the database is 8 MB today (Step 0.2), so Free fits now and a paid plan is needed only past 1 GB |
+| 6c | Neon AWS regions: us-east-1, us-east-2, us-west-2, **eu-central-1**, eu-west-2, ap-southeast-1, ap-southeast-2, sa-east-1 — **no eu-west-1** | Neon introduction/regions.md | ⚠️ region must be one Neon offers — eu-central-1 chosen |
+| 7 | SES email receiving is available in 22 regions **including eu-central-1**; receipt rule set, SNS topic and Lambda in one region | general/latest/gr/ses.html | ✅ |
+| 8 | API Gateway HTTP API integration timeout 30 s (fixed) | apigateway http-api-quotas.html | ✅ |
+| 9 | SAM: `FunctionUrlConfig.InvokeMode: RESPONSE_STREAM`; event `Type: ScheduleV2`; `ReservedConcurrentExecutions`; `EventInvokeConfig.MaximumRetryAttempts` 0–2. Reserved concurrency is capped at unreserved account concurrency minus 100 | SAM function properties; lambda configuration-concurrency.html | ✅ |
+
+## AWS account and production (Step 0.2, measured 2026-11-27, profile `mkl`, account 919747048193)
+
+| Spec Phase 0 step | Finding | Consequence |
+|---|---|---|
+| 2 — inbox SNS dead-letter queue | **Production has no inbox.** The Hetzner `.env` sets no `INBOX_*` variable, and no SES receipt rule set is active in eu-central-1, eu-west-1 or us-east-1. The host runs revision `eaaddcb` (migration head `0006_item_reservation`), which predates the inbox | No production mail can be lost at cutover, and the Phase 2 isolation concern (a Lambda worker eating production mail) cannot arise. The Lambda stack's inbox is the first inbox deployment. The DLQ is still configured on the new subscription |
+| 3 — `botito.app` hosted zone | Hosted zone `Z06147722TLSJWJZMPBG` exists in this account, and the registrar delegates to its four `awsdns` name servers. `trips.botito.app` has no record; no MX exists on the zone | No delegation work; the stack owns `trips.botito.app` |
+| 4 — database size | `pg_database_size` = **8.2 MB**; one trip | Neon Free (1 GB) holds it with room; `pg_dump` takes seconds |
+| Region (A6) | `INBOX_AWS_REGION` is unset, so A6 has no value to inherit. **eu-central-1** is the one region where Neon (Frankfurt) and SES receiving both exist and that is closest to the owner | Lambda, worker, SES, SNS, bucket and Neon all in eu-central-1 |
+| Concurrency quota | Lambda `ConcurrentExecutions` = 1000 in eu-central-1 (not the reduced new-account quota) | Reserved concurrency 10 + 1 is settable |
+
+## Where the implementation differs from the spec (Step 2.9)
+
+The spec stays as merged: its Delta is the record of this change, and the archive rules say not to edit it. These are the corrections, carried into the PR body.
+
+| Spec said | What was built, and why |
+|---|---|
+| Secrets in SSM SecureString, "resolved by SAM at deploy time" | CloudFormation cannot resolve `ssm-secure` into a Lambda environment variable. `deploy.sh` reads the SecureStrings and passes them as `NoEcho` template parameters, through a 0600 `samconfig.toml` in a private temp directory, never on a command line. SSM stays the store; Secrets Manager was avoided because it is a standing cost |
+| `serve` drops `--forwarded-allow-ips '*'` on the Lambda target | Not enough: uvicorn turns proxy headers on by default and trusts 127.0.0.1, which is where LWA connects from. `serve` passes `--no-proxy-headers` (checkpoint 2 review, step 1.7-review-fix) |
+| Streamed-response limit "above 10 MiB (verify)" | 200 MB. Holds |
+| Region = `INBOX_AWS_REGION` (A6) | Unset in production, which has no inbox. **eu-central-1**: Neon has no eu-west-1, and SES receiving exists in eu-central-1 |
+| Phase 2: the Lambda inbox is isolated from the production topic and prefix | Moot: production has no inbox. The Lambda stack's inbox, `inbox@trips.botito.app`, is the first one, so Phase 3 has no SNS switch-over or DLQ redrive to do |
+| Neon storage for 2 GiB "likely above the free tier (verify)" | The Free tier is 1 GB per project; the database is 8.2 MB. Free fits; a paid plan is needed only past 1 GB |
+| HSTS from the app | The value is Caddy's, `max-age=63072000; includeSubDomains`, so the two targets agree |
+| Function URL `AuthType: NONE` | Function URLs created since October 2025 need `lambda:InvokeFunction` granted alongside `lambda:InvokeFunctionUrl`; the template grants it, restricted by `InvokedViaFunctionUrl` |
+| `CloudFront-Viewer-Address` added in an origin request policy | The managed `AllViewerExceptHostHeader` policy (`allExcept: host`) is used; whether it includes the viewer-address header is not documented, so Step 2.6 probes it |
+| A test owner is created in Phase 2 | The owner is created from the built image against the direct endpoint (`deploy/lambda/README.md`) |

@@ -218,6 +218,88 @@ def test_a_genuine_notification_records_that_mail_arrived(
     assert stored[0].from_address == "owner@example.com"
 
 
+def test_an_accepted_notification_is_committed_before_the_request_ends_and_calls_nothing_else(
+    inbox_app: FastAPI,
+    engine: sa.Engine,
+    verifier: _OfflineVerifier,
+    signing_key: rsa.RSAPrivateKey,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Characterization: the row is durable when the response is, and nothing else is reached.
+
+    The shared `db_session` fixture hides commits inside an outer transaction, so
+    this test uses the real `get_db` against the throwaway database and then reads
+    the row from a **separate connection** — visible only if it was committed.
+    The outbound side is pinned the same way: the one certificate fetch the
+    verifier makes (faked), no S3 / boto3 client, no redirect-free fetch, and no
+    new Python-level socket.
+    """
+    import socket
+    import urllib.request
+
+    import boto3
+
+    from trip_planner.api import deps
+    from trip_planner.inbound import ses as ses_module
+
+    committed = sa.orm.sessionmaker(bind=engine, expire_on_commit=False, future=True)
+    monkeypatch.setattr(deps, "get_sessionmaker", lambda: committed)
+    inbox_app.dependency_overrides.pop(deps.get_db, None)
+
+    outbound: list[str] = []
+
+    def _no_socket(self: socket.socket, address: Any) -> None:
+        outbound.append(f"socket {address!r}")
+        raise AssertionError(f"unexpected outbound connection to {address!r}")
+
+    def _no_fetch(url: str, **_: object) -> bytes:
+        outbound.append(f"fetch {url}")
+        raise AssertionError(f"unexpected outbound fetch of {url}")
+
+    def _no_boto(*args: object, **_: object) -> None:
+        outbound.append(f"boto3 {args!r}")
+        raise AssertionError("unexpected AWS client")
+
+    monkeypatch.setattr(socket.socket, "connect", _no_socket)
+    monkeypatch.setattr(ses_module, "open_without_redirects", _no_fetch)
+    monkeypatch.setattr(urllib.request, "urlopen", _no_fetch)
+    monkeypatch.setattr(boto3, "client", _no_boto)
+
+    with engine.begin() as connection:
+        owner_id = connection.execute(
+            sa.insert(Owner)
+            .values(email="receipt-owner@example.com", password_hash="x")
+            .returning(Owner.id)
+        ).scalar_one()
+
+    try:
+        with TestClient(inbox_app, base_url="http://testserver") as client:
+            response = client.post(RECEIPTS, json=notification(signing_key))
+
+        assert response.status_code == 200, response.text
+
+        # A different connection, with no access to the request's transaction.
+        with engine.connect() as other:
+            rows = other.execute(
+                sa.select(InboundMessage.ses_message_id, InboundMessage.owner_id)
+            ).all()
+            stamped = other.execute(
+                sa.select(InboundDeliveryStatus.last_received_at).where(
+                    InboundDeliveryStatus.owner_id == owner_id
+                )
+            ).scalar_one_or_none()
+        assert [tuple(row) for row in rows] == [("ses-message-0001", owner_id)]
+        assert stamped is not None
+
+        assert verifier.fetches == [CERT_URL]
+        assert outbound == []
+    finally:
+        with engine.begin() as connection:
+            connection.execute(sa.delete(InboundMessage))
+            connection.execute(sa.delete(InboundDeliveryStatus))
+            connection.execute(sa.delete(Owner).where(Owner.id == owner_id))
+
+
 def test_a_recorded_delivery_carries_no_body_and_no_document(
     sns: TestClient, db_session: OrmSession, signing_key: rsa.RSAPrivateKey
 ) -> None:
@@ -628,3 +710,163 @@ def test_an_unconfigured_deployment_builds_no_aws_client(settings: Settings) -> 
     the suite itself free of AWS.
     """
     assert settings.inbox is None
+
+
+# --------------------------------------------------------------------------- #
+# The Lambda target: commit, then kick the worker function
+# --------------------------------------------------------------------------- #
+
+
+class _FakeKick:
+    """Stands in for `WorkerKick`; records what the row looked like when it fired."""
+
+    def __init__(self, engine: sa.Engine, *, fail: bool = False) -> None:
+        self._engine = engine
+        self._fail = fail
+        self.calls = 0
+        self.visible_at_kick: list[str] = []
+
+    def kick(self) -> None:
+        self.calls += 1
+        # A separate connection: it sees the row only if it was committed.
+        with self._engine.connect() as other:
+            self.visible_at_kick = list(
+                other.execute(sa.select(InboundMessage.ses_message_id)).scalars()
+            )
+        if self._fail:
+            raise RuntimeError("arn:aws:lambda:secret-looking-detail")
+
+
+@pytest.fixture
+def committed_receipts(
+    inbox_app: FastAPI, engine: sa.Engine, monkeypatch: pytest.MonkeyPatch
+) -> Iterator[Any]:
+    """The real `get_db` against the throwaway database, and an owner committed to it.
+
+    Yields a function `(mode, kick) -> TestClient-ready app` that sets the worker
+    mode and installs the fake kick through the module's seam.
+    """
+    from dataclasses import replace
+
+    from trip_planner.api import deps
+    from trip_planner.api import inbox as inbox_module
+    from trip_planner.config import get_settings
+
+    committed = sa.orm.sessionmaker(bind=engine, expire_on_commit=False, future=True)
+    monkeypatch.setattr(deps, "get_sessionmaker", lambda: committed)
+    inbox_app.dependency_overrides.pop(deps.get_db, None)
+    base_settings = inbox_app.dependency_overrides[get_settings]()
+
+    with engine.begin() as connection:
+        owner_id = connection.execute(
+            sa.insert(Owner)
+            .values(email="kick-owner@example.com", password_hash="x")
+            .returning(Owner.id)
+        ).scalar_one()
+
+    previous = inbox_module._kick_factory
+
+    def configure(mode: str, kick: _FakeKick) -> FastAPI:
+        settings = replace(
+            base_settings,
+            inbox_worker_mode=mode,
+            inbox_worker_function="trip-planner-worker" if mode == "lambda" else None,
+        )
+        inbox_app.dependency_overrides[get_settings] = lambda: settings
+        inbox_module.set_worker_kick_factory(lambda _settings: kick)  # type: ignore[arg-type,return-value]
+        return inbox_app
+
+    try:
+        yield configure
+    finally:
+        inbox_module.set_worker_kick_factory(previous)
+        with engine.begin() as connection:
+            connection.execute(sa.delete(InboundMessage))
+            connection.execute(sa.delete(InboundDeliveryStatus))
+            connection.execute(sa.delete(Owner).where(Owner.id == owner_id))
+
+
+def _stored_ids(engine: sa.Engine) -> list[str]:
+    with engine.connect() as other:
+        return list(other.execute(sa.select(InboundMessage.ses_message_id)).scalars())
+
+
+def test_on_the_lambda_target_the_row_is_committed_before_the_worker_is_kicked(
+    committed_receipts: Any, engine: sa.Engine, signing_key: rsa.RSAPrivateKey
+) -> None:
+    kick = _FakeKick(engine)
+    app = committed_receipts("lambda", kick)
+
+    with TestClient(app, base_url="http://testserver") as client:
+        response = client.post(RECEIPTS, json=notification(signing_key))
+
+    assert response.status_code == 200, response.text
+    assert kick.calls == 1
+    assert kick.visible_at_kick == ["ses-message-0001"]
+
+
+def test_a_failed_kick_is_logged_and_still_answers_200_with_the_row_durable(
+    committed_receipts: Any,
+    engine: sa.Engine,
+    signing_key: rsa.RSAPrivateKey,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    kick = _FakeKick(engine, fail=True)
+    app = committed_receipts("lambda", kick)
+
+    with (
+        caplog.at_level("WARNING", logger="trip_planner.api.inbox"),
+        TestClient(app, base_url="http://testserver") as client,
+    ):
+        response = client.post(RECEIPTS, json=notification(signing_key))
+
+    assert response.status_code == 200, response.text
+    assert kick.calls == 1
+    assert _stored_ids(engine) == ["ses-message-0001"]
+    logged = [r.getMessage() for r in caplog.records if "kick the worker" in r.getMessage()]
+    assert logged and "RuntimeError" in logged[0]
+    # The exception's text — which for AWS can carry ARNs — stays out of the log.
+    assert all("secret-looking-detail" not in r.getMessage() for r in caplog.records)
+
+
+def test_a_redelivered_notification_does_not_kick_the_worker_again(
+    committed_receipts: Any, engine: sa.Engine, signing_key: rsa.RSAPrivateKey
+) -> None:
+    kick = _FakeKick(engine)
+    app = committed_receipts("lambda", kick)
+
+    with TestClient(app, base_url="http://testserver") as client:
+        assert client.post(RECEIPTS, json=notification(signing_key)).status_code == 200
+        assert client.post(RECEIPTS, json=notification(signing_key)).status_code == 200
+
+    assert kick.calls == 1
+    assert _stored_ids(engine) == ["ses-message-0001"]
+
+
+def test_on_the_thread_target_the_worker_is_never_kicked(
+    committed_receipts: Any, engine: sa.Engine, signing_key: rsa.RSAPrivateKey
+) -> None:
+    kick = _FakeKick(engine)
+    app = committed_receipts("thread", kick)
+
+    with TestClient(app, base_url="http://testserver") as client:
+        response = client.post(RECEIPTS, json=notification(signing_key))
+
+    assert response.status_code == 200, response.text
+    assert kick.calls == 0
+    assert _stored_ids(engine) == ["ses-message-0001"]
+
+
+def test_a_refused_notification_does_not_kick_the_worker(
+    committed_receipts: Any, engine: sa.Engine, signing_key: rsa.RSAPrivateKey
+) -> None:
+    kick = _FakeKick(engine)
+    app = committed_receipts("lambda", kick)
+    forged = notification(signing_key) | {"Message": json.dumps(ses_event(ses_message_id="x"))}
+
+    with TestClient(app, base_url="http://testserver") as client:
+        response = client.post(RECEIPTS, json=forged)
+
+    assert response.status_code == 403
+    assert kick.calls == 0
+    assert _stored_ids(engine) == []

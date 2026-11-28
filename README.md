@@ -41,7 +41,7 @@ authority for each cut" table before assuming anything there is a product decisi
 | Frontend | React 19 + TypeScript (strict) + Vite, managed by `npm` |
 | i18n | `react-i18next` + `i18next-icu` |
 | Auth | Opaque server-side session in an `HttpOnly` cookie, plus a CSRF token; Argon2 password hashing |
-| Deployment | One container image serving both the API and the built SPA from a single origin |
+| Deployment | One container image serving both the API and the built SPA from a single origin — on a Docker host behind Caddy (`deploy/README.md`), or scaled to zero on AWS Lambda + Neon (`deploy/lambda/README.md`) |
 
 Never call `pip` directly, and do not swap `npm` for pnpm/yarn/bun — both lockfiles are
 committed and are the source of dependency truth.
@@ -61,6 +61,7 @@ frontend/                React SPA
   src/features/          auth/ and trips/ screens, with colocated tests
   src/locales/           en.json / pl.json — kept in sync by the gate
 deploy/                  Dockerfile, entrypoint, compose files
+  lambda/                The scale-to-zero target: SAM template, certificate stack, release script
 scripts/check_locales.py Locale parity gate (plain python3, no deps)
 scripts/check_css_tokens.py  CSS token completeness gate (plain python3, no deps)
 scripts/check_contrast.py    WCAG contrast gate over tokens.css (plain python3, no deps)

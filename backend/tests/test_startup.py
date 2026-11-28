@@ -8,6 +8,10 @@ that starts with a default, serves wrongly, and is diagnosed hours later.
 from __future__ import annotations
 
 import json
+import os
+import re
+import shutil
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -155,12 +159,127 @@ class TestDeploymentArtifacts:
         assert "COPY --from=frontend" in dockerfile, "one image must carry both"
         assert "USER planner" in dockerfile, "the runtime must not be root"
 
+    def test_the_dockerfile_carries_the_pinned_lambda_web_adapter(self, deploy_dir: Path) -> None:
+        dockerfile = (deploy_dir / "Dockerfile").read_text()
+
+        copy = next(
+            line
+            for line in dockerfile.splitlines()
+            if line.endswith("/opt/extensions/lambda-adapter")
+        )
+        assert copy.startswith("COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:")
+        tag = copy.split("aws-lambda-adapter:")[1].split()[0]
+        assert tag != "latest"
+        assert re.fullmatch(r"\d+\.\d+\.\d+", tag), "pin a release, not a floating tag"
+        assert "/lambda-adapter /opt/extensions/lambda-adapter" in copy
+        assert "AWS_LWA_PORT=8000" in dockerfile
+        assert "AWS_LWA_READINESS_CHECK_PATH=/api/v1/health" in dockerfile
+        env_lines = [ln for ln in dockerfile.splitlines() if not ln.lstrip().startswith("#")]
+        assert "AWS_LWA_INVOKE_MODE" not in "\n".join(env_lines), (
+            "the web function sets response_stream; the worker stays buffered"
+        )
+
     def test_the_entrypoint_offers_a_migrate_release_step(self, deploy_dir: Path) -> None:
         """Migrations run before the new image takes traffic, so they need a hook."""
         entrypoint = (deploy_dir / "entrypoint.sh").read_text()
 
         assert "alembic upgrade head" in entrypoint
         assert "--factory" in entrypoint, "startup must validate configuration first"
+
+    @staticmethod
+    def _serve_argv(
+        deploy_dir: Path, tmp_path: Path, command: str = "serve", **env: str
+    ) -> list[str]:
+        """Run `entrypoint.sh <command>` against a stub `uvicorn` and return its argv."""
+        sh = shutil.which("sh")
+        if sh is None:
+            pytest.skip("no POSIX sh available")
+        stub = tmp_path / "uvicorn"
+        stub.write_text('#!/bin/sh\nfor a in "$@"; do printf \'%s\\n\' "$a"; done\n')
+        stub.chmod(0o755)
+        base = {"PATH": f"{tmp_path}{os.pathsep}{os.environ.get('PATH', '')}"}
+        result = subprocess.run(
+            [sh, str(deploy_dir / "entrypoint.sh"), command],
+            env=base | env,
+            capture_output=True,
+            text=True,
+            check=True,
+            timeout=10,
+        )
+        return result.stdout.splitlines()
+
+    def test_the_entrypoint_is_valid_posix_sh(self, deploy_dir: Path) -> None:
+        sh = shutil.which("sh")
+        if sh is None:
+            pytest.skip("no POSIX sh available")
+        subprocess.run([sh, "-n", str(deploy_dir / "entrypoint.sh")], check=True, timeout=10)
+
+    def test_serve_trusts_proxy_headers_by_default(self, deploy_dir: Path, tmp_path: Path) -> None:
+        """Behind Caddy, which replaces X-Forwarded-For: today's command line."""
+        argv = self._serve_argv(deploy_dir, tmp_path)
+
+        assert argv == [
+            "trip_planner.app:create_production_app",
+            "--factory",
+            "--host",
+            "0.0.0.0",
+            "--port",
+            "8000",
+            "--proxy-headers",
+            "--forwarded-allow-ips",
+            "*",
+            "--no-server-header",
+        ]
+
+    @pytest.mark.parametrize("value", ["cloudfront", " CloudFront "])
+    def test_serve_ignores_proxy_headers_on_the_cloudfront_target(
+        self, deploy_dir: Path, tmp_path: Path, value: str
+    ) -> None:
+        """Otherwise uvicorn rewrites `request.client` from a viewer-controlled header."""
+        argv = self._serve_argv(deploy_dir, tmp_path, CLIENT_IP_SOURCE=value, PORT="8080")
+
+        assert argv == [
+            "trip_planner.app:create_production_app",
+            "--factory",
+            "--host",
+            "0.0.0.0",
+            "--port",
+            "8080",
+            "--no-proxy-headers",
+            "--no-server-header",
+        ]
+        assert "--proxy-headers" not in argv
+        assert "--forwarded-allow-ips" not in argv
+
+    def test_worker_runs_the_worker_app_for_the_adapter_on_localhost(
+        self, deploy_dir: Path, tmp_path: Path
+    ) -> None:
+        argv = self._serve_argv(deploy_dir, tmp_path, "worker", PORT="8080")
+
+        assert argv == [
+            "trip_planner.worker_app:create_worker_app",
+            "--factory",
+            "--host",
+            "127.0.0.1",
+            "--port",
+            "8080",
+            "--no-server-header",
+            "--no-proxy-headers",
+        ]
+
+    def test_uvicorn_would_trust_the_adapter_without_the_explicit_off_switch(self) -> None:
+        """Why `--no-proxy-headers` is spelled out rather than the flags merely omitted.
+
+        uvicorn's defaults enable proxy headers and trust 127.0.0.1 — the address
+        the Lambda Web Adapter connects from — so omitting the flags would still
+        let a viewer's X-Forwarded-For become `request.client`.
+        """
+        import uvicorn
+
+        defaults = uvicorn.Config(app=None)
+        assert defaults.proxy_headers is True
+        assert "127.0.0.1" in str(defaults.forwarded_allow_ips)
+        assert uvicorn.Config(app=None, proxy_headers=False).proxy_headers is False
 
     def test_the_compose_file_runs_migrations_before_the_app(self, deploy_dir: Path) -> None:
         compose = (deploy_dir / "compose.yml").read_text()
@@ -254,9 +373,7 @@ class TestProductionDeploymentShape:
 
     def test_the_proxy_waits_for_the_app_to_be_healthy(self, compose: dict) -> None:
         """Otherwise the proxy answers 502 for the seconds the app spends booting."""
-        assert compose["services"]["caddy"]["depends_on"]["app"] == {
-            "condition": "service_healthy"
-        }
+        assert compose["services"]["caddy"]["depends_on"]["app"] == {"condition": "service_healthy"}
         assert "healthcheck" in compose["services"]["app"], "…which needs something to wait on"
 
     def test_the_proxy_sends_hsts(self, deploy_dir: Path) -> None:

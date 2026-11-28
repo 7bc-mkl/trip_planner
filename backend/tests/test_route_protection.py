@@ -204,3 +204,45 @@ def test_get_current_owner_implies_get_current_session(application: FastAPI) -> 
         dependencies = dependency_callables(route)
         if get_current_owner in dependencies:
             assert get_current_session in dependencies, route.path
+
+
+# --------------------------------------------------------------------------- #
+# The worker function's app
+# --------------------------------------------------------------------------- #
+
+
+def _worker_application() -> FastAPI:
+    from tests.conftest import TEST_ENVIRONMENT
+    from trip_planner.config import require_settings
+    from trip_planner.worker_app import create_worker_app
+
+    settings = require_settings(
+        {"DATABASE_URL": "postgresql://unused@127.0.0.1:1/unused", **TEST_ENVIRONMENT}
+    )
+    return create_worker_app(settings=settings)
+
+
+def test_the_web_application_has_no_events_route(application: FastAPI) -> None:
+    """`/events` drains the inbox without a session; it must not be on the public URL."""
+    from trip_planner.worker_app import EVENTS_PATH
+
+    paths = {route.path for route in api_routes(application)}
+
+    assert EVENTS_PATH not in paths
+    assert not any(path.endswith("/events") for path in paths)
+
+
+def test_the_worker_application_serves_only_events_and_health() -> None:
+    """The worker app mounts no public API: anything else here is a hole."""
+    worker = _worker_application()
+    served = {(route.path, route.methods) for route in api_routes(worker)}
+
+    assert served == {
+        ("/events", frozenset({"POST"})),
+        (f"{API_PREFIX}/health", frozenset({"GET"})),
+    }
+    # The enumeration skips FastAPI's own paths, so check those directly: the
+    # worker app publishes no schema either.
+    from fastapi.testclient import TestClient
+
+    assert TestClient(worker).get("/openapi.json").status_code == 404

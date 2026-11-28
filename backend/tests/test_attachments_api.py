@@ -53,7 +53,7 @@ from tests.test_trips_api import TRIPS, create, error_code
 from trip_planner.api import attachments as attachments_module
 from trip_planner.api.attachments import MAX_BODY_BYTES, MAX_PARTS, parse_single_file_part
 from trip_planner.db.models import Attachment, AttachmentBlob, Owner, Trip
-from trip_planner.domain.uploads import MAX_ATTACHMENT_BYTES
+from trip_planner.domain.uploads import MAX_UPLOAD_BYTES
 from trip_planner.errors import ApiError, ErrorCode
 from trip_planner.security.quota import UploadQuota, get_upload_quota, set_upload_quota
 
@@ -117,8 +117,8 @@ def pdf_of_exactly(size: int) -> bytes:
 
 
 def oversized_pdf() -> bytes:
-    """A PDF one byte past the per-file cap. Valid, and refused for its size alone."""
-    return pdf_of_exactly(MAX_ATTACHMENT_BYTES + 1)
+    """A PDF one byte past the per-file upload limit. Valid, and refused for its size alone."""
+    return pdf_of_exactly(MAX_UPLOAD_BYTES + 1)
 
 
 class TestUploadingToADay:
@@ -256,21 +256,21 @@ class TestRefusals:
         """The documented limit is inclusive, and the test above it is the first refusal.
 
         The body carries the multipart envelope as well as the file, so bounding
-        the *body* at the per-file cap refused a file of exactly 10 MB while
-        quoting 10 MB back at the client — and made
-        `ck_attachment_byte_size`'s `byte_size <= 10485760` unreachable by any
-        code path. This is the path that reaches it.
+        the *body* at the per-file limit refused a file of exactly the limit
+        while quoting that limit back at the client. This is the path that
+        stores a file of exactly 4 MiB.
         """
-        data = pdf_of_exactly(MAX_ATTACHMENT_BYTES)
+        assert MAX_UPLOAD_BYTES == 4 * 1024 * 1024
+        data = pdf_of_exactly(MAX_UPLOAD_BYTES)
 
         response = upload(signed_in_client, day_attachments_url(trip), data)
 
         assert response.status_code == 201, response.text
-        assert response.json()["byte_size"] == MAX_ATTACHMENT_BYTES
+        assert response.json()["byte_size"] == MAX_UPLOAD_BYTES
 
         stored = db_session.get(Attachment, uuid.UUID(response.json()["id"]))
         assert stored is not None
-        assert stored.byte_size == MAX_ATTACHMENT_BYTES
+        assert stored.byte_size == MAX_UPLOAD_BYTES
 
     def test_a_declared_length_past_the_body_bound_is_refused(
         self, signed_in_client: TestClient, trip: dict
@@ -894,6 +894,40 @@ class TestServingTheContent:
 
         assert response.status_code == 200
         assert response.content == make_png()
+
+    def test_a_stored_ten_mib_attachment_downloads_in_full(
+        self, signed_in_client: TestClient, trip: dict, db_session: OrmSession
+    ) -> None:
+        """Characterization: a row of exactly 10 MiB stays readable.
+
+        The rows are inserted through the ORM rather than uploaded, so the test
+        does not depend on the upload limit — which may be lowered below 10 MiB
+        while rows already stored at the old limit must still be served.
+        """
+        import hashlib
+
+        from trip_planner.db.models import TripDay
+
+        size = 10 * 1024 * 1024
+        data = pdf_of_exactly(size)
+        day = db_session.query(TripDay).filter(TripDay.trip_id == uuid.UUID(trip["id"])).first()
+        assert day is not None
+        attachment = Attachment(
+            trip_day_id=day.id,
+            filename="big.pdf",
+            content_type="application/pdf",
+            byte_size=size,
+            sha256=hashlib.sha256(data).hexdigest(),
+        )
+        attachment.blob = AttachmentBlob(data=data)
+        db_session.add(attachment)
+        db_session.flush()
+
+        response = signed_in_client.get(f"{attachment_url(trip, str(attachment.id))}/content")
+
+        assert response.status_code == 200, response.text
+        assert len(response.content) == size
+        assert response.content == data
 
     def test_every_revalidation_still_passes_the_session_check(
         self, signed_in_client: TestClient, trip: dict

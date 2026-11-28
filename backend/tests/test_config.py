@@ -402,3 +402,167 @@ def test_the_model_settings_repr_does_not_carry_the_api_key() -> None:
 
     assert "test-key-not-a-real-credential" not in repr(settings.model)
     assert "test-key-not-a-real-credential" not in repr(settings)
+
+
+# ---------------------------------------------------------------------------
+# Deployment-shape settings: worker mode and database pool
+# ---------------------------------------------------------------------------
+
+
+def test_worker_and_pool_settings_default_to_todays_behaviour() -> None:
+    settings = require_settings(COMPLETE_ENV)
+
+    assert settings.inbox_worker_mode == "thread"
+    assert settings.inbox_worker_function is None
+    assert settings.db_pool is None
+
+
+def test_valid_worker_and_pool_values_resolve() -> None:
+    settings = require_settings(
+        COMPLETE_ENV
+        | INBOX_ENV
+        | {
+            "INBOX_WORKER_MODE": " Lambda ",
+            "INBOX_WORKER_FUNCTION": " trip-planner-worker ",
+            "DB_POOL": "NULL",
+        }
+    )
+
+    assert settings.inbox_worker_mode == "lambda"
+    assert settings.inbox_worker_function == "trip-planner-worker"
+    assert settings.db_pool == "null"
+
+
+def test_an_unknown_worker_mode_is_refused_naming_the_variable() -> None:
+    with pytest.raises(WeakConfiguration) as caught:
+        require_settings(env_with(INBOX_WORKER_MODE="process"))
+
+    assert "INBOX_WORKER_MODE" in str(caught.value)
+    assert "thread" in str(caught.value)
+    assert "lambda" in str(caught.value)
+
+
+def test_an_unknown_db_pool_is_refused_naming_the_variable() -> None:
+    with pytest.raises(WeakConfiguration) as caught:
+        require_settings(env_with(DB_POOL="queue"))
+
+    assert "DB_POOL" in str(caught.value)
+    assert "null" in str(caught.value)
+
+
+def test_lambda_mode_with_the_inbox_configured_requires_the_function_name() -> None:
+    with pytest.raises(WeakConfiguration) as caught:
+        require_settings(COMPLETE_ENV | INBOX_ENV | {"INBOX_WORKER_MODE": "lambda"})
+
+    assert "INBOX_WORKER_FUNCTION" in str(caught.value)
+
+
+def test_lambda_mode_with_the_inbox_unset_needs_no_function_name() -> None:
+    settings = require_settings(env_with(INBOX_WORKER_MODE="lambda"))
+
+    assert settings.inbox is None
+    assert settings.inbox_worker_mode == "lambda"
+    assert settings.inbox_worker_function is None
+
+
+# ---------------------------------------------------------------------------
+# Client-IP source for the login rate limit
+# ---------------------------------------------------------------------------
+
+
+def test_client_ip_source_defaults_to_the_forwarded_header_rule() -> None:
+    assert require_settings(COMPLETE_ENV).client_ip_source == "x-forwarded-for"
+
+
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [
+        (" CloudFront ", "cloudfront"),
+        ("X-Forwarded-For", "x-forwarded-for"),
+        ("", "x-forwarded-for"),
+    ],
+)
+def test_client_ip_source_values_resolve(raw: str, expected: str) -> None:
+    env = env_with(CLIENT_IP_SOURCE=raw, ORIGIN_VERIFY_SECRET=ORIGIN_SECRET)
+    assert require_settings(env).client_ip_source == expected
+
+
+def test_an_unknown_client_ip_source_is_refused_naming_the_variable() -> None:
+    """A typo must not quietly fall back to trusting X-Forwarded-For."""
+    with pytest.raises(WeakConfiguration) as caught:
+        require_settings(env_with(CLIENT_IP_SOURCE="cloudfront-viewer-address"))
+
+    message = str(caught.value)
+    assert "CLIENT_IP_SOURCE" in message
+    assert "cloudfront" in message
+    assert "x-forwarded-for" in message
+
+
+def test_client_ip_source_is_documented_as_a_deployment_option() -> None:
+    from trip_planner.config import DEPLOYMENT_OPTIONAL_ENVIRONMENT_VARIABLES
+
+    assert "CLIENT_IP_SOURCE" in DEPLOYMENT_OPTIONAL_ENVIRONMENT_VARIABLES
+
+
+# ---------------------------------------------------------------------------
+# Origin lock (ORIGIN_VERIFY_SECRET)
+# ---------------------------------------------------------------------------
+
+ORIGIN_SECRET = "o" * 40
+
+
+def test_origin_verify_secret_is_unset_by_default() -> None:
+    """Compose behind Caddy sets nothing and runs no origin check."""
+    assert require_settings(COMPLETE_ENV).origin_verify_secret is None
+    assert require_settings(env_with(ORIGIN_VERIFY_SECRET="   ")).origin_verify_secret is None
+
+
+def test_origin_verify_secret_resolves() -> None:
+    settings = require_settings(env_with(ORIGIN_VERIFY_SECRET=f" {ORIGIN_SECRET} "))
+    assert settings.origin_verify_secret == ORIGIN_SECRET
+
+
+def test_a_short_origin_verify_secret_is_refused() -> None:
+    with pytest.raises(WeakConfiguration) as caught:
+        require_settings(env_with(ORIGIN_VERIFY_SECRET="short-secret"))
+
+    message = str(caught.value)
+    assert "ORIGIN_VERIFY_SECRET" in message
+    assert "short-secret" not in message
+
+
+def test_cloudfront_client_ip_source_requires_the_origin_secret() -> None:
+    """The viewer header is CloudFront's word only after origin verification."""
+    with pytest.raises(WeakConfiguration) as caught:
+        require_settings(env_with(CLIENT_IP_SOURCE="cloudfront"))
+
+    message = str(caught.value)
+    assert "CLIENT_IP_SOURCE" in message
+    assert "ORIGIN_VERIFY_SECRET" in message
+
+
+def test_the_origin_secret_never_appears_in_the_settings_repr() -> None:
+    settings = require_settings(
+        env_with(CLIENT_IP_SOURCE="cloudfront", ORIGIN_VERIFY_SECRET=ORIGIN_SECRET)
+    )
+    assert ORIGIN_SECRET not in repr(settings)
+    assert ORIGIN_SECRET not in str(settings)
+
+
+def test_origin_verify_secret_is_documented_as_a_deployment_option() -> None:
+    from trip_planner.config import DEPLOYMENT_OPTIONAL_ENVIRONMENT_VARIABLES
+
+    assert "ORIGIN_VERIFY_SECRET" in DEPLOYMENT_OPTIONAL_ENVIRONMENT_VARIABLES
+
+
+def test_the_settings_repr_carries_no_credential() -> None:
+    settings = require_settings(
+        {
+            **COMPLETE_ENV,
+            "DATABASE_URL": "postgresql://user:hunter2-db@host/db",
+            "SESSION_SECRET": "s" * 40 + "-session-secret",
+        }
+    )
+    text = repr(settings)
+    assert "hunter2-db" not in text
+    assert "-session-secret" not in text

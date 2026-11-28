@@ -18,7 +18,10 @@ from starlette.requests import Request
 
 from trip_planner.db.models import LoginAttempt, Owner
 from trip_planner.security import rate_limit
+from trip_planner.security.origin import ORIGIN_VERIFIED_SCOPE_KEY
 from trip_planner.security.rate_limit import (
+    CLIENT_IP_SOURCE_CLOUDFRONT,
+    CLIENT_IP_SOURCE_FORWARDED,
     RESPONSE_FLOOR_SECONDS,
     UNKNOWN_SOURCE_IP,
     RateLimiter,
@@ -90,7 +93,9 @@ class TestResponseFloor:
 
 
 class TestClientIp:
-    def _request(self, headers: dict[str, str], client_host: str | None) -> Request:
+    def _request(
+        self, headers: dict[str, str], client_host: str | None, *, verified: bool = False
+    ) -> Request:
         scope = {
             "type": "http",
             "method": "POST",
@@ -98,7 +103,52 @@ class TestClientIp:
             "headers": Headers(headers).raw,
             "client": (client_host, 12345) if client_host else None,
         }
+        if verified:
+            scope[ORIGIN_VERIFIED_SCOPE_KEY] = True
         return Request(scope)
+
+    @pytest.mark.parametrize(
+        ("viewer", "expected"),
+        [
+            ("198.51.100.10:46532", "198.51.100.10"),
+            ("2001:db8::1:46532", "2001:db8::1"),
+            ("2001:DB8:0:0:0:0:0:1:443", "2001:db8::1"),
+            ("[2001:db8::1]:46532", "2001:db8::1"),
+            ("::ffff:198.51.100.10:80", "::ffff:198.51.100.10"),
+        ],
+    )
+    def test_cloudfront_reads_the_viewer_address_on_a_verified_request(
+        self, viewer: str, expected: str
+    ) -> None:
+        request = self._request(
+            {"cloudfront-viewer-address": viewer, "x-forwarded-for": "203.0.113.66"},
+            "192.0.2.44",
+            verified=True,
+        )
+        assert client_ip(request, source=CLIENT_IP_SOURCE_CLOUDFRONT) == expected
+
+    @pytest.mark.parametrize(
+        "viewer",
+        ["", "garbage", "198.51.100.10", "198.51.100.10:", "198.51.100.10:x", "1.2.3.4:5:6"],
+    )
+    def test_a_malformed_viewer_address_falls_back_to_the_socket_peer(self, viewer: str) -> None:
+        request = self._request(
+            {"cloudfront-viewer-address": viewer}, "192.0.2.44", verified=True
+        )
+        assert client_ip(request, source=CLIENT_IP_SOURCE_CLOUDFRONT) == "192.0.2.44"
+
+    def test_the_viewer_address_is_ignored_on_an_unverified_request(self) -> None:
+        """Without the origin check anyone calling the Function URL could set it."""
+        request = self._request(
+            {"cloudfront-viewer-address": "198.51.100.10:46532"}, "192.0.2.44"
+        )
+        assert client_ip(request, source=CLIENT_IP_SOURCE_CLOUDFRONT) == "192.0.2.44"
+
+    def test_the_forwarded_rule_never_reads_the_viewer_address(self) -> None:
+        request = self._request(
+            {"cloudfront-viewer-address": "198.51.100.10:46532"}, "192.0.2.44", verified=True
+        )
+        assert client_ip(request, source=CLIENT_IP_SOURCE_FORWARDED) == "192.0.2.44"
 
     def test_the_forwarded_header_wins_behind_a_proxy(self) -> None:
         request = self._request({"x-forwarded-for": "203.0.113.7, 10.0.0.1"}, "10.0.0.1")
@@ -124,6 +174,34 @@ class TestClientIp:
         """
         request = self._request({"x-forwarded-for": garbage}, None)
         assert client_ip(request) == UNKNOWN_SOURCE_IP
+
+    def test_the_default_source_is_todays_forwarded_rule(self) -> None:
+        request = self._request({"x-forwarded-for": "198.51.100.9, 10.0.0.1"}, "10.0.0.1")
+        assert client_ip(request, source=CLIENT_IP_SOURCE_FORWARDED) == "198.51.100.9"
+        assert client_ip(request) == client_ip(request, source=CLIENT_IP_SOURCE_FORWARDED)
+
+    @pytest.mark.parametrize(
+        "spoofed",
+        ["198.51.100.9", "198.51.100.9, 203.0.113.50", "[2001:db8::bad]:1", "garbage"],
+    )
+    def test_cloudfront_never_reads_a_viewer_supplied_forwarded_header(
+        self, spoofed: str
+    ) -> None:
+        """Behind a Function URL the viewer's header survives with AWS's appended.
+
+        Trusting its first element would let a caller rotate a fake address on
+        every attempt and never trip the per-address limit.
+        """
+        request = self._request({"x-forwarded-for": spoofed}, "192.0.2.44")
+        assert client_ip(request, source=CLIENT_IP_SOURCE_CLOUDFRONT) == "192.0.2.44"
+
+    def test_cloudfront_reads_an_ipv6_socket_peer(self) -> None:
+        request = self._request({"x-forwarded-for": "198.51.100.9"}, "2001:db8::7")
+        assert client_ip(request, source=CLIENT_IP_SOURCE_CLOUDFRONT) == "2001:db8::7"
+
+    def test_cloudfront_without_a_socket_peer_shares_the_unknown_bucket(self) -> None:
+        request = self._request({"x-forwarded-for": "198.51.100.9"}, None)
+        assert client_ip(request, source=CLIENT_IP_SOURCE_CLOUDFRONT) == UNKNOWN_SOURCE_IP
 
     def test_a_non_ip_socket_peer_falls_back(self) -> None:
         request = self._request({}, "testclient")
@@ -274,3 +352,63 @@ class TestLimitedResponseIsIndistinguishable:
             response = client.post(LOGIN, json={"email": owner.email, "password": "wrong"})
 
         assert "retry-after" not in {k.lower() for k in response.headers}
+
+
+class TestCloudFrontLogin:
+    """End to end: the address a login is recorded under on the Lambda target."""
+
+    SECRET = "cloudfront-origin-secret-" + "s" * 24
+
+    @pytest.fixture
+    def cloudfront_client(self, db_session: OrmSession, settings: object):
+        import dataclasses
+
+        from trip_planner.api.deps import get_db
+        from trip_planner.app import create_app
+        from trip_planner.config import get_settings
+
+        cloudfront = dataclasses.replace(
+            settings, client_ip_source="cloudfront", origin_verify_secret=self.SECRET
+        )
+        application = create_app(check_configuration=False, settings=cloudfront)
+
+        def request_scoped_db():
+            db_session.expire_all()
+            yield db_session
+
+        application.dependency_overrides[get_db] = request_scoped_db
+        application.dependency_overrides[get_settings] = lambda: cloudfront
+        # No `with`: the inbox lifespan is not needed.
+        return TestClient(application)
+
+    def _recorded_addresses(self, db_session: OrmSession) -> list[str]:
+        rows = db_session.execute(sa.select(LoginAttempt.source_ip)).scalars().all()
+        return [str(row) for row in rows]
+
+    def test_the_viewer_address_is_used_and_a_spoofed_forwarded_header_ignored(
+        self, cloudfront_client: TestClient, db_session: OrmSession, owner: Owner
+    ) -> None:
+        response = cloudfront_client.post(
+            LOGIN,
+            json={"email": owner.email, "password": "wrong-password-entirely"},
+            headers={
+                "X-Origin-Verify": self.SECRET,
+                "CloudFront-Viewer-Address": "2001:db8::42:51234",
+                "X-Forwarded-For": "203.0.113.99, 198.51.100.1",
+            },
+        )
+
+        assert response.status_code == 401
+        assert self._recorded_addresses(db_session) == ["2001:db8::42"]
+
+    def test_an_unverified_login_never_reaches_the_handler(
+        self, cloudfront_client: TestClient, db_session: OrmSession, owner: Owner
+    ) -> None:
+        response = cloudfront_client.post(
+            LOGIN,
+            json={"email": owner.email, "password": "wrong-password-entirely"},
+            headers={"CloudFront-Viewer-Address": "198.51.100.7:1234"},
+        )
+
+        assert response.status_code == 403
+        assert self._recorded_addresses(db_session) == []

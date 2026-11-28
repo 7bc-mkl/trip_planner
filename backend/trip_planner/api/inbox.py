@@ -33,6 +33,7 @@ import logging
 import uuid
 from collections.abc import Callable
 from datetime import datetime
+from functools import lru_cache
 from typing import Annotated, Any
 
 import sqlalchemy as sa
@@ -41,10 +42,11 @@ from pydantic import BaseModel, ConfigDict
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session as OrmSession
+from starlette.concurrency import run_in_threadpool
 
 from trip_planner.api.attachments import _matches_etag, _serving_headers
 from trip_planner.api.deps import AppSettings, CurrentOwner, DbSession
-from trip_planner.config import InboxSettings
+from trip_planner.config import InboxSettings, Settings
 from trip_planner.db.models import (
     Attachment,
     AttachmentBlob,
@@ -71,6 +73,7 @@ from trip_planner.inbound.ingest import (
 from trip_planner.inbound.ses import (
     S3Fetcher,
     SignatureVerifier,
+    WorkerKick,
     open_without_redirects,
     verify_event,
 )
@@ -116,6 +119,32 @@ def get_signature_verifier() -> SignatureVerifier:
 def set_signature_verifier(verifier: SignatureVerifier) -> None:
     global _verifier
     _verifier = verifier
+
+
+@lru_cache(maxsize=4)
+def _cached_worker_kick(mode: str, function_name: str | None, region: str | None) -> WorkerKick:
+    """One `WorkerKick` per configuration, so a warm web function reuses its client."""
+    return WorkerKick(mode=mode, function_name=function_name, region=region)
+
+
+def _worker_kick_factory(settings: Settings) -> WorkerKick:
+    region = settings.inbox.aws_region if settings.inbox is not None else None
+    return _cached_worker_kick(
+        settings.inbox_worker_mode, settings.inbox_worker_function, region
+    )
+
+
+_kick_factory: Callable[[Settings], WorkerKick] = _worker_kick_factory
+
+
+def get_worker_kick(settings: Settings) -> WorkerKick:
+    """The seam tests replace so no suite run invokes a real Lambda function."""
+    return _kick_factory(settings)
+
+
+def set_worker_kick_factory(factory: Callable[[Settings], WorkerKick]) -> None:
+    global _kick_factory
+    _kick_factory = factory
 
 
 def require_inbox(settings: AppSettings) -> InboxSettings:
@@ -400,15 +429,45 @@ async def receive_sns_notification(
         # unsubscribe confirmation. Acknowledged, deliberately not acted on.
         return Response(status_code=status.HTTP_200_OK)
 
+    kick_after_commit = settings.inbox_worker_mode == "lambda"
     try:
-        _record_delivery(db, outcome.notice)
+        recorded = _record_delivery(db, outcome.notice)
+        if kick_after_commit:
+            # The worker runs in another function with its own connection, so
+            # the row has to be committed before it is woken — `get_db`'s
+            # teardown commit would come after the kick, and the worker could
+            # find nothing to do. Committing twice is harmless: the teardown
+            # commit then has nothing left to write.
+            db.commit()
     except (OperationalError, NoOwnerYet):
         # Ours, not theirs: a retryable 5xx so SNS tries again and its
         # dead-letter queue catches what survives the retry schedule.
         logger.exception("inbox: could not record a verified delivery")
         return Response(status_code=status.HTTP_503_SERVICE_UNAVAILABLE)
 
+    if kick_after_commit and recorded:
+        # A blocking boto3 call, bounded by its timeouts; off the event loop.
+        await run_in_threadpool(_kick_worker, settings)
+
     return Response(status_code=status.HTTP_200_OK)
+
+
+def _kick_worker(settings: Settings) -> None:
+    """Wake the worker function. A failure is logged and is **not** SNS's problem.
+
+    The row is already committed, so the mail is safe; the worst a failed kick
+    costs is waiting for the worker's schedule. Answering `5xx` here would only
+    make SNS redeliver a notification that is already recorded. Logged by
+    exception type alone — an AWS error message can carry ARNs and request ids
+    that have no business in an application log line.
+    """
+    try:
+        get_worker_kick(settings).kick()
+    except Exception as error:
+        logger.warning(
+            "inbox: could not kick the worker function (%s); the schedule will catch up",
+            type(error).__name__,
+        )
 
 
 def _refused(reason: str) -> Response:
@@ -450,8 +509,11 @@ def _confirm_subscription(subscription: SubscriptionRequest) -> None:
         logger.warning("inbox: subscription confirmation could not be completed")
 
 
-def _record_delivery(db: OrmSession, notice: DeliveryNotice) -> None:
+def _record_delivery(db: OrmSession, notice: DeliveryNotice) -> bool:
     """Insert one `pending_ingest` row, idempotently, and stamp the delivery status.
+
+    Returns whether a **new** row was inserted — `False` for a redelivery the
+    unique constraint absorbed, which has nothing new for the worker to do.
 
     **Idempotency is the database's job, not a `SELECT` first.** Checking for an
     existing row and inserting if absent is a race two concurrent redeliveries
@@ -469,7 +531,7 @@ def _record_delivery(db: OrmSession, notice: DeliveryNotice) -> None:
     if owner_id is None:
         raise NoOwnerYet("no owner account exists yet")
 
-    db.execute(
+    inserted = db.execute(
         pg_insert(InboundMessage)
         .values(
             owner_id=owner_id,
@@ -483,7 +545,8 @@ def _record_delivery(db: OrmSession, notice: DeliveryNotice) -> None:
             state="pending_ingest",
         )
         .on_conflict_do_nothing(constraint="uq_inbound_message_ses_id")
-    )
+        .returning(InboundMessage.id)
+    ).scalar_one_or_none()
 
     db.execute(
         pg_insert(InboundDeliveryStatus)
@@ -494,6 +557,7 @@ def _record_delivery(db: OrmSession, notice: DeliveryNotice) -> None:
         )
     )
     db.flush()
+    return inserted is not None
 
 
 def _scan_verdict(notice: DeliveryNotice) -> str:

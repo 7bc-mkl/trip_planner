@@ -19,8 +19,10 @@ import pytest
 
 from trip_planner.domain.uploads import (
     ATTACHMENT_CONTENT_TYPES,
+    MAX_ATTACHMENT_BYTES,
     MAX_FILENAME_CHARS,
     MAX_PIXELS,
+    MAX_UPLOAD_BYTES,
     InspectedUpload,
     UploadRejection,
     inspect_upload,
@@ -32,6 +34,17 @@ from trip_planner.domain.uploads import (
 )
 
 PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
+
+
+def test_the_upload_limit_is_4_mib_and_the_stored_bound_stays_10_mib() -> None:
+    """D26: uploads are held to 4 MiB; rows stored before, up to 10 MiB, stay valid.
+
+    The upload limit must not exceed the stored bound, or the endpoint could
+    accept a file the `attachment.byte_size` `CHECK` then refuses.
+    """
+    assert MAX_UPLOAD_BYTES == 4 * 1024 * 1024
+    assert MAX_ATTACHMENT_BYTES == 10 * 1024 * 1024
+    assert MAX_UPLOAD_BYTES <= MAX_ATTACHMENT_BYTES
 
 
 # --------------------------------------------------------------------------- #

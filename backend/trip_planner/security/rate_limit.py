@@ -25,6 +25,7 @@ from fastapi import Request
 from sqlalchemy.orm import Session as OrmSession
 
 from trip_planner.db.models import LoginAttempt
+from trip_planner.security.origin import is_origin_verified
 
 #: How long a failed attempt counts against the limit.
 DEFAULT_WINDOW = timedelta(minutes=15)
@@ -117,20 +118,73 @@ def _parse_ip(value: str) -> str | None:
         return None
 
 
-def client_ip(request: Request) -> str:
+#: Today's rule: the first X-Forwarded-For element, behind Caddy.
+CLIENT_IP_SOURCE_FORWARDED = "x-forwarded-for"
+
+#: The Lambda target: X-Forwarded-For is never read.
+CLIENT_IP_SOURCE_CLOUDFRONT = "cloudfront"
+
+
+def _cloudfront_viewer_ip(request: Request) -> str | None:
+    """The viewer address CloudFront vouches for, or None.
+
+    Read **only** on a request that passed the `X-Origin-Verify` check
+    (`security.origin`): without it anyone calling the raw Function URL could set
+    `CloudFront-Viewer-Address`. On an unverified request — including every
+    request when `ORIGIN_VERIFY_SECRET` is unset — the header is ignored and
+    `client_ip` falls back to the socket peer.
+
+    The format is `ip:port` (`198.51.100.10:46532`). IPv6 comes without
+    brackets (`2001:db8::1:46532`), so the port is split off at the **last**
+    colon; a bracketed `[2001:db8::1]:46532` is tolerated too.
+    """
+    if not is_origin_verified(request.scope):
+        return None
+
+    value = request.headers.get("cloudfront-viewer-address", "").strip()
+    if not value:
+        return None
+    if value.startswith("["):
+        return _parse_ip(value)
+    address, separator, port = value.rpartition(":")
+    # One colon left in the address would be `_parse_ip` stripping a second
+    # "port" — not a shape CloudFront sends, so refuse it rather than guess.
+    if not separator or not port.isdigit() or address.count(":") == 1:
+        return None
+    return _parse_ip(address)
+
+
+def client_ip(request: Request, source: str = CLIENT_IP_SOURCE_FORWARDED) -> str:
     """The caller's address, always a value the INET column accepts.
 
-    Behind the platform's proxy the socket peer is the proxy, so the leftmost
-    X-Forwarded-For entry is used when present. That header is caller-controlled
-    in general — it is trusted here only because the deployment (A12) puts the app
-    behind exactly one proxy that sets it, and a spoofed value can at worst make an
-    attacker rate-limit himself under someone else's key.
+    `source` is `Settings.client_ip_source` (`CLIENT_IP_SOURCE`):
+
+    - `x-forwarded-for` (default, compose behind Caddy): the socket peer is the
+      proxy, so the leftmost X-Forwarded-For entry is used when present. That is
+      safe only because Caddy *replaces* the header; the app must never be
+      reachable except through it.
+    - `cloudfront` (Lambda behind CloudFront and a Function URL): X-Forwarded-For
+      is **never** read. There a client-supplied header is preserved with AWS's
+      address appended, so its first element is chosen by the viewer — who could
+      rotate it on every attempt and never trip the per-address limit. The
+      address comes from `_cloudfront_viewer_ip`, else the socket peer; uvicorn
+      must then run without `--proxy-headers` (`deploy/entrypoint.sh`), or it
+      rewrites `request.client` from that same header.
+
+    A spoofable source is not harmless: rotating fake addresses bypasses the
+    per-address limit entirely (the per-e-mail limit still holds), which is why
+    the rule is selected per deployment rather than assumed.
     """
-    forwarded = request.headers.get("x-forwarded-for", "")
-    if forwarded:
-        parsed = _parse_ip(forwarded.split(",")[0])
-        if parsed is not None:
-            return parsed
+    if source == CLIENT_IP_SOURCE_CLOUDFRONT:
+        viewer = _cloudfront_viewer_ip(request)
+        if viewer is not None:
+            return viewer
+    else:
+        forwarded = request.headers.get("x-forwarded-for", "")
+        if forwarded:
+            parsed = _parse_ip(forwarded.split(",")[0])
+            if parsed is not None:
+                return parsed
 
     if request.client is not None:
         parsed = _parse_ip(request.client.host or "")

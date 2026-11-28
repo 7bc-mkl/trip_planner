@@ -131,7 +131,8 @@ MAX_INBOUND_TEXT_CHARS = 200_000
 # below. One definition is what keeps "what the sniffer accepts" and "what the
 # database can store" a single fact rather than two that drift, and the
 # dependency runs `db` → `domain` so the pure module stays free of SQLAlchemy.
-# The 10 MiB cap is enforced before the body is read *and* by the constraint, so
+# The 10 MiB stored bound is enforced by the constraint (an upload is held to the
+# lower `MAX_UPLOAD_BYTES` before its body is read), so
 # a write path that skips the endpoint still cannot store a larger file.
 
 #: The three statuses R02 and D05 fix, in the order they progress.

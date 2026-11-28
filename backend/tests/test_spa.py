@@ -87,3 +87,19 @@ class TestTheClientRoutingFallback:
 
         assert response.status_code == 404
         assert response.json() == {"error": {"code": "not_found", "field": None}}
+
+
+class TestAssetCaching:
+    """Hashed assets are immutable for a year; the shell that names them is never cached."""
+
+    def test_a_hashed_asset_is_cached_immutably(self, client: TestClient) -> None:
+        response = client.get("/assets/index-abc123.js")
+
+        assert response.status_code == 200
+        assert response.headers["cache-control"] == "public, max-age=31536000, immutable"
+        assert "etag" in response.headers
+        assert "last-modified" in response.headers
+
+    def test_the_index_routes_still_answer_no_store(self, client: TestClient) -> None:
+        for path in ("/", "/trips", "/index.html"):
+            assert client.get(path).headers["cache-control"] == "no-store", path

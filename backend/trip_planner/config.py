@@ -23,7 +23,7 @@ from __future__ import annotations
 
 import os
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from decimal import Decimal, InvalidOperation
 from functools import lru_cache
 
@@ -98,6 +98,44 @@ INBOX_OPTIONAL_ENVIRONMENT_VARIABLES: dict[str, str] = {
         "hard cap on the raw MIME object this app will fetch from S3; default: 41943040 (40 MB)"
     ),
 }
+
+#: Optional deployment-shape settings for the scale-to-zero (Lambda + Neon) target.
+#:
+#: Each default reproduces today's behaviour, so an existing deployment starts
+#: unchanged (§5). Unknown values are refused rather than coerced: a typo in
+#: `DB_POOL` that silently fell back to the pool would defeat the point of
+#: setting it.
+DEPLOYMENT_OPTIONAL_ENVIRONMENT_VARIABLES: dict[str, str] = {
+    "INBOX_WORKER_MODE": (
+        "where inbox work runs: 'thread' runs it in the web process, 'lambda' hands it to "
+        "the worker function; default: thread"
+    ),
+    "INBOX_WORKER_FUNCTION": (
+        "name of the worker Lambda function; required when INBOX_WORKER_MODE=lambda and "
+        "the inbox is configured; default: unset"
+    ),
+    "DB_POOL": (
+        "'null' opens a connection per use and keeps none (for a function that scales to "
+        "zero); default: unset, SQLAlchemy's QueuePool"
+    ),
+    "CLIENT_IP_SOURCE": (
+        "where the login rate limit reads the caller's address: 'x-forwarded-for' trusts "
+        "the first X-Forwarded-For element (behind Caddy, which replaces the header); "
+        "'cloudfront' never reads X-Forwarded-For (behind CloudFront and a Function URL "
+        "the viewer controls it), reads CloudFront-Viewer-Address on origin-verified "
+        "requests, requires ORIGIN_VERIFY_SECRET and must be paired with uvicorn run "
+        "without proxy headers; default: x-forwarded-for"
+    ),
+    "ORIGIN_VERIFY_SECRET": (
+        "secret (32+ characters) CloudFront sends as the X-Origin-Verify origin header; "
+        "when set, every request without it except GET /api/v1/health is refused with "
+        "403, and CLIENT_IP_SOURCE=cloudfront requires it; default: unset, no check"
+    ),
+}
+
+VALID_INBOX_WORKER_MODES = frozenset({"thread", "lambda"})
+VALID_DB_POOLS = frozenset({"null"})
+VALID_CLIENT_IP_SOURCES = frozenset({"x-forwarded-for", "cloudfront"})
 
 #: The providers D24 permits, and the credential each one reads.
 #:
@@ -219,8 +257,9 @@ class ModelSettings:
 
 @dataclass(frozen=True, slots=True)
 class Settings:
-    database_url: str
-    session_secret: str
+    #: Both hold a credential, so neither may reach a log line through a repr.
+    database_url: str = field(repr=False)
+    session_secret: str = field(repr=False)
     app_base_url: str
     environment: str
     #: `None` when the deployment has no inbox configuration — a normal state.
@@ -228,6 +267,20 @@ class Settings:
     #: `None` when no model is configured. Also a normal state: the inbox then
     #: behaves exactly as Phase 1 shipped — stored and queued, no egress.
     model: ModelSettings | None = None
+    #: `thread` (today's behaviour) or `lambda`. Only `require_settings` sets it,
+    #: and it has already refused anything else.
+    inbox_worker_mode: str = "thread"
+    #: The worker Lambda's name. Guaranteed set when the mode is `lambda` and the
+    #: inbox is configured; otherwise it may be `None` and is never read.
+    inbox_worker_function: str | None = None
+    #: `None` is SQLAlchemy's default QueuePool; `"null"` is `NullPool`.
+    db_pool: str | None = None
+    #: `x-forwarded-for` (today's rule, behind Caddy) or `cloudfront`. Read by
+    #: `security.rate_limit.client_ip`; `require_settings` has refused anything else.
+    client_ip_source: str = "x-forwarded-for"
+    #: The `X-Origin-Verify` value CloudFront adds; `None` means no origin check
+    #: (compose behind Caddy). A secret, so it is kept out of the repr.
+    origin_verify_secret: str | None = field(default=None, repr=False)
 
     @property
     def inbox_enabled(self) -> bool:
@@ -301,13 +354,71 @@ def require_settings(environ: dict[str, str] | None = None) -> Settings:
             f"got {app_base_url!r}"
         )
 
+    inbox = resolve_inbox_settings(env)
+
+    worker_mode = env.get("INBOX_WORKER_MODE", "").strip().lower() or "thread"
+    if worker_mode not in VALID_INBOX_WORKER_MODES:
+        raise WeakConfiguration(
+            f"INBOX_WORKER_MODE must be one of {sorted(VALID_INBOX_WORKER_MODES)}; "
+            f"got {worker_mode!r}"
+        )
+    worker_function = env.get("INBOX_WORKER_FUNCTION", "").strip() or None
+    if worker_mode == "lambda" and inbox is not None and worker_function is None:
+        # With the inbox off nothing is ever handed to the worker, so the name is
+        # not needed; with it on, a missing name would surface at the first
+        # notification as a failed invoke that names no variable.
+        raise WeakConfiguration(
+            "INBOX_WORKER_MODE=lambda with the inbox configured requires "
+            "INBOX_WORKER_FUNCTION, the name of the worker Lambda function; it is not set."
+        )
+
+    db_pool = env.get("DB_POOL", "").strip().lower() or None
+    if db_pool is not None and db_pool not in VALID_DB_POOLS:
+        raise WeakConfiguration(
+            f"DB_POOL must be one of {sorted(VALID_DB_POOLS)} or unset; got {db_pool!r}"
+        )
+
+    client_ip_source = env.get("CLIENT_IP_SOURCE", "").strip().lower() or "x-forwarded-for"
+    if client_ip_source not in VALID_CLIENT_IP_SOURCES:
+        # A typo must not fall back to the header rule: on the Lambda target that
+        # would hand the login rate limit's key to the viewer.
+        raise WeakConfiguration(
+            f"CLIENT_IP_SOURCE must be one of {sorted(VALID_CLIENT_IP_SOURCES)} or unset; "
+            f"got {client_ip_source!r}"
+        )
+
+    origin_verify_secret = env.get("ORIGIN_VERIFY_SECRET", "").strip() or None
+    if (
+        origin_verify_secret is not None
+        and len(origin_verify_secret) < MINIMUM_SESSION_SECRET_LENGTH
+    ):
+        # A short origin secret is guessable, and guessing it reopens the raw
+        # Function URL — including the viewer address the rate limit trusts.
+        raise WeakConfiguration(
+            f"ORIGIN_VERIFY_SECRET must be at least {MINIMUM_SESSION_SECRET_LENGTH} "
+            f"characters; got {len(origin_verify_secret)}."
+        )
+    if client_ip_source == "cloudfront" and origin_verify_secret is None:
+        # CloudFront-Viewer-Address is only CloudFront's word on a request that
+        # proved it came through CloudFront. Without the check, anyone calling
+        # the Function URL directly could set it.
+        raise WeakConfiguration(
+            "CLIENT_IP_SOURCE=cloudfront requires ORIGIN_VERIFY_SECRET: the viewer "
+            "address is trusted only on origin-verified requests; it is not set."
+        )
+
     return Settings(
         database_url=env["DATABASE_URL"].strip(),
         session_secret=session_secret,
         app_base_url=app_base_url,
         environment=environment,
-        inbox=resolve_inbox_settings(env),
+        inbox=inbox,
         model=resolve_model_settings(env),
+        inbox_worker_mode=worker_mode,
+        inbox_worker_function=worker_function,
+        db_pool=db_pool,
+        client_ip_source=client_ip_source,
+        origin_verify_secret=origin_verify_secret,
     )
 
 

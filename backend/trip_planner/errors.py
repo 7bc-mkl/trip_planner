@@ -77,6 +77,10 @@ class ErrorCode(StrEnum):
     ACTION_ITEM_CONFLICT = "action_item_conflict"
     INVALID_ACTION_SELECTION = "invalid_action_selection"
 
+    # The Lambda target's origin lock: a request that did not come through
+    # CloudFront (no matching `X-Origin-Verify`).
+    FORBIDDEN_ORIGIN = "forbidden_origin"
+
 
 #: The status each code is served with. Kept beside the enum so a code cannot be
 #: introduced without deciding its status, and so the pairing is assertable.
@@ -131,6 +135,9 @@ STATUS_FOR_CODE: dict[ErrorCode, int] = {
     ErrorCode.ACTION_ITEM_ALREADY_DECIDED: status.HTTP_409_CONFLICT,
     ErrorCode.ACTION_ITEM_CONFLICT: status.HTTP_409_CONFLICT,
     ErrorCode.INVALID_ACTION_SELECTION: status.HTTP_422_UNPROCESSABLE_CONTENT,
+    # 403: the request may be fine; where it came from is not. Not
+    # `csrf_token_invalid`, whose copy tells a signed-in user to reload.
+    ErrorCode.FORBIDDEN_ORIGIN: status.HTTP_403_FORBIDDEN,
 }
 
 
