@@ -158,6 +158,8 @@ toml_string() {
 	echo ']'
 } >"${SECRETS_DIR}/samconfig.toml"
 
+# SAM requires a repository for image functions even when, as here, the image is
+# already pushed and named in full by the ImageUri parameter.
 echo "==> sam deploy"
 SAM_CLI_TELEMETRY=0 sam deploy \
 	--config-file "${SECRETS_DIR}/samconfig.toml" \
@@ -165,6 +167,7 @@ SAM_CLI_TELEMETRY=0 sam deploy \
 	--stack-name "$STACK" \
 	--region "$REGION" \
 	--capabilities CAPABILITY_IAM \
+	--image-repository "${REGISTRY}/${REPOSITORY}" \
 	--no-confirm-changeset \
 	--no-fail-on-empty-changeset
 

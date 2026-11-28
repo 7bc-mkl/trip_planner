@@ -40,6 +40,7 @@
 | 2 | 2.4-neon | Link the Neon project (`neon init`, `neon.ts`) | inline | done | 873bcb1 |
 | 2 | 2.4-review-fix | `deploy.sh` builds on Docker without `--provenance` | inline | done | 776b60a |
 | 2 | 2.4-review-fix-2 | `deploy.sh` omits empty optional parameters | inline | done | 5862e0d |
+| 2 | 2.4-review-fix-3 | `deploy.sh` names the image repository for `sam deploy` | inline | done | 0830dd6 |
 | 2 | 2.5 | Neon project and first deploy against an empty database (spec Phase 2 step 3) | inline | todo | — |
 | 2 | 2.6 | Smoke probes on `https://trips.botito.app`, recorded (spec Phase 2 steps 4–5) | inline | todo | — |
 | 2 | 2.7 | `deploy/lambda/README.md` and links (spec Phase 2 step 6) | inline | done | 2fc0aaa |
