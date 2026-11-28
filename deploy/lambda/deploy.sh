@@ -94,8 +94,14 @@ if ! aws ecr describe-repositories --region "$REGION" --repository-names "$REPOS
 fi
 
 echo "==> Building ${IMAGE}"
-# --provenance=false: Lambda refuses the multi-manifest index an attestation adds.
-docker build --platform linux/amd64 --provenance=false -f deploy/Dockerfile -t "$IMAGE" .
+# Lambda refuses the multi-manifest index a BuildKit provenance attestation adds,
+# so it is turned off where the builder knows the flag. Older builders (Docker
+# 20.10, buildx < 0.10) neither know it nor add attestations.
+BUILD_FLAGS=(--platform linux/amd64)
+if docker build --help 2>/dev/null | grep -q -- '--provenance'; then
+	BUILD_FLAGS+=(--provenance=false)
+fi
+docker build "${BUILD_FLAGS[@]}" -f deploy/Dockerfile -t "$IMAGE" .
 
 echo "==> Pushing"
 aws ecr get-login-password --region "$REGION" | docker login --username AWS --password-stdin "$REGISTRY" >/dev/null
