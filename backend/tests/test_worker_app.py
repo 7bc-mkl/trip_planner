@@ -43,9 +43,7 @@ class FakeClock:
         return self.now
 
 
-def backlog(
-    sessions: sessionmaker[OrmSession], owner: Owner, s3: StubS3, count: int
-) -> list:
+def backlog(sessions: sessionmaker[OrmSession], owner: Owner, s3: StubS3, count: int) -> list:
     ids = []
     for index in range(count):
         key = f"{PREFIX}ses-{index}"
@@ -149,3 +147,26 @@ def test_the_worker_app_serves_health_for_the_adapter_readiness_check() -> None:
 
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}
+
+
+def test_a_transient_failure_costs_one_attempt_per_event_not_all_of_them(
+    inbox_settings: Settings,
+    worker_sessions: sessionmaker[OrmSession],
+    committed_owner: Owner,
+) -> None:
+    """Regression: a failed message is claimable again at once, so a drain that
+    counted claims as progress re-ran it back to back — one S3 hiccup burned every
+    retry in milliseconds and sent real mail to `ingest_failed`, and a deferred
+    message kept the worker (and Neon) busy for the whole budget.
+    """
+    s3 = StubS3()
+    (message_id,) = backlog(worker_sessions, committed_owner, s3, 1)
+    s3.fail_with = TimeoutError("S3 read timed out")
+    app = create_worker_app(settings=inbox_settings, session_factory=worker_sessions, fetcher=s3)
+
+    response = TestClient(app).post("/events", json=KICK)
+
+    assert response.status_code == 200
+    assert response.json() == {"processed": 1, "budget_exhausted": False}
+    assert len(s3.fetched) == 1, "one attempt per event; the schedule is the retry"
+    assert reload(worker_sessions, message_id).state in ("pending_ingest", "deferred")

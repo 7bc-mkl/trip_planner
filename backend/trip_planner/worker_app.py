@@ -12,8 +12,8 @@ is public, so a drain endpoint there would be a new unauthenticated route. Here
 the app has no public API at all — only `/events` and the health route the
 adapter's readiness check polls — and the function serving it has no URL.
 
-**A time budget, not one batch.** One event loops `InboxWorker.run_once()` until
-a pass processes nothing or the budget is spent, so a single kick drains a
+**A time budget, not one batch.** One event loops `InboxWorker.run_pass()` until
+a pass moves nothing on or the budget is spent, so a single kick drains a
 backlog larger than `BATCH_SIZE`. The budget is also checked between messages
 inside a pass, so ten slow model calls cannot run past Lambda's five-minute
 timeout. A single tick of the thread loop is exactly one `run_once()` — the
@@ -64,7 +64,7 @@ def drain(
     clock: Callable[[], float] = time.monotonic,
     budget: timedelta = WORKER_BUDGET,
 ) -> DrainSummary:
-    """Run passes until one processes nothing or the budget is spent."""
+    """Run passes until one moves nothing on or the budget is spent."""
     deadline = clock() + budget.total_seconds()
 
     def within_budget() -> bool:
@@ -72,9 +72,12 @@ def drain(
 
     processed = 0
     while within_budget():
-        count = worker.run_once(should_continue=within_budget)
-        processed += count
-        if count == 0:
+        result = worker.run_pass(should_continue=within_budget)
+        processed += result.processed
+        # Stop on a pass that moved nothing on, not on one that claimed nothing:
+        # a deferred or transiently failing message is claimable again at once,
+        # and passes run back to back here (the thread waits between them).
+        if result.progressed == 0:
             break
 
     return DrainSummary(processed=processed, budget_exhausted=not within_budget())
@@ -103,9 +106,7 @@ def create_worker_app(
             from trip_planner.db.session import get_sessionmaker
 
             session_factory = get_sessionmaker()
-        worker = InboxWorker(
-            settings, session_factory, fetcher=fetcher, model_client=model_client
-        )
+        worker = InboxWorker(settings, session_factory, fetcher=fetcher, model_client=model_client)
 
     app = FastAPI(
         title="Smart Trip Planner worker",

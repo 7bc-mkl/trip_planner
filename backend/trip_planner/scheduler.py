@@ -33,6 +33,7 @@ from __future__ import annotations
 import logging
 import threading
 from collections.abc import Callable
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
 import sqlalchemy as sa
@@ -42,7 +43,12 @@ from trip_planner.approvals import propose_from_routing
 from trip_planner.config import Settings
 from trip_planner.db.models import InboundMessage, Owner
 from trip_planner.inbound.cleanup import CleanupReport, run_cleanup
-from trip_planner.inbound.ingest import claim_pending, delete_ingested_object, ingest_message
+from trip_planner.inbound.ingest import (
+    INGESTABLE_STATES,
+    claim_pending,
+    delete_ingested_object,
+    ingest_message,
+)
 from trip_planner.inbound.router import month_spend, route_message
 from trip_planner.inbound.ses import S3Fetcher
 from trip_planner.integrations.model import ModelBudget, ModelClient
@@ -67,6 +73,22 @@ INBOX_WORKER_LOCK_KEY = 0x7A11_0C0D_E003
 #: backlog is drained over several passes rather than in one transaction that
 #: holds a connection for minutes.
 BATCH_SIZE = 10
+
+
+@dataclass(frozen=True, slots=True)
+class PassResult:
+    """What one pass did, for a caller that loops passes back to back.
+
+    `processed` is every message the pass claimed — today's `run_once` count.
+    `progressed` is the messages it actually moved on: ingested out of the
+    ingestable states, or routed out of `received`. A deferred message or a
+    transient failure is claimable again at once, so a caller with no pause
+    between passes must stop on `progressed == 0`, not `processed == 0`, or it
+    spins on that one message (and burns its retry budget in milliseconds).
+    """
+
+    processed: int
+    progressed: int
 
 
 class InboxWorker:
@@ -138,7 +160,11 @@ class InboxWorker:
     # ------------------------------------------------------------- one pass
 
     def run_once(self, *, should_continue: Callable[[], bool] | None = None) -> int:
-        """Ingest up to `BATCH_SIZE` messages. Returns how many were processed.
+        """Ingest up to `BATCH_SIZE` messages. Returns how many were processed."""
+        return self.run_pass(should_continue=should_continue).processed
+
+    def run_pass(self, *, should_continue: Callable[[], bool] | None = None) -> PassResult:
+        """One pass, reporting what was claimed and what actually moved on.
 
         `should_continue`, when given, is asked **between messages** alongside
         the stop event; once it answers false the pass stops taking new ones.
@@ -166,7 +192,7 @@ class InboxWorker:
             if not self._take_lock(lock_session):
                 # Another worker owns this pass. Doing nothing is the correct
                 # outcome, not a failure.
-                return 0
+                return PassResult(processed=0, progressed=0)
             try:
                 with self._session_factory() as db:
                     return self._drain(db, should_continue)
@@ -185,7 +211,9 @@ class InboxWorker:
             sa.select(sa.func.pg_advisory_unlock(sa.literal(INBOX_WORKER_LOCK_KEY)))
         ).scalar_one()
 
-    def _drain(self, db: OrmSession, should_continue: Callable[[], bool] | None = None) -> int:
+    def _drain(
+        self, db: OrmSession, should_continue: Callable[[], bool] | None = None
+    ) -> PassResult:
         def halted() -> bool:
             return self._stop.is_set() or (should_continue is not None and not should_continue())
 
@@ -193,9 +221,10 @@ class InboxWorker:
             sa.select(Owner).order_by(Owner.created_at).limit(1)
         ).scalar_one_or_none()
         if owner is None:
-            return 0
+            return PassResult(processed=0, progressed=0)
 
         processed = 0
+        progressed = 0
         for message in claim_pending(db, limit=BATCH_SIZE):
             if halted():
                 break
@@ -210,6 +239,8 @@ class InboxWorker:
             # other order would leave no object and no message.
             db.commit()
             processed += 1
+            if outcome.state not in INGESTABLE_STATES:
+                progressed += 1
 
             if outcome.state == "received" and key and delete_ingested_object(self._fetcher, key):
                 message.s3_object_key = None
@@ -233,7 +264,8 @@ class InboxWorker:
             for message in pending:
                 if halted():
                     break
-                self._route(db, message, owner)
+                if self._route(db, message, owner):
+                    progressed += 1
 
         # After the ingestion, and in the same pass: the quarantine timer, the
         # deletes the owner asked for, the objects a failed delete left behind,
@@ -248,19 +280,23 @@ class InboxWorker:
             db.rollback()
             logger.exception("inbox: the cleanup pass failed; it will run again")
 
-        return processed
+        return PassResult(processed=processed, progressed=progressed)
 
-    def _route(self, db: OrmSession, message: InboundMessage, owner: Owner) -> None:
+    def _route(self, db: OrmSession, message: InboundMessage, owner: Owner) -> bool:
         """Point one stored, received message at a trip, if a model is configured.
 
         **With no model this does nothing at all**, which is Phase 1's behaviour
         exactly: the message stays `received`, shows up in the inbox, and the
         owner places it by hand. An inbox without a model is a working product,
         not a degraded one.
+
+        Returns whether the message moved on from `received` — routed, or
+        settled as unroutable — which is what a back-to-back drain counts as
+        progress. A routing deferred by the budget or failed is not progress.
         """
         model_settings = self._settings.model
         if model_settings is None:
-            return
+            return False
 
         try:
             client = self._model_client()
@@ -284,10 +320,10 @@ class InboxWorker:
             # The message keeps its body and its documents either way, so the
             # worst case is an unrouted message the owner places himself.
             logger.exception("inbox: routing failed for a message; it stays placeable by hand")
-            return
+            return False
 
         if outcome.state != "routed":
-            return
+            return outcome.state != "received"
         # Committed apart from the route, on purpose: a failure here must not
         # roll the route back, or the next pass would send the owner's text to
         # the provider a second time for the same answer. A routed message with
@@ -306,6 +342,7 @@ class InboxWorker:
         except Exception:
             db.rollback()
             logger.exception("inbox: proposing failed for a routed message; it stays routed")
+        return True
 
     def _model_client(self) -> ModelClient:
         """Built once and reused, so the signing/connection setup is not per message."""
