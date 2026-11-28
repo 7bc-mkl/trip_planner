@@ -17,37 +17,37 @@
 
 | Phase | Step | Title | Exec | Status | Commit |
 |-------|------|-------|------|--------|--------|
-| 0 | 0.1 | Record verified platform facts (spec Phase 0 step 1) | inline | done | 3fac4d9 |
-| 0 | 0.2 | Record the AWS account and production measurements (spec Phase 0 steps 2–4) | inline | done | b694c17 |
-| 1 | 1.1 | Characterize the receipt path (spec step 1) | dispatch | done | 01e9201 |
-| 1 | 1.2 | `INBOX_WORKER_MODE`, `INBOX_WORKER_FUNCTION`, `DB_POOL` settings (spec step 2) | dispatch | done | 2c1427a |
-| 1 | 1.3 | `WorkerKick` port and commit-then-kick in the receipt endpoint (spec step 3) | dispatch:capable | done | ba46cd9 |
-| 1 | 1.4 | Lifespan skips the worker thread in `lambda` mode (spec step 4) | dispatch:cheap | done | 3cacfff |
-| 1 | 1.5 | `worker_app.py` — `POST /events` drains under a 4-minute budget (spec step 5) | dispatch:capable | done | d671b86 |
-| 1 | 1.6 | `DB_POOL=null` → `NullPool`, and worker keepalives (spec step 6) | dispatch | done | 6191301 |
-| 1 | 1.7 | Client-IP hop rule behind a setting (spec step 7) | dispatch:capable | done | 74e6c08 |
-| 1 | 1.8 | Characterize the upload limit and the stored 10 MiB row (spec step 8) | dispatch | done | 2bb2712 |
-| 1 | 1.9 | Upload limit 4 MiB; stored bound stays 10 MiB; frontend and copy (spec step 9) | dispatch:capable | done | 64c3eb7 |
-| 1 | 1.10 | Characterize response headers and `/assets` caching (spec step 10) | dispatch:cheap | done | d23217a |
-| 1 | 1.7-review-fix | `--no-proxy-headers` on the Lambda target (checkpoint 2 review) | inline | done | e3b698b |
-| 1 | 1.11 | Security-headers middleware, immutable `/assets`, `--no-server-header` (spec step 11) | dispatch | done | 54d3625 |
-| 1 | 1.12 | Origin-verify middleware and the `CloudFront-Viewer-Address` source (spec step 12) | dispatch:capable | done | 706ee28 |
-| 1 | 1.13 | Lambda Web Adapter in the image; `worker` entrypoint (spec step 13) | dispatch | done | 344db3a |
-| 2 | 2.1 | `deploy/lambda/cert.yaml` — ACM certificate in us-east-1 (spec Phase 2 step 1) | inline | done | 2977d09 |
-| 2 | 2.2 | `deploy/lambda/template.yaml` — functions, URL, schedule, CloudFront, DNS, IAM (spec Phase 2 step 1) | inline | done | 0018ed3 |
-| 2 | 2.3 | Inbox wiring for the Lambda stack — bucket, topic, SES receipt rule (spec Phase 2 step 5) | inline | done | 64f55e4 |
-| 2 | 2.4 | `deploy/lambda/deploy.sh` — the release script (spec Phase 2 step 2) | inline | done | 6c76d61 |
-| 2 | 2.4-neon | Link the Neon project (`neon init`, `neon.ts`) | inline | done | 873bcb1 |
-| 2 | 2.4-review-fix | `deploy.sh` builds on Docker without `--provenance` | inline | done | 776b60a |
-| 2 | 2.4-review-fix-2 | `deploy.sh` omits empty optional parameters | inline | done | 5862e0d |
-| 2 | 2.4-review-fix-3 | `deploy.sh` names the image repository for `sam deploy` | inline | done | 0830dd6 |
-| 2 | 2.5 | Neon project and first deploy against an empty database (spec Phase 2 step 3) | inline | done | 2689651 |
-| 2 | 2.6 | Smoke probes on `https://trips.botito.app`, recorded (spec Phase 2 steps 4–5) | inline | done | d6df898 |
-| 2 | 2.7 | `deploy/lambda/README.md` and links (spec Phase 2 step 6) | inline | done | 2fc0aaa |
-| 2 | 2.8 | Archive the Delta into the living capability specs (spec Phase 2 step 7) | dispatch:cheap | done | bc5213f |
-| 2 | 2.9 | Correct the spec's unverified assumptions from Phase 0 | inline | done | f5280fc |
-| 2 | 2.9-review-fix | Drain stops on a pass with no progress (review finding 1, 3) | inline | done | feca33d |
-| 2 | 2.9-review-fix-2 | Server-side keepalives, secret-free repr, threadpool kick, parameter spaces (review findings 2, 4–6) | inline | done | 47ce729 |
+| 0 | 0.1 | Record verified platform facts (spec Phase 0 step 1) | inline | done | 91f9389 |
+| 0 | 0.2 | Record the AWS account and production measurements (spec Phase 0 steps 2–4) | inline | done | 63c900f |
+| 1 | 1.1 | Characterize the receipt path (spec step 1) | dispatch | done | e1234da |
+| 1 | 1.2 | `INBOX_WORKER_MODE`, `INBOX_WORKER_FUNCTION`, `DB_POOL` settings (spec step 2) | dispatch | done | 67c2d2c |
+| 1 | 1.3 | `WorkerKick` port and commit-then-kick in the receipt endpoint (spec step 3) | dispatch:capable | done | 4db3139 |
+| 1 | 1.4 | Lifespan skips the worker thread in `lambda` mode (spec step 4) | dispatch:cheap | done | ef7d185 |
+| 1 | 1.5 | `worker_app.py` — `POST /events` drains under a 4-minute budget (spec step 5) | dispatch:capable | done | f1443dd |
+| 1 | 1.6 | `DB_POOL=null` → `NullPool`, and worker keepalives (spec step 6) | dispatch | done | a8d71c7 |
+| 1 | 1.7 | Client-IP hop rule behind a setting (spec step 7) | dispatch:capable | done | e915859 |
+| 1 | 1.8 | Characterize the upload limit and the stored 10 MiB row (spec step 8) | dispatch | done | a84010e |
+| 1 | 1.9 | Upload limit 4 MiB; stored bound stays 10 MiB; frontend and copy (spec step 9) | dispatch:capable | done | 7a4e685 |
+| 1 | 1.10 | Characterize response headers and `/assets` caching (spec step 10) | dispatch:cheap | done | b62651d |
+| 1 | 1.7-review-fix | `--no-proxy-headers` on the Lambda target (checkpoint 2 review) | inline | done | 8e1a29a |
+| 1 | 1.11 | Security-headers middleware, immutable `/assets`, `--no-server-header` (spec step 11) | dispatch | done | 42f9b93 |
+| 1 | 1.12 | Origin-verify middleware and the `CloudFront-Viewer-Address` source (spec step 12) | dispatch:capable | done | 833476f |
+| 1 | 1.13 | Lambda Web Adapter in the image; `worker` entrypoint (spec step 13) | dispatch | done | a56aa48 |
+| 2 | 2.1 | `deploy/lambda/cert.yaml` — ACM certificate in us-east-1 (spec Phase 2 step 1) | inline | done | c69f9f9 |
+| 2 | 2.2 | `deploy/lambda/template.yaml` — functions, URL, schedule, CloudFront, DNS, IAM (spec Phase 2 step 1) | inline | done | d2d0c2d |
+| 2 | 2.3 | Inbox wiring for the Lambda stack — bucket, topic, SES receipt rule (spec Phase 2 step 5) | inline | done | 6d81f2d |
+| 2 | 2.4 | `deploy/lambda/deploy.sh` — the release script (spec Phase 2 step 2) | inline | done | 70408c8 |
+| 2 | 2.4-neon | Link the Neon project (`neon init`, `neon.ts`) | inline | done | c317071 |
+| 2 | 2.4-review-fix | `deploy.sh` builds on Docker without `--provenance` | inline | done | 1fdecbf |
+| 2 | 2.4-review-fix-2 | `deploy.sh` omits empty optional parameters | inline | done | 22a198c |
+| 2 | 2.4-review-fix-3 | `deploy.sh` names the image repository for `sam deploy` | inline | done | e6ca6c1 |
+| 2 | 2.5 | Neon project and first deploy against an empty database (spec Phase 2 step 3) | inline | done | 728ef21 |
+| 2 | 2.6 | Smoke probes on `https://trips.botito.app`, recorded (spec Phase 2 steps 4–5) | inline | done | 5d51f8c |
+| 2 | 2.7 | `deploy/lambda/README.md` and links (spec Phase 2 step 6) | inline | done | 0f766d6 |
+| 2 | 2.8 | Archive the Delta into the living capability specs (spec Phase 2 step 7) | dispatch:cheap | done | fac4f3f |
+| 2 | 2.9 | Correct the spec's unverified assumptions from Phase 0 | inline | done | fbe790b |
+| 2 | 2.9-review-fix | Drain stops on a pass with no progress (review finding 1, 3) | inline | done | dee968e |
+| 2 | 2.9-review-fix-2 | Server-side keepalives, secret-free repr, threadpool kick, parameter spaces (review findings 2, 4–6) | inline | done | b35e83f |
 
 ## Goal
 

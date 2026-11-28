@@ -30,3 +30,13 @@
 - Decision: step 2.9 records spec corrections in the run folder + PR body instead of editing the merged spec (delta-archive rule).
 - Live AWS: trip-planner-cert stack (us-east-1) created; two generated secrets put into SSM.
 - **Blocker:** step 2.5 needs Neon credentials (no Neon account access here). Steps 2.7–2.9 were done ahead of 2.5–2.6 so the blocker costs no idle time.
+
+## 2026-11-28T06:10:00Z — blocker cleared
+- Owner supplied a Neon API key; `neon init` / `neon deploy` linked project broad-darkness-02702202 (aws-eu-central-1, Postgres 18). URLs stored in SSM.
+- First real deploy surfaced three `deploy.sh` defects (Docker 20.10 `--provenance`, empty SAM overrides, `--image-repository`), each fixed as a review-fix Step.
+
+## 2026-11-28T06:54:38Z — run complete
+- Final gate green on b35e83f (8/8, 1355 backend, 0 skipped); live probes 16/16 twice; cold start recorded.
+- Review: independent reviewer found 1 major (drain spun on no-progress passes), 2 minor, 3 nits — all fixed (dee968e, b35e83f); re-review approved.
+- Decision: Phase 3 cutover left for the owner's go-ahead after merge.
+- PR: https://github.com/7bc-mkl/trip_planner/pull/26
