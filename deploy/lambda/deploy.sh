@@ -23,7 +23,9 @@ HOSTED_ZONE_ID="${HOSTED_ZONE_ID:-Z06147722TLSJWJZMPBG}"
 SSM_PREFIX="${SSM_PREFIX:-/trip-planner}"
 ENABLE_INBOX="${ENABLE_INBOX:-true}"
 ALARM_EMAIL="${ALARM_EMAIL:-}"
+# Comma-separated; spaces are stripped because SAM splits override values on them.
 INBOX_ALLOWED_SENDERS="${INBOX_ALLOWED_SENDERS:-}"
+INBOX_ALLOWED_SENDERS="${INBOX_ALLOWED_SENDERS// /}"
 # Optional model routing (D24). Leave INBOX_MODEL_PROVIDER empty to run the
 # inbox without it; when set, the key is read from ${SSM_PREFIX}/model-api-key.
 INBOX_MODEL_PROVIDER="${INBOX_MODEL_PROVIDER:-}"

@@ -75,6 +75,10 @@ INBOX_WORKER_LOCK_KEY = 0x7A11_0C0D_E003
 BATCH_SIZE = 10
 
 
+#: Above the worker function's 300 s timeout, so a live pass is never cut short.
+LAMBDA_LOCK_IDLE_TIMEOUT = "360s"
+
+
 @dataclass(frozen=True, slots=True)
 class PassResult:
     """What one pass did, for a caller that loops passes back to back.
@@ -200,6 +204,19 @@ class InboxWorker:
                 self._release_lock(lock_session)
 
     def _take_lock(self, db: OrmSession) -> bool:
+        if self._settings.inbox_worker_mode == "lambda":
+            # If Lambda kills a run, nothing closes this connection cleanly, and
+            # on Neon the TCP connection ends at Neon's proxy, so keepalives
+            # cannot tell Postgres the worker is gone. This session idles in its
+            # transaction for the whole pass, so this timeout frees the lock a
+            # minute after the function's five-minute limit at worst. Lambda
+            # only: a compose pass is not bounded by a platform timeout.
+            db.execute(
+                sa.text(
+                    "SET LOCAL idle_in_transaction_session_timeout = "
+                    f"'{LAMBDA_LOCK_IDLE_TIMEOUT}'"
+                )
+            )
         return bool(
             db.execute(
                 sa.select(sa.func.pg_try_advisory_lock(sa.literal(INBOX_WORKER_LOCK_KEY)))

@@ -47,7 +47,7 @@
 | 2 | 2.8 | Archive the Delta into the living capability specs (spec Phase 2 step 7) | dispatch:cheap | done | bc5213f |
 | 2 | 2.9 | Correct the spec's unverified assumptions from Phase 0 | inline | done | f5280fc |
 | 2 | 2.9-review-fix | Drain stops on a pass with no progress (review finding 1, 3) | inline | done | feca33d |
-| 2 | 2.9-review-fix-2 | Server-side keepalives, secret-free repr, threadpool kick, parameter spaces (review findings 2, 4–6) | inline | todo | — |
+| 2 | 2.9-review-fix-2 | Server-side keepalives, secret-free repr, threadpool kick, parameter spaces (review findings 2, 4–6) | inline | done | 47ce729 |
 
 ## Goal
 

@@ -431,3 +431,43 @@ def test_a_pass_runs_the_cleanup(
     with worker_sessions() as db:
         assert db.get(InboundMessage, expired) is None
     assert s3.deleted == [f"{PREFIX}ses-1"]
+
+
+@pytest.mark.parametrize("mode", ["lambda", "thread"])
+def test_a_killed_lambda_worker_cannot_hold_the_lock_forever(
+    inbox_settings: Settings,
+    worker_sessions: sessionmaker[OrmSession],
+    engine: sa.Engine,
+    mode: str,
+) -> None:
+    """On Neon the TCP connection ends at Neon's proxy, so keepalives cannot free
+    the session-level lock of a function Lambda killed. The lock's own session
+    times out in its idle transaction instead — Lambda only, where a pass is
+    bounded by the function timeout; a compose pass is not.
+    """
+    from dataclasses import replace
+
+    from trip_planner.scheduler import LAMBDA_LOCK_IDLE_TIMEOUT
+
+    statements: list[str] = []
+
+    def record(conn, cursor, statement, *args) -> None:  # noqa: ANN001, ANN002
+        statements.append(statement)
+
+    sa.event.listen(engine, "before_cursor_execute", record)
+    try:
+        worker = make_worker(
+            replace(inbox_settings, inbox_worker_mode=mode), worker_sessions, StubS3()
+        )
+        worker.run_once()
+    finally:
+        sa.event.remove(engine, "before_cursor_execute", record)
+
+    lock = next(i for i, s in enumerate(statements) if "pg_try_advisory_lock" in s)
+    timeouts = [i for i, s in enumerate(statements) if "idle_in_transaction_session_timeout" in s]
+    if mode == "lambda":
+        assert timeouts and timeouts[0] < lock
+        assert LAMBDA_LOCK_IDLE_TIMEOUT in statements[timeouts[0]]
+        assert int(LAMBDA_LOCK_IDLE_TIMEOUT.rstrip("s")) > 300, "above the function timeout"
+    else:
+        assert timeouts == []

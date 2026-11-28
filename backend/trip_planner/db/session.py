@@ -20,10 +20,12 @@ from sqlalchemy.pool import NullPool
 
 from trip_planner.config import Settings, get_settings
 
-# The worker function holds a session-level `pg_try_advisory_lock` (scheduler.py).
-# If Lambda kills a run, the server only frees that lock once it notices the
-# connection is dead; without TCP keepalives that can take hours. With these it
-# takes about a minute (30s idle + 3 probes x 10s). Harmless on compose.
+# Client-side TCP keepalives: the app notices a server that vanished mid-query
+# (a Neon compute suspended or restarted) within about a minute — 30 s idle plus
+# 3 probes x 10 s — instead of hanging until the OS gives up. They do NOT free a
+# killed worker's advisory lock: on Neon the client's TCP connection ends at
+# Neon's proxy. The lock is freed by `idle_in_transaction_session_timeout`
+# (scheduler.py, `_take_lock`). Harmless on compose.
 _KEEPALIVES: dict[str, int] = {
     "keepalives": 1,
     "keepalives_idle": 30,

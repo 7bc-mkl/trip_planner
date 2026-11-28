@@ -553,3 +553,16 @@ def test_origin_verify_secret_is_documented_as_a_deployment_option() -> None:
     from trip_planner.config import DEPLOYMENT_OPTIONAL_ENVIRONMENT_VARIABLES
 
     assert "ORIGIN_VERIFY_SECRET" in DEPLOYMENT_OPTIONAL_ENVIRONMENT_VARIABLES
+
+
+def test_the_settings_repr_carries_no_credential() -> None:
+    settings = require_settings(
+        {
+            **COMPLETE_ENV,
+            "DATABASE_URL": "postgresql://user:hunter2-db@host/db",
+            "SESSION_SECRET": "s" * 40 + "-session-secret",
+        }
+    )
+    text = repr(settings)
+    assert "hunter2-db" not in text
+    assert "-session-secret" not in text

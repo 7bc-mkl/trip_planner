@@ -257,8 +257,9 @@ class ModelSettings:
 
 @dataclass(frozen=True, slots=True)
 class Settings:
-    database_url: str
-    session_secret: str
+    #: Both hold a credential, so neither may reach a log line through a repr.
+    database_url: str = field(repr=False)
+    session_secret: str = field(repr=False)
     app_base_url: str
     environment: str
     #: `None` when the deployment has no inbox configuration — a normal state.

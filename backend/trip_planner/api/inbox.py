@@ -42,6 +42,7 @@ from pydantic import BaseModel, ConfigDict
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session as OrmSession
+from starlette.concurrency import run_in_threadpool
 
 from trip_planner.api.attachments import _matches_etag, _serving_headers
 from trip_planner.api.deps import AppSettings, CurrentOwner, DbSession
@@ -445,7 +446,8 @@ async def receive_sns_notification(
         return Response(status_code=status.HTTP_503_SERVICE_UNAVAILABLE)
 
     if kick_after_commit and recorded:
-        _kick_worker(settings)
+        # A blocking boto3 call, bounded by its timeouts; off the event loop.
+        await run_in_threadpool(_kick_worker, settings)
 
     return Response(status_code=status.HTTP_200_OK)
 

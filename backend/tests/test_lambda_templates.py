@@ -267,3 +267,9 @@ def test_deploy_script_omits_empty_parameter_overrides() -> None:
     script = (LAMBDA_DIR / "deploy.sh").read_text()
     loop = script[script.index('"ImageUri=${IMAGE}"') :]
     assert '[ -n "${pair#*=}" ] || continue' in loop.split("done", 1)[0]
+
+
+def test_deploy_script_strips_spaces_from_allowed_senders() -> None:
+    """SAM splits override values on spaces; `a@x, b@y` must arrive as one value."""
+    script = (LAMBDA_DIR / "deploy.sh").read_text()
+    assert 'INBOX_ALLOWED_SENDERS="${INBOX_ALLOWED_SENDERS// /}"' in script
